@@ -598,12 +598,23 @@ def import_leads(request):
             'branch_name': clean_string(raw.get('Filial')),
         }
         try:
-            if not normalized['full_name'] or not normalized['phone1']:
-                raise ValueError('F.I.O va tel1 kiritish shart.')
+            # F.I.O yoki telefon raqam majburiy emas.
+            # Excel qatorida kamida bitta ma'lumot bo'lsa, lead saqlanadi.
             operator = operators[op_index % len(operators)] if operator_mode == 'all' else assigned_operator
             if operator_mode == 'all':
                 op_index += 1
-            dup = Lead.objects.filter(boss=request.app_user).filter(Q(phone1=normalized['phone1']) | Q(phone2=normalized['phone1']) | Q(phone3=normalized['phone1']) | Q(full_name__iexact=normalized['full_name'])).order_by('id').first()
+
+            duplicate_query = Q()
+            phones = [normalized.get('phone1'), normalized.get('phone2'), normalized.get('phone3')]
+            for phone in [p for p in phones if p]:
+                duplicate_query |= Q(phone1=phone) | Q(phone2=phone) | Q(phone3=phone)
+            if normalized.get('full_name'):
+                duplicate_query |= Q(full_name__iexact=normalized['full_name'])
+
+            dup = None
+            if duplicate_query:
+                dup = Lead.objects.filter(boss=request.app_user).filter(duplicate_query).order_by('id').first()
+
             lead = Lead.objects.create(**normalized, assigned_operator=operator, boss=request.app_user, uploaded_by=request.app_user, current_status='new', source_row_number=source_row_number, is_duplicate=bool(dup), duplicate_of_lead=dup)
             ExcelImportRow.objects.create(import_record=import_record, source_row_number=source_row_number, raw_data=raw, normalized_data=normalized, status='duplicate' if dup else 'saved', lead=lead, duplicate_of_lead=dup)
             success += 1

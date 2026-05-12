@@ -1,0 +1,7 @@
+Excel importda F.I.O va tel1 majburiy tekshiruvi olib tashlandi.
+
+Endi qator ichida kamida bitta ma'lumot bo'lsa, lead saqlanadi.
+F.I.O bo'lsa saqlanadi, bo'lmasa bo'sh qoladi.
+tel1 bo'lsa saqlanadi, bo'lmasa bo'sh qoladi.
+tel2/tel3 bo'lsa ham o'z ustunida saqlanadi.
+Dublikat tekshiruvi faqat mavjud F.I.O yoki mavjud telefonlar orqali qilinadi.
