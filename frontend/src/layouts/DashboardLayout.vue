@@ -2,7 +2,13 @@
   <div class="dashboard">
     <header class="dashboard-nav">
       <div class="dashboard-nav__top">
-        <RouterLink :to="homePath" class="dashboard-nav__brand" @click="closeMobileMenu">
+        <RouterLink
+          :to="homePath"
+          class="dashboard-nav__brand"
+          title="Bosh sahifaga qaytish"
+          aria-label="Bosh sahifaga qaytish"
+          @click.prevent="goHome"
+        >
           <span class="dashboard-nav__dot"></span>
           <div>
             <div>AZIZ ACADEMY</div>
@@ -126,6 +132,11 @@ function toggleMobileMenu() {
 
 function closeMobileMenu() {
   mobileMenuOpen.value = false
+}
+
+function goHome() {
+  closeMobileMenu()
+  router.push(homePath.value)
 }
 
 function logout() {

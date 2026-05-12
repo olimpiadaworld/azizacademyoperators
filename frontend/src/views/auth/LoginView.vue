@@ -16,13 +16,19 @@
           </p>
         </div>
 
-        <div class="login-brand">
+        <button
+          class="login-brand"
+          type="button"
+          title="Bosh sahifaga qaytish"
+          aria-label="Bosh sahifaga qaytish"
+          @click="goHome"
+        >
           <div class="login-brand__icon">A</div>
           <div>
             <strong>AZIZ ACADEMY</strong>
             <span>Lead boshqaruvi</span>
           </div>
-        </div>
+        </button>
       </div>
 
       <form class="login-form" @submit.prevent="submit">
@@ -104,6 +110,10 @@ function getHomePath(user) {
     return { path: '/boss', query: { tab: 'leads' } }
   }
   return `/${user?.role || 'login'}`
+}
+
+function goHome() {
+  router.push('/')
 }
 
 async function submit() {
@@ -246,6 +256,14 @@ async function submit() {
   box-shadow:
     0 16px 32px rgba(111, 154, 219, 0.12),
     inset 0 1px 0 rgba(255,255,255,0.75);
+  cursor: pointer;
+  text-align: left;
+  appearance: none;
+  font: inherit;
+}
+
+.login-brand:hover {
+  transform: translateY(-1px);
 }
 
 .login-brand__icon {
