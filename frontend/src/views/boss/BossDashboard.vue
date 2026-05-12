@@ -579,7 +579,7 @@
         </div>
       </div>
 
-      <template v-if="statistics.length">
+      <template v-if="sortedStatistics.length">
         <div class="operator-sales-chart glass-soft">
           <div class="operator-sales-chart__head">
             <div>
@@ -651,10 +651,38 @@
             </div>
           </div>
         </div>
+
+        <div v-if="topThreeOperators.length" class="operator-podium glass-soft">
+          <div class="operator-podium__head">
+            <div>
+              <div class="eyebrow">Premium reyting</div>
+              <h4>Eng kuchli operatorlar</h4>
+            </div>
+            <span class="badge">Top {{ topThreeOperators.length }}</span>
+          </div>
+
+          <div class="operator-podium__grid">
+            <article
+              v-for="(row, index) in topThreeOperators"
+              :key="`operator-podium-${row.operator_id}`"
+              class="operator-podium__card"
+              :class="getPodiumToneClass(index)"
+            >
+              <div class="operator-podium__rank">#{{ index + 1 }}</div>
+              <div class="operator-podium__medal">{{ podiumMedals[index] }}</div>
+              <h5>{{ row.operator_name }}</h5>
+              <div class="operator-podium__stats">
+                <span><strong>{{ row.sale }}</strong> sotuv</span>
+                <span><strong>{{ row.total }}</strong> jami</span>
+                <span><strong>{{ row.conversion }}%</strong> conversion</span>
+              </div>
+            </article>
+          </div>
+        </div>
       </template>
       <div v-else class="empty-state">Operator statistikasi hali yo‘q.</div>
 
-      <div v-if="isCompactSwiperViewport && statistics.length" class="operator-swiper glass-soft stats-mobile-swiper stats-mobile-swiper--operators">
+      <div v-if="isCompactSwiperViewport && sortedStatistics.length" class="operator-swiper glass-soft stats-mobile-swiper stats-mobile-swiper--operators">
         <div class="operator-swiper__head">
           <div>
             <div class="eyebrow">Operatorlar swiper</div>
@@ -668,10 +696,10 @@
         </div>
         <div class="operator-swiper__viewport">
           <div class="operator-swiper__track" :style="operatorStatsTrackStyle">
-            <div v-for="row in statistics" :key="`operator-stat-card-${row.operator_id}`" class="operator-swiper__slide">
-              <article class="operator-stat-card glass-soft">
+            <div v-for="(row, index) in sortedStatistics" :key="`operator-stat-card-${row.operator_id}`" class="operator-swiper__slide">
+              <article class="operator-stat-card glass-soft" :class="getOperatorTierClass(index)">
                 <div class="operator-stat-card__head">
-                  <h4>{{ row.operator_name }}</h4>
+                  <div class="operator-stat-card__title"><span class="operator-rank-badge">#{{ index + 1 }}</span><h4>{{ row.operator_name }}</h4></div>
                   <span class="badge">{{ row.conversion }}%</span>
                 </div>
                 <div class="operator-stat-card__grid">
@@ -687,10 +715,11 @@
           </div>
         </div>
       </div>
-      <div v-else class="table-wrap">
-        <table>
+      <div v-else class="table-wrap operator-premium-table-wrap">
+        <table class="operator-premium-table">
           <thead>
             <tr>
+              <th>№</th>
               <th>Operator</th>
               <th>Jami</th>
               <th>Sotuv</th>
@@ -702,15 +731,36 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in statistics" :key="row.operator_id">
-              <td>{{ row.operator_name }}</td>
+            <tr v-for="(row, index) in sortedStatistics" :key="row.operator_id" :class="['operator-premium-row', getOperatorTierClass(index)]">
+              <td>
+                <div class="operator-rank-cell">
+                  <span class="operator-rank-badge">#{{ index + 1 }}</span>
+                  <span v-if="index < 3" class="operator-rank-medal">{{ podiumMedals[index] }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="operator-name-cell">
+                  <strong>{{ row.operator_name }}</strong>
+                  <small v-if="index === 0">Eng ko'p sotuv</small>
+                  <small v-else-if="index === 1">2-o'rin</small>
+                  <small v-else-if="index === 2">3-o'rin</small>
+                  <small v-else>Faol operator</small>
+                </div>
+              </td>
               <td>{{ row.total }}</td>
-              <td>{{ row.sale }}</td>
+              <td><span class="operator-sale-chip">{{ row.sale }}</span></td>
               <td>{{ row.actions_today }}</td>
               <td>{{ row.touched_today }}</td>
               <td>{{ row.advice }}</td>
               <td>{{ row.other }}</td>
-              <td>{{ row.conversion }}%</td>
+              <td>
+                <div class="operator-conversion-cell">
+                  <strong>{{ row.conversion }}%</strong>
+                  <div class="operator-conversion-track">
+                    <div class="operator-conversion-fill" :style="{ width: formatConversionWidth(row.conversion) }"></div>
+                  </div>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -1053,13 +1103,26 @@ const filteredSummaryText = computed(() => {
 })
 const totalActionsToday = computed(() => statistics.value.reduce((sum, item) => sum + (item.actions_today || 0), 0))
 const totalTouchedToday = computed(() => statistics.value.reduce((sum, item) => sum + (item.touched_today || 0), 0))
-const salesChartData = computed(() => ([...statistics.value]
+const sortedStatistics = computed(() => ([...statistics.value]
+  .sort((a, b) => {
+    const saleDiff = Number(b.sale || 0) - Number(a.sale || 0)
+    if (saleDiff) return saleDiff
+    const conversionDiff = Number(b.conversion || 0) - Number(a.conversion || 0)
+    if (conversionDiff) return conversionDiff
+    const touchedDiff = Number(b.touched_today || 0) - Number(a.touched_today || 0)
+    if (touchedDiff) return touchedDiff
+    return (a.operator_name || '').localeCompare(b.operator_name || '', 'uz')
+  })))
+const topThreeOperators = computed(() => sortedStatistics.value.slice(0, 3))
+const podiumMedals = ['🥇', '🥈', '🥉']
+const salesChartData = computed(() => (sortedStatistics.value
   .map(item => ({
     operator_id: item.operator_id,
     operator_name: item.operator_name,
     sale: Number(item.sale || 0),
-  }))
-  .sort((a, b) => b.sale - a.sale || a.operator_name.localeCompare(b.operator_name, 'uz'))))
+    total: Number(item.total || 0),
+    conversion: Number(item.conversion || 0),
+  }))))
 const donutPalette = ['#4f7cff', '#ff6b6b', '#22c55e', '#a855f7', '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#14b8a6', '#e11d48']
 const donutCircumference = 2 * Math.PI * 66
 const maxOperatorSales = computed(() => Math.max(0, ...salesChartData.value.map(item => item.sale || 0)))
@@ -1238,13 +1301,13 @@ const topStatsCurrentPositionLabel = computed(() => {
   return start === end ? `Hozir: ${start}-card` : `Hozir: ${start}-${end}-cardlar`
 })
 const operatorStatsVisibleSlides = computed(() => (viewportWidth.value <= 560 ? 1 : 2))
-const operatorStatsMaxSlide = computed(() => Math.max(0, statistics.value.length - operatorStatsVisibleSlides.value))
-const operatorStatsCanSlide = computed(() => statistics.value.length > operatorStatsVisibleSlides.value)
+const operatorStatsMaxSlide = computed(() => Math.max(0, sortedStatistics.value.length - operatorStatsVisibleSlides.value))
+const operatorStatsCanSlide = computed(() => sortedStatistics.value.length > operatorStatsVisibleSlides.value)
 const operatorStatsTrackStyle = computed(() => ({ transform: `translateX(-${currentOperatorStatsSlide.value * (100 / operatorStatsVisibleSlides.value)}%)` }))
 const operatorStatsCurrentPositionLabel = computed(() => {
-  if (!statistics.value.length) return "Card yo'q"
-  const start = Math.min(currentOperatorStatsSlide.value + 1, statistics.value.length)
-  const end = Math.min(currentOperatorStatsSlide.value + operatorStatsVisibleSlides.value, statistics.value.length)
+  if (!sortedStatistics.value.length) return "Card yo'q"
+  const start = Math.min(currentOperatorStatsSlide.value + 1, sortedStatistics.value.length)
+  const end = Math.min(currentOperatorStatsSlide.value + operatorStatsVisibleSlides.value, sortedStatistics.value.length)
   return start === end ? `Hozir: ${start}-card` : `Hozir: ${start}-${end}-cardlar`
 })
 const bossLeadVisibleSlides = computed(() => (viewportWidth.value <= 560 ? 1 : 2))
@@ -1303,6 +1366,25 @@ function getSalesBarWidth(value) {
   const percent = (Number(value || 0) / maxOperatorSales.value) * 100
   if (value > 0 && percent < 8) return '8%'
   return `${Math.min(percent, 100)}%`
+}
+
+function getOperatorTierClass(index) {
+  if (index === 0) return 'tier-gold'
+  if (index === 1) return 'tier-silver'
+  if (index === 2) return 'tier-bronze'
+  return 'tier-default'
+}
+
+function getPodiumToneClass(index) {
+  if (index === 0) return 'operator-podium__card--gold'
+  if (index === 1) return 'operator-podium__card--silver'
+  if (index === 2) return 'operator-podium__card--bronze'
+  return ''
+}
+
+function formatConversionWidth(value) {
+  const number = Number(value || 0)
+  return `${Math.max(6, Math.min(number, 100))}%`
 }
 
 function clearBossDecisionFilters() {
@@ -2178,15 +2260,245 @@ onBeforeUnmount(() => {
   transition: width .35s ease;
 }
 
+
+.operator-podium {
+  margin-bottom: 18px;
+  padding: 20px;
+  border-radius: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.operator-podium__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.operator-podium__head h4 {
+  margin: 4px 0 0;
+}
+
+.operator-podium__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.operator-podium__card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9));
+  color: #fff;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+  display: grid;
+  gap: 12px;
+}
+
+.operator-podium__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(255,255,255,.24), transparent 42%);
+  pointer-events: none;
+}
+
+.operator-podium__card--gold {
+  background: linear-gradient(135deg, #1e293b, #7c5c12 58%, #f59e0b 100%);
+}
+
+.operator-podium__card--silver {
+  background: linear-gradient(135deg, #1f2937, #64748b 62%, #cbd5e1 100%);
+}
+
+.operator-podium__card--bronze {
+  background: linear-gradient(135deg, #2b2118, #7c4a2d 58%, #f97316 100%);
+}
+
+.operator-podium__rank,
+.operator-podium__medal {
+  position: relative;
+  z-index: 1;
+}
+
+.operator-podium__rank {
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.operator-podium__medal {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.operator-podium__card h5 {
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  font-size: 20px;
+}
+
+.operator-podium__stats {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 6px;
+  opacity: .95;
+}
+
+.operator-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.operator-rank-medal {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.operator-stat-card.tier-gold,
+.operator-premium-row.tier-gold {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(255,255,255,0.98));
+}
+
+.operator-stat-card.tier-silver,
+.operator-premium-row.tier-silver {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.18), rgba(255,255,255,0.98));
+}
+
+.operator-stat-card.tier-bronze,
+.operator-premium-row.tier-bronze {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.16), rgba(255,255,255,0.98));
+}
+
+.operator-stat-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.operator-stat-card__title h4 {
+  margin: 0;
+}
+
+.operator-premium-table-wrap {
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.operator-premium-table {
+  min-width: 960px;
+}
+
+.operator-premium-table thead th {
+  padding: 16px 14px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: #64748b;
+  background: rgba(241, 245, 249, 0.95);
+}
+
+.operator-premium-table tbody td {
+  padding: 16px 14px;
+  vertical-align: middle;
+}
+
+.operator-premium-row {
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.operator-premium-row:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 999px rgba(59, 130, 246, 0.03);
+}
+
+.operator-rank-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.operator-name-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.operator-name-cell strong {
+  font-size: 15px;
+}
+
+.operator-name-cell small {
+  color: #64748b;
+}
+
+.operator-sale-chip {
+  display: inline-flex;
+  min-width: 44px;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+  color: white;
+  font-weight: 800;
+}
+
+.operator-conversion-cell {
+  display: grid;
+  gap: 8px;
+  min-width: 110px;
+}
+
+.operator-conversion-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.operator-conversion-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e 0%, #14b8a6 100%);
+}
+
 @media (max-width: 800px) {
   .operator-donut-card__body {
+    grid-template-columns: 1fr;
+  }
+
+  .operator-podium__grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 640px) {
   .operator-sales-chart,
-  .operator-donut-card {
+  .operator-donut-card,
+  .operator-podium {
     padding: 14px;
   }
 
