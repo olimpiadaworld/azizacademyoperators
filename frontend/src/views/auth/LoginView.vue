@@ -7,15 +7,6 @@
     <section class="login-card">
       <div class="login-card__shine"></div>
       <div class="login-card__header">
-        <div class="login-card__intro">
-          <div class="login-card__badge">Premium Lead CRM</div>
-          <h1>Login</h1>
-          <p>
-            Admin, boshliq va operatorlar uchun yagona, tartibli va chiroyli
-            boshqaruv tizimi.
-          </p>
-        </div>
-
         <button
           class="login-brand"
           type="button"
@@ -208,7 +199,7 @@ async function submit() {
   position: relative;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: center;
   gap: 26px;
   margin-bottom: 34px;
 }
