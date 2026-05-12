@@ -1,11 +1,26 @@
 #!/bin/sh
 set -e
 
-echo "Running migrations..."
+cd /app
+
+echo "=== Railway start.sh boshlandi ==="
+echo "PORT=${PORT:-8000}"
+echo "DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings}"
+
+echo "=== Django check ==="
+python manage.py check --deploy || true
+
+echo "=== Migrations ==="
 python manage.py migrate --noinput
 
-echo "Creating admin if needed..."
+echo "=== Init DB / Admin ==="
 python manage.py init_db || true
 
-echo "Starting gunicorn on port ${PORT:-8000}..."
-exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 1 --threads 4 --timeout 120 --access-logfile - --error-logfile -
+echo "=== Starting Gunicorn ==="
+exec gunicorn config.wsgi:application \
+  --bind 0.0.0.0:${PORT:-8000} \
+  --workers ${WEB_CONCURRENCY:-1} \
+  --threads 4 \
+  --timeout 120 \
+  --access-logfile - \
+  --error-logfile -
