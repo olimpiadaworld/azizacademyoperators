@@ -202,6 +202,27 @@ def admin_filial_rahbarlari(request, user_id=None):
     return ok({'detail': 'Method not allowed'}, status=405)
 
 
+
+@csrf_exempt
+@require_auth('admin')
+def admin_users(request, user_id=None):
+    allowed_roles = ['boss', 'operator', 'filial_rahbari']
+    if request.method == 'GET':
+        qs = AppUser.objects.select_related('boss').filter(role__in=allowed_roles, is_active=True).order_by('role', '-id')
+        return ok([user_to_dict(u) for u in qs])
+
+    user = AppUser.objects.filter(id=user_id, role__in=allowed_roles).first()
+    if not user:
+        return ok({'detail': 'Foydalanuvchi topilmadi.'}, status=404)
+
+    if request.method in ('PATCH', 'PUT'):
+        return update_user(request, user_id, user.role)
+
+    if request.method == 'DELETE':
+        return delete_user(request, user_id, user.role)
+
+    return ok({'detail': 'Method not allowed'}, status=405)
+
 @csrf_exempt
 @require_auth('boss')
 def boss_operators(request, user_id=None):
@@ -348,27 +369,34 @@ def set_reminder(request, lead_id):
 @require_http_methods(['POST'])
 def public_online_leads(request):
     body = json_body(request)
-    full_name = clean_string(body.get('full_name'))
+    tsh = clean_string(body.get('tsh') or body.get('t_sh'))
+    school = clean_string(body.get('school') or body.get('maktab'))
+    grade = clean_string(body.get('grade') or body.get('sinf'))
+    full_name = clean_string(body.get('full_name') or body.get('fio'))
+    subject = clean_string(body.get('subject') or body.get('interest_subject') or body.get('fan'))
+    phone1 = clean_string(body.get('phone1') or body.get('tel1'))
+    phone2 = clean_string(body.get('phone2') or body.get('tel2'))
+    phone3 = clean_string(body.get('phone3') or body.get('tel3'))
     age = int(body.get('age') or 0)
-    phone1 = clean_string(body.get('phone1'))
-    phone2 = clean_string(body.get('phone2'))
-    phone3 = clean_string(body.get('phone3'))
-    interest_subject = clean_string(body.get('interest_subject'))
     region = clean_string(body.get('region'))
-    if not full_name or not age or not phone1 or not interest_subject or not region:
-        return ok({'detail': 'Majburiy maydonlarni to‘ldiring.'}, status=400)
+
     boss = AppUser.objects.filter(role='boss', is_active=True).order_by('id').first()
-    item = OnlineLead.objects.create(full_name=full_name, age=age, phone1=phone1, phone2=phone2, phone3=phone3, interest_subject=interest_subject, region=region, assigned_boss=boss, source_payload=body)
+    item = OnlineLead.objects.create(
+        full_name=full_name, tsh=tsh, school=school, grade=grade, subject=subject,
+        age=age, phone1=phone1, phone2=phone2, phone3=phone3,
+        interest_subject=subject, region=region, assigned_boss=boss, source_payload=body
+    )
     msg = (
         '🆕 <b>Yangi online lead keldi</b>\n'
         + tg_line('Vaqt', tg_now_text())
+        + tg_line('T/SH', tsh)
+        + tg_line('Maktab', school)
+        + tg_line('Sinf', grade)
         + tg_line('F.I.O', full_name)
-        + tg_line('Yosh', age)
+        + tg_line('Fan', subject)
         + tg_line('Tel 1', phone1)
         + tg_line('Tel 2', phone2)
         + tg_line('Tel 3', phone3)
-        + tg_line('Fan', interest_subject)
-        + tg_line('Hudud/filial', region)
         + tg_line('Boss', tg_user_name(boss))
     )
     notify_telegram_after_commit(msg)
@@ -380,7 +408,7 @@ def boss_online_leads(request):
     qs = OnlineLead.objects.select_related('assigned_operator').filter(assigned_operator__isnull=True, assigned_boss=request.app_user)
     search = clean_string(request.GET.get('search'))
     if search:
-        qs = qs.filter(full_name__icontains=search)
+        qs = qs.filter(Q(full_name__icontains=search) | Q(phone1__icontains=search) | Q(phone2__icontains=search) | Q(phone3__icontains=search) | Q(tsh__icontains=search) | Q(school__icontains=search) | Q(grade__icontains=search) | Q(subject__icontains=search) | Q(interest_subject__icontains=search))
     return ok([online_lead_to_dict(x) for x in qs.order_by('-submitted_at')])
 
 
@@ -403,8 +431,11 @@ def assign_online_lead(request, online_id):
         return ok({'detail': 'Lead topilmadi yoki allaqachon biriktirilgan.'}, status=404)
     with transaction.atomic():
         lead = Lead.objects.create(
-            full_name=online.full_name, phone1=online.phone1, phone2=online.phone2, phone3=online.phone3,
-            subject=online.interest_subject or '', school='', grade=f'{online.age} yosh', branch_name=online.region or '',
+            full_name=online.full_name, tsh=getattr(online, 'tsh', '') or '',
+            phone1=online.phone1, phone2=online.phone2, phone3=online.phone3,
+            subject=(getattr(online, 'subject', '') or online.interest_subject or ''),
+            school=getattr(online, 'school', '') or '', grade=(getattr(online, 'grade', '') or (f'{online.age} yosh' if online.age else '')),
+            branch_name=online.region or '',
             assigned_operator=operator, boss=request.app_user, uploaded_by=request.app_user, current_status='new'
         )
         online.assigned_operator = operator
@@ -435,7 +466,7 @@ def bulk_assign_online_leads(request):
     count = 0
     with transaction.atomic():
         for online in items:
-            lead = Lead.objects.create(full_name=online.full_name, phone1=online.phone1, phone2=online.phone2, phone3=online.phone3, subject=online.interest_subject or '', grade=f'{online.age} yosh', branch_name=online.region or '', assigned_operator=operator, boss=request.app_user, uploaded_by=request.app_user, current_status='new')
+            lead = Lead.objects.create(full_name=online.full_name, tsh=getattr(online, 'tsh', '') or '', phone1=online.phone1, phone2=online.phone2, phone3=online.phone3, subject=(getattr(online, 'subject', '') or online.interest_subject or ''), school=getattr(online, 'school', '') or '', grade=(getattr(online, 'grade', '') or (f'{online.age} yosh' if online.age else '')), branch_name=online.region or '', assigned_operator=operator, boss=request.app_user, uploaded_by=request.app_user, current_status='new')
             online.assigned_operator = operator
             online.created_lead = lead
             online.assigned_at = timezone.now()

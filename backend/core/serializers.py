@@ -63,14 +63,20 @@ def visit_decision_to_dict(item):
 
 
 def online_lead_to_dict(item):
+    subject = getattr(item, 'subject', '') or item.interest_subject or ''
     return {
         'id': item.id,
         'full_name': item.full_name or '',
+        'tsh': getattr(item, 'tsh', '') or '',
+        'school': getattr(item, 'school', '') or '',
+        'display_school': getattr(item, 'school', '') or '',
+        'grade': getattr(item, 'grade', '') or '',
+        'subject': subject,
         'age': item.age,
         'phone1': item.phone1 or '',
         'phone2': item.phone2 or '',
         'phone3': item.phone3 or '',
-        'interest_subject': item.interest_subject or '',
+        'interest_subject': subject,
         'region': item.region or '',
         'assigned_boss': item.assigned_boss_id,
         'assigned_operator': item.assigned_operator_id,

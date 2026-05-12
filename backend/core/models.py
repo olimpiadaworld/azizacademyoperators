@@ -72,6 +72,10 @@ class LeadStatusHistory(models.Model):
 
 class OnlineLead(models.Model):
     full_name = models.CharField(max_length=255, default='', blank=True)
+    tsh = models.CharField(max_length=100, default='', blank=True)
+    school = models.CharField(max_length=255, default='', blank=True)
+    grade = models.CharField(max_length=100, default='', blank=True)
+    subject = models.CharField(max_length=255, default='', blank=True)
     age = models.IntegerField(default=0)
     phone1 = models.CharField(max_length=50, default='', blank=True)
     phone2 = models.CharField(max_length=50, default='', blank=True)

@@ -226,26 +226,28 @@
               <th>Telefon</th>
               <th>Filial</th>
               <th>Holati</th>
+              <th>Amal</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="person in leaders" :key="`${person.role}-${person.id}`">
-              <td><span class="badge">{{ person.role === 'filial_rahbari' ? 'Filial Rahbari' : 'Boshliq' }}</span></td>
+              <td><span class="badge">{{ roleLabel(person.role) }}</span></td>
               <td>{{ person.full_name || '-' }}</td>
               <td>{{ person.username }}</td>
               <td>{{ person.phone || '-' }}</td>
-              <td>{{ person.branch_name || '-' }}</td>
+              <td>{{ person.branch_name || person.boss_name || '-' }}</td>
               <td><span class="badge">{{ person.is_active ? 'Faol' : 'Nofaol' }}</span></td>
+              <td><button class="btn ghost" type="button" @click="openUserEdit(person)">Login/parol</button></td>
             </tr>
             <tr v-if="!leaders.length">
-              <td colspan="6" class="empty-state">Hali rahbar yaratilmagan.</td>
+              <td colspan="7" class="empty-state">Hali foydalanuvchi yaratilmagan.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <div v-if="openFilialModal" class="modal-overlay" @click.self="closeFilialModal">
+    <div v-if="openFilialModal" class="modal-overlay">
       <div class="modal-card glass">
         <div class="modal-card__head">
           <div>
@@ -265,7 +267,7 @@
       </div>
     </div>
 
-    <div v-if="openBossModal" class="modal-overlay" @click.self="closeModal">
+    <div v-if="openBossModal" class="modal-overlay">
       <div class="modal-card glass">
         <div class="modal-card__head">
           <div>
@@ -283,6 +285,26 @@
         </form>
       </div>
     </div>
+
+    <div v-if="openUserEditModal" class="modal-overlay">
+      <div class="modal-card glass">
+        <div class="modal-card__head">
+          <div>
+            <div class="eyebrow">Login va parol</div>
+            <h3>{{ editUserForm.full_name || editUserForm.username }} ma'lumotlarini o'zgartirish</h3>
+          </div>
+          <button class="modal-close" @click="closeUserEdit">×</button>
+        </div>
+        <form class="grid" @submit.prevent="saveUserEdit">
+          <input v-model="editUserForm.full_name" class="input" placeholder="To'liq ism" />
+          <input v-model="editUserForm.username" class="input" placeholder="Yangi login" />
+          <input v-model="editUserForm.phone" class="input" placeholder="Telefon" />
+          <input v-if="editingUser?.role === 'filial_rahbari'" v-model="editUserForm.branch_name" class="input" placeholder="Filial nomi" />
+          <input v-model="editUserForm.password" type="password" class="input" placeholder="Yangi parol — o'zgarmasa bo'sh qoldiring" />
+          <button class="btn full" :disabled="userEditLoading">{{ userEditLoading ? 'Saqlanmoqda...' : 'Saqlash' }}</button>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -296,6 +318,7 @@ import { useViewport } from '../../composables/useViewport'
 const stats = reactive({ bosses: 0, filial_rahbarlari: 0, operators: 0, leads: 0, sale: 0, otkaz: 0, open_number: 0, wrong_number: 0, advice: 0, other: 0, new: 0 })
 const bosses = ref([])
 const filialRahbarlari = ref([])
+const users = ref([])
 const adminReportLoading = ref(false)
 const allReportsDownloading = ref(false)
 const adminReportData = ref(null)
@@ -303,10 +326,14 @@ const reportOperators = ref([])
 const reportFilters = reactive({ boss_id: '', operator_id: '', date: '', month: '' })
 const openBossModal = ref(false)
 const openFilialModal = ref(false)
+const openUserEditModal = ref(false)
+const editingUser = ref(null)
+const userEditLoading = ref(false)
 const error = ref('')
 const success = ref('')
 const form = reactive({ full_name: '', username: '', phone: '', password: '' })
 const filialForm = reactive({ full_name: '', username: '', phone: '', branch_name: '', password: '' })
+const editUserForm = reactive({ full_name: '', username: '', phone: '', branch_name: '', password: '' })
 const { isCompact } = useViewport(960, 640)
 
 const summaryCards = computed(() => ([
@@ -315,7 +342,7 @@ const summaryCards = computed(() => ([
   { title: 'Operatorlar', value: stats.operators, subtitle: 'Jami operatorlar' },
   { title: 'Sotuvlar', value: stats.sale, subtitle: 'Muvaffaqiyatli natija' },
 ]))
-const leaders = computed(() => [...bosses.value, ...filialRahbarlari.value])
+const leaders = computed(() => (users.value.length ? users.value : [...bosses.value, ...filialRahbarlari.value]))
 const adminOperatorRows = computed(() => adminReportData.value?.operator_rows || [])
 const adminDailyRows = computed(() => adminReportData.value?.daily || [])
 const adminReportSummaryCards = computed(() => {
@@ -338,6 +365,13 @@ const adminReportRangeLabel = computed(() => {
   return `${formatInputDate(start)} - ${formatInputDate(end)}`
 })
 
+function roleLabel(role) {
+  if (role === 'filial_rahbari') return 'Filial Rahbari'
+  if (role === 'operator') return 'Operator'
+  if (role === 'boss') return 'Boshliq'
+  return role || '-'
+}
+
 function resetMessages() {
   error.value = ''
   success.value = ''
@@ -358,6 +392,26 @@ function closeFilialModal() {
   filialForm.phone = ''
   filialForm.branch_name = ''
   filialForm.password = ''
+}
+
+function openUserEdit(person) {
+  editingUser.value = person
+  editUserForm.full_name = person.full_name || ''
+  editUserForm.username = person.username || ''
+  editUserForm.phone = person.phone || ''
+  editUserForm.branch_name = person.branch_name || ''
+  editUserForm.password = ''
+  openUserEditModal.value = true
+}
+
+function closeUserEdit() {
+  openUserEditModal.value = false
+  editingUser.value = null
+  editUserForm.full_name = ''
+  editUserForm.username = ''
+  editUserForm.phone = ''
+  editUserForm.branch_name = ''
+  editUserForm.password = ''
 }
 
 
@@ -460,6 +514,37 @@ async function fetchFilialRahbarlari() {
   filialRahbarlari.value = data.results || data
 }
 
+async function fetchUsers() {
+  const { data } = await client.get('admin/users/')
+  users.value = data.results || data
+}
+
+async function saveUserEdit() {
+  if (!editingUser.value) return
+  userEditLoading.value = true
+  resetMessages()
+  try {
+    const payload = {
+      full_name: editUserForm.full_name,
+      username: editUserForm.username,
+      phone: editUserForm.phone,
+      branch_name: editUserForm.branch_name,
+    }
+    if (editUserForm.password) payload.password = editUserForm.password
+    await client.patch(`admin/users/${editingUser.value.id}/`, payload)
+    success.value = 'Login/parol ma’lumotlari yangilandi.'
+    closeUserEdit()
+    await fetchBosses()
+    await fetchFilialRahbarlari()
+    await fetchUsers()
+    await fetchStats()
+  } catch (e) {
+    error.value = e.response?.data?.username?.[0] || e.response?.data?.detail || 'Foydalanuvchini yangilashda xatolik yuz berdi.'
+  } finally {
+    userEditLoading.value = false
+  }
+}
+
 async function createBoss() {
   resetMessages()
   try {
@@ -467,6 +552,7 @@ async function createBoss() {
     success.value = 'Boshliq muvaffaqiyatli yaratildi.'
     closeModal()
     await fetchBosses()
+    await fetchUsers()
     await fetchStats()
   } catch (e) {
     error.value = e.response?.data?.username?.[0] || e.response?.data?.detail || 'Boshliq yaratishda xatolik yuz berdi.'
@@ -480,6 +566,7 @@ async function createFilialRahbari() {
     success.value = 'Filial Rahbari muvaffaqiyatli yaratildi.'
     closeFilialModal()
     await fetchFilialRahbarlari()
+    await fetchUsers()
     await fetchStats()
   } catch (e) {
     error.value = e.response?.data?.username?.[0] || e.response?.data?.detail || 'Filial Rahbari yaratishda xatolik yuz berdi.'
@@ -490,6 +577,7 @@ onMounted(async () => {
   await fetchStats()
   await fetchBosses()
   await fetchFilialRahbarlari()
+  await fetchUsers()
   await fetchAdminOperatorReport()
 })
 </script>

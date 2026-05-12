@@ -84,17 +84,21 @@
         <article v-for="lead in onlineLeads" :key="lead.id" class="online-lead-card glass-soft">
           <div class="online-lead-card__head">
             <div>
-              <h4>{{ lead.full_name }}</h4>
+              <h4>{{ lead.full_name || 'F.I.O kiritilmagan' }}</h4>
               <div class="online-lead-card__meta-row">
-                <span class="badge">{{ lead.interest_subject }}</span>
-                <span class="badge muted">{{ lead.region }}</span>
+                <span class="badge">{{ lead.subject || lead.interest_subject || 'Fan kiritilmagan' }}</span>
+                <span class="badge muted">{{ lead.grade || 'Sinf yo‘q' }}</span>
               </div>
             </div>
             <span class="badge">{{ formatDateTime(lead.submitted_at) }}</span>
           </div>
           <div class="online-lead-card__body">
-            <span><strong>Yosh:</strong> {{ lead.age }}</span>
-            <span><strong>tel1:</strong> {{ lead.phone1 }}</span>
+            <span><strong>T/SH:</strong> {{ lead.tsh || '-' }}</span>
+            <span><strong>Maktab:</strong> {{ lead.school || lead.display_school || '-' }}</span>
+            <span><strong>Sinf:</strong> {{ lead.grade || '-' }}</span>
+            <span><strong>F.I.O:</strong> {{ lead.full_name || '-' }}</span>
+            <span><strong>Fan:</strong> {{ lead.subject || lead.interest_subject || '-' }}</span>
+            <span><strong>tel1:</strong> {{ lead.phone1 || '-' }}</span>
             <span><strong>tel2:</strong> {{ lead.phone2 || '-' }}</span>
             <span><strong>tel3:</strong> {{ lead.phone3 || '-' }}</span>
           </div>
