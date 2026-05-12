@@ -1,0 +1,10 @@
+Boss paneli uchun Keldi/Kelmadi statistikasi qo‘shildi:
+
+1) Filial rahbari Keldi yoki Kelmadi bosganda Boss panelida sonlari ko‘rinadi.
+2) Boss panelida umumiy Jami, Keldi, Kelmadi va belgi qo‘ygan rahbarlar soni chiqadi.
+3) Har bir filial rahbari bo‘yicha alohida jadval qo‘shildi: Jami, Keldi, Kelmadi, oxirgi belgi vaqti.
+4) Kelmadi bo‘lgan leadlar alohida jadvalda to‘liq ma’lumot bilan chiqadi:
+   Filial rahbari, F.I.O, tel1, tel2, tel3, T/SH, Maktab, Sinf, Fan, Ball, Operator, Vaqt.
+5) Keldi/Kelmadi kartalarida ham leadning to‘liq ma’lumotlari ko‘rinadi.
+6) Bossning Umumiy hisobot Excelida qo‘shimcha listlar bor:
+   Filial Rahbarlari, Kelmadi Leadlar, Keldi Leadlar.

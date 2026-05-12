@@ -1,0 +1,20 @@
+Telegram notification yangilandi:
+
+Operator lead statusini "Sotuv" qilsa Telegramga tushadi.
+Operator lead statusini "Maslahat" qilsa ham Telegramga tushadi.
+
+Telegram xabarida quyidagilar bo‘ladi:
+- Vaqt
+- Operator
+- Oldingi status
+- Yangi status
+- Izoh
+- F.I.O
+- tel1, tel2, tel3
+- T/SH
+- Maktab
+- Sinf
+- Fan
+- Ball
+
+Eslatma: Maslahat statusi uchun izoh majburiy.

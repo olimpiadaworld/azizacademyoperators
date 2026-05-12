@@ -1,0 +1,132 @@
+from collections import defaultdict
+from .models import LeadStatusHistory, OnlineLead, LeadVisitDecision
+
+
+def user_to_dict(user):
+    if not user:
+        return None
+    return {
+        'id': user.id,
+        'username': user.username,
+        'full_name': user.full_name or '',
+        'phone': user.phone or '',
+        'role': user.role,
+        'boss': user.boss_id,
+        'boss_name': getattr(user.boss, 'full_name', '') if getattr(user, 'boss_id', None) else '',
+        'branch_name': user.branch_name or '',
+        'is_active': user.is_active,
+        'deactivated_at': user.deactivated_at,
+    }
+
+
+def history_to_dict(item):
+    return {
+        'id': item.id,
+        'old_status': item.old_status,
+        'new_status': item.new_status,
+        'note': item.note or '',
+        'changed_by_name': item.changed_by.full_name if item.changed_by_id and item.changed_by else '',
+        'changed_at': item.changed_at,
+    }
+
+
+def visit_decision_to_dict(item):
+    lead = item.lead if item.lead_id and item.lead else None
+    return {
+        'id': item.id,
+        'lead': item.lead_id,
+        'lead_id': item.lead_id,
+        'lead_name': lead.full_name if lead else '',
+        'full_name': lead.full_name if lead else '',
+        'tsh': lead.tsh if lead else '',
+        'subject': lead.subject if lead else '',
+        'ball': lead.ball if lead else '',
+        'school': lead.school if lead else '',
+        'display_school': lead.school if lead else '',
+        'grade': lead.grade if lead else '',
+        'branch_name': lead.branch_name if lead else '',
+        'lead_phone': lead.phone1 if lead else '',
+        'lead_phone2': lead.phone2 if lead else '',
+        'lead_phone3': lead.phone3 if lead else '',
+        'phone1': lead.phone1 if lead else '',
+        'phone2': lead.phone2 if lead else '',
+        'phone3': lead.phone3 if lead else '',
+        'operator_name': lead.assigned_operator.full_name if lead and lead.assigned_operator_id and lead.assigned_operator else '',
+        'boss_name': lead.boss.full_name if lead and lead.boss_id and lead.boss else '',
+        'decision': item.decision,
+        'decided_by': item.decided_by_id,
+        'filial_rahbari_id': item.decided_by_id,
+        'filial_rahbari_name': item.decided_by.full_name if item.decided_by_id and item.decided_by else '',
+        'created_at': item.created_at,
+        'updated_at': item.updated_at,
+    }
+
+
+def online_lead_to_dict(item):
+    return {
+        'id': item.id,
+        'full_name': item.full_name or '',
+        'age': item.age,
+        'phone1': item.phone1 or '',
+        'phone2': item.phone2 or '',
+        'phone3': item.phone3 or '',
+        'interest_subject': item.interest_subject or '',
+        'region': item.region or '',
+        'assigned_boss': item.assigned_boss_id,
+        'assigned_operator': item.assigned_operator_id,
+        'operator_name': item.assigned_operator.full_name if item.assigned_operator_id and item.assigned_operator else '',
+        'submitted_at': item.submitted_at,
+        'assigned_at': item.assigned_at,
+    }
+
+
+def lead_to_dict(lead, history=None, online=None, decisions=None):
+    history = history or []
+    decisions = decisions or []
+    return {
+        'id': lead.id,
+        'full_name': lead.full_name or '',
+        'tsh': lead.tsh or '',
+        'subject': lead.subject or '',
+        'ball': lead.ball or '',
+        'phone1': lead.phone1 or '',
+        'phone2': lead.phone2 or '',
+        'phone3': lead.phone3 or '',
+        'school': lead.school or '',
+        'grade': lead.grade or '',
+        'age': online.age if online else '',
+        'branch_name': lead.branch_name or '',
+        'display_school': '' if online else (lead.school or ''),
+        'current_status': lead.current_status or 'new',
+        'operator_name': lead.assigned_operator.full_name if lead.assigned_operator_id and lead.assigned_operator else '',
+        'assigned_operator': lead.assigned_operator_id,
+        'created_at': lead.created_at,
+        'updated_at': lead.updated_at,
+        'history': [history_to_dict(h) for h in history],
+        'is_online': bool(online),
+        'online_region': online.region if online else '',
+        'online_interest_subject': online.interest_subject if online else '',
+        'visit_decisions': [visit_decision_to_dict(d) for d in decisions],
+        'reminder_at': lead.reminder_at,
+        'reminder_note': lead.reminder_note or '',
+        'reminder_last_notified_at': lead.reminder_last_notified_at,
+        'is_duplicate': bool(lead.is_duplicate),
+        'duplicate_of_lead': lead.duplicate_of_lead_id,
+    }
+
+
+def serialize_leads(leads, include_visit_decisions=True):
+    leads = list(leads)
+    ids = [l.id for l in leads]
+    hist_map = defaultdict(list)
+    online_map = {}
+    decision_map = defaultdict(list)
+    if ids:
+        for h in LeadStatusHistory.objects.select_related('changed_by').filter(lead_id__in=ids).order_by('-changed_at', '-id'):
+            hist_map[h.lead_id].append(h)
+        for o in OnlineLead.objects.select_related('assigned_operator').filter(created_lead_id__in=ids).order_by('-submitted_at'):
+            online_map.setdefault(o.created_lead_id, o)
+        if include_visit_decisions:
+            for d in LeadVisitDecision.objects.select_related('lead', 'decided_by').filter(lead_id__in=ids).order_by('-updated_at'):
+                decision_map[d.lead_id].append(d)
+    return [lead_to_dict(l, hist_map.get(l.id, []), online_map.get(l.id), decision_map.get(l.id, [])) for l in leads]

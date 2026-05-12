@@ -1,0 +1,15 @@
+Admin panelga “Barcha hisobotlarni yuklash” tugmasi qo‘shildi.
+
+Tugma bosilganda Excel fayl yuklanadi. Fayl ichida quyidagi sahifalar bor:
+1. Umumiy
+2. Barcha Leadlar
+3. Status Tarixi
+4. Keldi Kelmadi
+5. Online Leadlar
+6. Excel Import Qatorlari
+7. Foydalanuvchilar
+8. Audit Loglar
+
+Excelda F.I.O, operator, boss, izoh, qachon kiritilgan vaqtlar, status tarixi, telefonlar, maktab, sinf, fan, ball, filial va boshqa barcha lead ma’lumotlari saqlanadi.
+
+Ishga tushirish: BOSHLASH_LOCAL.bat

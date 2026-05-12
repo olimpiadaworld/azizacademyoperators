@@ -1,0 +1,25 @@
+TELEGRAM NOTIFICATION QO'SHILDI
+
+Backend quyidagi holatlarda Telegramga xabar yuboradi:
+1. Public forma orqali yangi online lead kelganda
+2. Boss online leadni operatorga biriktirganda
+3. Boss Excel import qilganda
+4. Operator lead statusini “Sotuv” qilganda
+5. Filial rahbari “Keldi” yoki “Kelmadi” bosganda
+
+ENV SOZLASH:
+backend/.env yoki Railway backend Variables ichiga:
+
+TELEGRAM_BOT_TOKEN=bot_tokeningiz
+TELEGRAM_CHAT_ID=asosiy_chat_id
+TELEGRAM_CHAT_IDS=qo'shimcha_chat_id_1,qo'shimcha_chat_id_2
+
+Agar faqat bitta guruhga yubormoqchi bo'lsangiz, TELEGRAM_CHAT_ID yetarli.
+Agar bir nechta guruh/odamga yubormoqchi bo'lsangiz, TELEGRAM_CHAT_IDS ga vergul bilan yozing.
+
+TEST QILISH:
+Admin token bilan shu endpointga GET so'rov yuboring:
+/api/admin/telegram/test/
+
+Agar Telegram env bo'sh bo'lsa, loyiha ishlashda davom etadi, faqat xabar yuborilmaydi.
+Telegram yuborishdagi xato asosiy API ishini to'xtatmaydi.

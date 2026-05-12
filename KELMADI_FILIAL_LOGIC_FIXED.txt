@@ -1,0 +1,8 @@
+Kelmadi filial rahbari logikasi:
+
+1) Operator leadni "Sotuv" qilsa, lead barcha filial rahbarlari panelida ko'rinadi.
+2) Qaysi filial rahbari "Kelmadi" bossa, lead faqat o'sha rahbarning "Sotuvlar" qatoridan yo'qoladi.
+3) Boshqa filial rahbarlari panelida o'sha lead ko'rinib turadi.
+4) "Kelmadi" bosgan rahbar panelida lead "Kelmaganlar qatori"ga to'liq ma'lumotlari bilan qo'shiladi.
+5) Qaysi filial rahbari "Keldi" bossa, lead barcha filial rahbarlari panelidan yopiladi.
+6) Boss panelida Keldi/Kelmadi statistikasi va lead ma'lumotlari saqlanadi.
