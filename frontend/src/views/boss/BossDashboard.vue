@@ -272,12 +272,12 @@
         </div>
         <div class="decision-filter-stack">
           <div class="decision-filter-group">
-            <button class="decision-filter-btn" :class="{ active: filialDecisionFilter === 'all' }" @click="filialDecisionFilter = 'all'">Hammasi</button>
+            <button class="decision-filter-btn" :class="{ active: filialDecisionFilter === 'all' }" @click="filialDecisionFilter = 'all'">Umumiy</button>
             <button class="decision-filter-btn" :class="{ active: filialDecisionFilter === 'arrived' }" @click="filialDecisionFilter = 'arrived'">Keldi</button>
             <button class="decision-filter-btn" :class="{ active: filialDecisionFilter === 'not_arrived' }" @click="filialDecisionFilter = 'not_arrived'">Kelmadi</button>
           </div>
           <div class="decision-filter-group payment-filter-group">
-            <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'all' }" @click="filialPaymentFilter = 'all'">To‘lov: hammasi</button>
+            <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'all' }" @click="filialPaymentFilter = 'all'">To‘lov</button>
             <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'paid' }" @click="filialPaymentFilter = 'paid'">To‘lov qildi</button>
             <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'unpaid' }" @click="filialPaymentFilter = 'unpaid'">To‘lov qilmadi</button>
           </div>
@@ -429,12 +429,12 @@
         <div class="decision-panel-tools">
           <div class="decision-filter-stack">
             <div class="decision-filter-group">
-              <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'all' }" @click="bossDecisionFilter = 'all'">Hammasi</button>
+              <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'all' }" @click="bossDecisionFilter = 'all'">Umumiy</button>
               <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'arrived' }" @click="bossDecisionFilter = 'arrived'">Keldi</button>
               <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'not_arrived' }" @click="bossDecisionFilter = 'not_arrived'">Kelmadi</button>
             </div>
             <div class="decision-filter-group payment-filter-group">
-              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'all' }" @click="bossPaymentFilter = 'all'">To‘lov: hammasi</button>
+              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'all' }" @click="bossPaymentFilter = 'all'">To‘lov</button>
               <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'paid' }" @click="bossPaymentFilter = 'paid'">To‘lov qildi</button>
               <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'unpaid' }" @click="bossPaymentFilter = 'unpaid'">To‘lov qilmadi</button>
             </div>
@@ -636,12 +636,12 @@
         </div>
         <div class="decision-filter-stack">
           <div class="decision-filter-group">
-            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'all' }" @click="activeDecisionFilter = 'all'">Hammasi</button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'all' }" @click="activeDecisionFilter = 'all'">Umumiy</button>
             <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'arrived' }" @click="activeDecisionFilter = 'arrived'">Keldi</button>
             <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'not_arrived' }" @click="activeDecisionFilter = 'not_arrived'">Kelmadi</button>
           </div>
           <div class="decision-filter-group payment-filter-group">
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="activePaymentFilter = 'all'">To‘lov: hammasi</button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="activePaymentFilter = 'all'">To‘lov</button>
             <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'paid' }" @click="activePaymentFilter = 'paid'">To‘lov qildi</button>
             <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'unpaid' }" @click="activePaymentFilter = 'unpaid'">To‘lov qilmadi</button>
           </div>

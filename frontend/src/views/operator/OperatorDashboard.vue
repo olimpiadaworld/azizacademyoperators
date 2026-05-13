@@ -185,12 +185,12 @@
 
         <div class="operator-visit-control__filters">
           <select class="select" v-model="operatorDecisionFilter">
-            <option value="all">Keldi/Kelmadi: barchasi</option>
-            <option value="arrived">Faqat Keldi</option>
-            <option value="not_arrived">Faqat Kelmadi</option>
+            <option value="all">Keldi/Kelmadi</option>
+            <option value="arrived">Keldi</option>
+            <option value="not_arrived">Kelmadi</option>
           </select>
           <select class="select" v-model="operatorPaymentFilter">
-            <option value="all">To‘lov: barchasi</option>
+            <option value="all">To‘lov</option>
             <option value="done">To‘lov qilindi</option>
             <option value="not_done">To‘lov qilinmadi</option>
           </select>

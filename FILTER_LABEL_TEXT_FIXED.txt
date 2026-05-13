@@ -1,0 +1,4 @@
+Keldi/Kelmadi va To'lov filterlaridagi ortiqcha so'zlar tozalandi.
+- Faqat Keldi -> Keldi
+- Faqat Kelmadi -> Kelmadi
+- Barchasi/Hammasi o'rniga Umumiy yoki qisqa label ishlatildi
