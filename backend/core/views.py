@@ -30,6 +30,72 @@ def notify_telegram_after_commit(text):
     transaction.on_commit(lambda: send_telegram_message(text))
 
 
+
+BRANCH_CHOICES = [
+    'Niyozbosh', 'Xalqabod', 'Gulbahor', 'Kasblar', 'Kids1', 'Kids2',
+    'Do’stobod', 'Olmazor', 'Chinoz', 'Krasin', 'Pitiletka', 'Qo’rg’oncha',
+    'Kids 3', 'Oqqo’rg’on', 'Alimkent'
+]
+
+BRANCH_ALIASES = {
+    'dostobod': 'Do’stobod', 'do‘stobod': 'Do’stobod', "do'stobod": 'Do’stobod', 'do’stobod': 'Do’stobod',
+    'qorgoncha': 'Qo’rg’oncha', "qo'rg'oncha": 'Qo’rg’oncha', 'qo’rg’oncha': 'Qo’rg’oncha', 'qo‘rg‘oncha': 'Qo’rg’oncha',
+    'oqqorgon': 'Oqqo’rg’on', "oqqo'rg'on": 'Oqqo’rg’on', 'oqqo’rg’on': 'Oqqo’rg’on', 'oqqo‘rg‘on': 'Oqqo’rg’on',
+    'xalqobod': 'Xalqabod', 'xalqabod': 'Xalqabod',
+    'kids 1': 'Kids1', 'kids1': 'Kids1', 'kids 2': 'Kids2', 'kids2': 'Kids2', 'kids3': 'Kids 3', 'kids 3': 'Kids 3',
+}
+
+
+def normalize_branch_label(value):
+    value = clean_string(value)
+    if not value:
+        return ''
+    if '-' in value and value.split('-', 1)[0].strip().isdigit():
+        value = value.split('-', 1)[1].strip()
+    key = value.lower().replace('ʼ', "'").replace('’', "'").replace('‘', "'").strip()
+    key = ' '.join(key.split())
+    if key in BRANCH_ALIASES:
+        return BRANCH_ALIASES[key]
+    for branch in BRANCH_CHOICES:
+        if branch.lower().replace('’', "'") == key:
+            return branch
+    return value
+
+
+def normalize_branch_names(value):
+    items = []
+    if isinstance(value, (list, tuple)):
+        raw_items = value
+    else:
+        raw_items = str(value or '').replace(';', ',').split(',')
+    for raw in raw_items:
+        branch = normalize_branch_label(raw)
+        if branch and branch not in items:
+            items.append(branch)
+    return items
+
+
+def branch_names_string(body):
+    raw = body.get('branch_names')
+    if raw is None:
+        raw = body.get('branch_name') or body.get('branch') or body.get('filial')
+    return ', '.join(normalize_branch_names(raw))
+
+
+def user_branch_set(user):
+    return set(normalize_branch_names(getattr(user, 'branch_name', '') or ''))
+
+
+def users_branch_overlap(user_a, user_b):
+    a = user_branch_set(user_a)
+    b = user_branch_set(user_b)
+    return bool(a and b and a.intersection(b))
+
+
+def filial_can_see_lead(filial_user, lead):
+    operator = getattr(lead, 'assigned_operator', None)
+    return bool(operator and users_branch_overlap(filial_user, operator))
+
 def status_text(value):
     return STATUS_LABELS.get(value, value or '')
 
@@ -104,12 +170,16 @@ def create_user(request, role, boss_id=None):
     username = clean_string(body.get('username'))
     password = str(body.get('password') or '')
     full_name = clean_string(body.get('full_name'))
-    phone = clean_string(body.get('phone'))
-    branch_name = clean_string(body.get('branch_name') or body.get('branch') or body.get('filial'))
-    if not username or not password or not full_name:
+    phone = '' if role in ('operator', 'filial_rahbari') else clean_string(body.get('phone'))
+    branch_name = branch_names_string(body)
+    if role in ('operator', 'filial_rahbari'):
+        full_name = full_name or username
+        if not username or not password:
+            return ok({'detail': 'Login va parol kiritish shart.'}, status=400)
+        if not branch_name:
+            return ok({'branch_name': ['Kamida bitta filial tanlash shart.'], 'detail': 'Kamida bitta filial tanlash shart.'}, status=400)
+    elif not username or not password or not full_name:
         return ok({'detail': 'Ism, login va parol kiritish shart.'}, status=400)
-    if role == 'filial_rahbari' and not branch_name:
-        return ok({'branch_name': ['Filial nomini kiritish shart.'], 'detail': 'Filial nomini kiritish shart.'}, status=400)
     if AppUser.objects.filter(username=username).exists():
         return ok({'username': ['Bu login allaqachon mavjud.']}, status=400)
     user = AppUser.objects.create(
@@ -141,9 +211,12 @@ def update_user(request, user_id, role, boss_id=None):
     if 'full_name' in body:
         user.full_name = clean_string(body.get('full_name'))
     if 'phone' in body:
-        user.phone = clean_string(body.get('phone'))
-    if 'branch_name' in body:
-        user.branch_name = clean_string(body.get('branch_name'))
+        user.phone = '' if role in ('operator', 'filial_rahbari') else clean_string(body.get('phone'))
+    if 'branch_names' in body or 'branch_name' in body or 'branch' in body or 'filial' in body:
+        normalized_branches = branch_names_string(body)
+        if role in ('operator', 'filial_rahbari') and not normalized_branches:
+            return ok({'branch_name': ['Kamida bitta filial tanlash shart.'], 'detail': 'Kamida bitta filial tanlash shart.'}, status=400)
+        user.branch_name = normalized_branches
     if 'is_active' in body:
         user.is_active = bool(body.get('is_active'))
         if user.is_active:
@@ -272,6 +345,9 @@ def boss_leads(request):
         arrived_lead_ids = LeadVisitDecision.objects.filter(decision='arrived').values('lead_id')
         own_not_arrived_ids = LeadVisitDecision.objects.filter(decided_by=user, decision='not_arrived').values('lead_id')
         qs = qs.filter(current_status='sale').exclude(id__in=arrived_lead_ids).exclude(id__in=own_not_arrived_ids)
+        qs = apply_lead_search(qs, request.GET.get('search')).order_by('-updated_at', '-id')
+        visible = [lead for lead in qs if filial_can_see_lead(user, lead)]
+        return ok(serialize_leads(visible, include_visit_decisions=True))
     else:
         qs = qs.filter(boss=user)
         status = clean_string(request.GET.get('current_status'))
@@ -485,6 +561,8 @@ def visit_decision(request, lead_id):
     lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
     if not lead:
         return ok({'detail': 'Lead topilmadi.'}, status=404)
+    if not filial_can_see_lead(request.app_user, lead):
+        return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
 
     with transaction.atomic():
         existing_arrived = LeadVisitDecision.objects.select_for_update().filter(lead=lead, decision='arrived').first()
@@ -530,6 +608,8 @@ def mark_visit_payment(request, lead_id):
     lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
     if not lead:
         return ok({'detail': 'Lead topilmadi.'}, status=404)
+    if not filial_can_see_lead(request.app_user, lead):
+        return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
     with transaction.atomic():
         item = LeadVisitDecision.objects.select_for_update().filter(lead=lead, decided_by=request.app_user).first()
         if not item:
@@ -556,6 +636,25 @@ def lead_visit_decisions(request):
         operator_ids = list(AppUser.objects.filter(role='operator', boss=user).values_list('id', flat=True))
         qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by').filter(lead__assigned_operator_id__in=operator_ids).order_by('-updated_at')
     return ok([visit_decision_to_dict(x) for x in qs])
+
+
+@require_auth('operator')
+def operator_visit_decisions(request):
+    user = request.app_user
+    qs = LeadVisitDecision.objects.select_related(
+        'lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by'
+    ).filter(lead__assigned_operator=user).order_by('-updated_at')
+    # Operator faqat o‘ziga biriktirilgan filiallar rahbarlari bosgan Keldi/Kelmadi natijalarini ko‘radi.
+    visible = [item for item in qs if item.decided_by and users_branch_overlap(user, item.decided_by)]
+    decision = clean_string(request.GET.get('decision'))
+    payment = clean_string(request.GET.get('payment'))
+    if decision in ('arrived', 'not_arrived'):
+        visible = [item for item in visible if item.decision == decision]
+    if payment == 'done':
+        visible = [item for item in visible if bool(getattr(item, 'payment_done', False))]
+    elif payment == 'not_done':
+        visible = [item for item in visible if not bool(getattr(item, 'payment_done', False))]
+    return ok([visit_decision_to_dict(x) for x in visible])
 
 
 def autosize(ws):

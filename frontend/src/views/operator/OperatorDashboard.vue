@@ -168,6 +168,59 @@
         </article>
       </div>
       <div v-else class="empty-state">Hali kunlik hisobot topilmadi.</div>
+
+      <div class="operator-visit-control glass-soft">
+        <div class="section-head section-head--wrap">
+          <div>
+            <div class="eyebrow">Filial nazorati</div>
+            <h3>Keldi / Kelmadi natijalari</h3>
+            <p>Bu yerda faqat sizga biriktirilgan filial rahbarlari bosgan natijalar ko‘rinadi.</p>
+          </div>
+          <div class="operator-visit-control__summary">
+            <span class="badge">Keldi: {{ operatorArrivedCount }}</span>
+            <span class="badge muted">Kelmadi: {{ operatorNotArrivedCount }}</span>
+            <span class="badge">To‘lov: {{ operatorPaymentDoneCount }}</span>
+          </div>
+        </div>
+
+        <div class="operator-visit-control__filters">
+          <select class="select" v-model="operatorDecisionFilter">
+            <option value="all">Keldi/Kelmadi: barchasi</option>
+            <option value="arrived">Faqat Keldi</option>
+            <option value="not_arrived">Faqat Kelmadi</option>
+          </select>
+          <select class="select" v-model="operatorPaymentFilter">
+            <option value="all">To‘lov: barchasi</option>
+            <option value="done">To‘lov qilindi</option>
+            <option value="not_done">To‘lov qilinmadi</option>
+          </select>
+        </div>
+
+        <div v-if="filteredOperatorVisitDecisions.length" class="operator-visit-control__grid">
+          <article v-for="item in filteredOperatorVisitDecisions" :key="`operator-decision-${item.id}`" class="operator-visit-card">
+            <div class="operator-visit-card__top">
+              <span class="operator-visit-status" :class="item.decision === 'arrived' ? 'operator-visit-status--arrived' : 'operator-visit-status--not-arrived'">
+                {{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}
+              </span>
+              <span class="operator-visit-payment" :class="item.payment_done ? 'operator-visit-payment--done' : 'operator-visit-payment--pending'">
+                {{ item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}
+              </span>
+            </div>
+            <h4>{{ item.lead_name || item.full_name || 'Lead' }}</h4>
+            <div class="operator-visit-card__meta">
+              <span><strong>Filial rahbari:</strong> {{ item.filial_rahbari_name || '-' }}</span>
+              <span><strong>Filial:</strong> {{ item.filial_rahbari_branch || item.branch_name || '-' }}</span>
+              <span><strong>Fan:</strong> {{ item.subject || '-' }}</span>
+              <span><strong>Sinf:</strong> {{ item.grade || '-' }}</span>
+              <span><strong>Tel:</strong> {{ item.lead_phone || item.phone1 || '-' }}</span>
+              <span><strong>Vaqt:</strong> {{ formatDateTime(item.updated_at) }}</span>
+              <span v-if="item.payment_done"><strong>To‘lovni belgilagan:</strong> {{ item.payment_done_by_name || '-' }}</span>
+              <span v-if="item.payment_done"><strong>To‘lov vaqti:</strong> {{ formatDateTime(item.payment_done_at) }}</span>
+            </div>
+          </article>
+        </div>
+        <div v-else class="empty-state">Sizga tegishli filiallar bo‘yicha Keldi/Kelmadi natijasi hali yo‘q.</div>
+      </div>
     </section>
 
     <section v-else-if="currentTab === 'assigned'" class="operator-new-leads panel glass">
@@ -382,6 +435,9 @@ const reminderSavingId = ref(null)
 const reminderAlerts = ref([])
 const actionToast = ref(null)
 const dailyHistory = ref([])
+const operatorVisitDecisions = ref([])
+const operatorDecisionFilter = ref('all')
+const operatorPaymentFilter = ref('all')
 const draggedLead = ref(null)
 const dropTargetStatus = ref('')
 const statusModal = reactive({ open: false, lead: null, status: '', existingNote: '', newNote: '' })
@@ -543,6 +599,28 @@ const statusSummaryItems = computed(() => {
   return displaySections.value.map(section => ({ key: section.key, title: section.title, count: section.leads.length }))
 })
 
+const filteredOperatorVisitDecisions = computed(() => operatorVisitDecisions.value.filter((item) => {
+  if (operatorDecisionFilter.value !== 'all' && item.decision !== operatorDecisionFilter.value) return false
+  if (operatorPaymentFilter.value === 'done' && !item.payment_done) return false
+  if (operatorPaymentFilter.value === 'not_done' && item.payment_done) return false
+  return true
+}))
+const operatorArrivedCount = computed(() => operatorVisitDecisions.value.filter(item => item.decision === 'arrived').length)
+const operatorNotArrivedCount = computed(() => operatorVisitDecisions.value.filter(item => item.decision === 'not_arrived').length)
+const operatorPaymentDoneCount = computed(() => operatorVisitDecisions.value.filter(item => item.payment_done).length)
+
+function formatDateTime(value) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  const dd = String(date.getDate()).padStart(2, '0')
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const yyyy = date.getFullYear()
+  const hh = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  return `${dd}.${mm}.${yyyy} ${hh}:${min}`
+}
+
 watch(() => route.query.tab, (tab) => {
   if (!['assigned', 'general', 'timed', 'report'].includes(tab)) {
     router.replace({ path: '/operator', query: { ...route.query, tab: 'general' } })
@@ -634,6 +712,15 @@ async function fetchDailyHistory() {
     dailyHistory.value = data?.results || []
   } catch {
     dailyHistory.value = []
+  }
+}
+
+async function fetchOperatorVisitDecisions() {
+  try {
+    const { data } = await client.get('operator/lead-visit-decisions/')
+    operatorVisitDecisions.value = data?.results || data || []
+  } catch {
+    operatorVisitDecisions.value = []
   }
 }
 
@@ -753,7 +840,7 @@ async function changeStatus(payload) {
       client.patch(`operator/leads/${payload.id}/change-status/`, { current_status: nextStatus, note }),
       sleep(450),
     ])
-    await Promise.all([fetchAllStatuses('Leadlar yangilanmoqda...'), fetchDaily(), fetchDailyHistory()])
+    await Promise.all([fetchAllStatuses('Leadlar yangilanmoqda...'), fetchDaily(), fetchDailyHistory(), fetchOperatorVisitDecisions()])
     showSuccess(`${statusLabels[nextStatus] || 'Tanlangan bo‘lim'} bo‘limiga o‘tkazildi`)
   } catch (error) {
     const backendNoteError = error?.response?.data?.note
@@ -919,7 +1006,7 @@ async function checkDueReminders() {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchAllStatuses(), fetchDaily(), fetchDailyHistory()])
+  await Promise.all([fetchAllStatuses(), fetchDaily(), fetchDailyHistory(), fetchOperatorVisitDecisions()])
   await ensureNotificationPermission()
   await checkDueReminders()
   reminderCheckTimer = window.setInterval(checkDueReminders, 15000)

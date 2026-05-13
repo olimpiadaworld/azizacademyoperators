@@ -1,0 +1,11 @@
+Operator paneliga filial rahbarlari bosgan Keldi/Kelmadi natijalari qo‘shildi.
+
+Qoida:
+- Operator faqat o‘ziga biriktirilgan filiallar rahbarlari bosgan qarorlarni ko‘radi.
+- Keldi/Kelmadi natijalari Operator panelidagi Kunlik hisobot bo‘limida chiqadi.
+- To‘lov qilindi/qilinmadi holati ham operatorga ko‘rinadi.
+- Filterlar: Keldi/Kelmadi va To‘lov qildi/qilmadi.
+
+Backend:
+- /api/operator/lead-visit-decisions/ endpoint qo‘shildi.
+- Natijalar operatorning filiallari bo‘yicha cheklanadi.

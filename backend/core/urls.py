@@ -44,6 +44,7 @@ urlpatterns = [
     path('operator/online-leads/', views.operator_online_leads),
     path('operator/daily-results/', views.operator_daily_results),
     path('operator/daily-history/', views.operator_daily_history),
+    path('operator/lead-visit-decisions/', views.operator_visit_decisions),
 
     path('public/online-leads/', views.public_online_leads),
 ]

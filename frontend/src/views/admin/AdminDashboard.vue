@@ -303,11 +303,17 @@
           <button class="modal-close" @click="closeFilialModal">×</button>
         </div>
         <form class="grid" @submit.prevent="createFilialRahbari">
-          <input v-model="filialForm.full_name" class="input" placeholder="To'liq ism" />
           <input v-model="filialForm.username" class="input" placeholder="Login" />
-          <input v-model="filialForm.phone" class="input" placeholder="Telefon" />
-          <input v-model="filialForm.branch_name" class="input" placeholder="Filial nomi (masalan: Niyozbosh)" />
           <input v-model="filialForm.password" type="password" class="input" placeholder="Parol" />
+          <div class="branch-picker">
+            <label>Filial biriktiring</label>
+            <div class="branch-picker__grid">
+              <label v-for="branch in branchOptions" :key="`filial-${branch.value}`" class="branch-check">
+                <input type="checkbox" :value="branch.value" v-model="filialForm.branch_names" />
+                <span>{{ branch.label }}</span>
+              </label>
+            </div>
+          </div>
           <button class="btn full">Saqlash</button>
         </form>
       </div>
@@ -342,10 +348,17 @@
           <button class="modal-close" @click="closeUserEdit">×</button>
         </div>
         <form class="grid" @submit.prevent="saveUserEdit">
-          <input v-model="editUserForm.full_name" class="input" placeholder="To'liq ism" />
+          <input v-if="editingUser?.role === 'boss'" v-model="editUserForm.full_name" class="input" placeholder="To'liq ism" />
           <input v-model="editUserForm.username" class="input" placeholder="Yangi login" />
-          <input v-model="editUserForm.phone" class="input" placeholder="Telefon" />
-          <input v-if="editingUser?.role === 'filial_rahbari'" v-model="editUserForm.branch_name" class="input" placeholder="Filial nomi" />
+          <div v-if="editingUser?.role === 'filial_rahbari' || editingUser?.role === 'operator'" class="branch-picker">
+            <label>Filial(lar)</label>
+            <div class="branch-picker__grid">
+              <label v-for="branch in branchOptions" :key="`edit-${branch.value}`" class="branch-check">
+                <input type="checkbox" :value="branch.value" v-model="editUserForm.branch_names" />
+                <span>{{ branch.label }}</span>
+              </label>
+            </div>
+          </div>
           <input v-model="editUserForm.password" type="password" class="input" placeholder="Yangi parol — o'zgarmasa bo'sh qoldiring" />
           <button class="btn full" :disabled="userEditLoading">{{ userEditLoading ? 'Saqlanmoqda...' : 'Saqlash' }}</button>
         </form>
@@ -379,9 +392,31 @@ const userEditLoading = ref(false)
 const error = ref('')
 const success = ref('')
 const form = reactive({ full_name: '', username: '', phone: '', password: '' })
-const filialForm = reactive({ full_name: '', username: '', phone: '', branch_name: '', password: '' })
-const editUserForm = reactive({ full_name: '', username: '', phone: '', branch_name: '', password: '' })
+const filialForm = reactive({ username: '', password: '', branch_names: [] })
+const editUserForm = reactive({ full_name: '', username: '', phone: '', branch_name: '', branch_names: [], password: '' })
 const { isCompact } = useViewport(960, 640)
+const branchOptions = [
+  { label: '1-Niyozbosh', value: 'Niyozbosh' },
+  { label: '2-Xalqabod', value: 'Xalqabod' },
+  { label: '3-Gulbahor', value: 'Gulbahor' },
+  { label: '4-Kasblar', value: 'Kasblar' },
+  { label: '5-Kids1', value: 'Kids1' },
+  { label: '6-Kids2', value: 'Kids2' },
+  { label: '7-Do’stobod', value: 'Do’stobod' },
+  { label: '8-Olmazor', value: 'Olmazor' },
+  { label: '9-Chinoz', value: 'Chinoz' },
+  { label: '10-Krasin', value: 'Krasin' },
+  { label: '11-Pitiletka', value: 'Pitiletka' },
+  { label: '12-Qo’rg’oncha', value: 'Qo’rg’oncha' },
+  { label: '13-Kids 3', value: 'Kids 3' },
+  { label: '14-Oqqo’rg’on', value: 'Oqqo’rg’on' },
+  { label: '15-Alimkent', value: 'Alimkent' },
+]
+
+function branchStringToArray(value) {
+  if (Array.isArray(value)) return value
+  return String(value || '').split(',').map(item => item.trim()).filter(Boolean)
+}
 
 const summaryCards = computed(() => ([
   { title: 'Boshliqlar', value: stats.bosses, subtitle: 'Tizimdagi boshliqlar' },
@@ -438,11 +473,9 @@ function closeModal() {
 
 function closeFilialModal() {
   openFilialModal.value = false
-  filialForm.full_name = ''
   filialForm.username = ''
-  filialForm.phone = ''
-  filialForm.branch_name = ''
   filialForm.password = ''
+  filialForm.branch_names = []
 }
 
 function openUserEdit(person) {
@@ -451,6 +484,7 @@ function openUserEdit(person) {
   editUserForm.username = person.username || ''
   editUserForm.phone = person.phone || ''
   editUserForm.branch_name = person.branch_name || ''
+  editUserForm.branch_names = branchStringToArray(person.branch_names || person.branch_name)
   editUserForm.password = ''
   openUserEditModal.value = true
 }
@@ -462,6 +496,7 @@ function closeUserEdit() {
   editUserForm.username = ''
   editUserForm.phone = ''
   editUserForm.branch_name = ''
+  editUserForm.branch_names = []
   editUserForm.password = ''
 }
 
@@ -592,6 +627,7 @@ async function saveUserEdit() {
       username: editUserForm.username,
       phone: editUserForm.phone,
       branch_name: editUserForm.branch_name,
+      branch_names: editUserForm.branch_names,
     }
     if (editUserForm.password) payload.password = editUserForm.password
     await client.patch(`admin/users/${editingUser.value.id}/`, payload)
@@ -624,6 +660,10 @@ async function createBoss() {
 
 async function createFilialRahbari() {
   resetMessages()
+  if (!filialForm.username || !filialForm.password || !filialForm.branch_names.length) {
+    error.value = 'Login, parol va kamida bitta filial tanlang.'
+    return
+  }
   try {
     await client.post('admin/filial-rahbarlari/', { ...filialForm })
     success.value = 'Filial Rahbari muvaffaqiyatli yaratildi.'
@@ -649,4 +689,19 @@ onMounted(async () => {
 <style scoped>
 .payment-paid-badge { background: rgba(34, 197, 94, 0.14) !important; color: #047857 !important; border-color: rgba(34, 197, 94, 0.28) !important; }
 .payment-unpaid-badge { background: rgba(239, 68, 68, 0.12) !important; color: #b91c1c !important; border-color: rgba(239, 68, 68, 0.24) !important; }
+
+.branch-picker {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+.branch-picker > label { font-weight: 800; color: #0f172a; }
+.branch-picker__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.branch-check { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 14px; background: white; border: 1px solid rgba(148, 163, 184, .22); font-size: 13px; cursor: pointer; }
+.branch-check input { width: 16px; height: 16px; accent-color: #2563eb; }
+@media (max-width: 640px) { .branch-picker__grid { grid-template-columns: 1fr; } }
+
 </style>

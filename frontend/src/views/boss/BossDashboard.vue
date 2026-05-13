@@ -990,10 +990,17 @@
           <button class="modal-close" @click="closeOperatorModal">×</button>
         </div>
         <form class="grid" @submit.prevent="createOperator">
-          <input v-model="operatorForm.full_name" class="input" placeholder="To'liq ism" />
-          <input v-model="operatorForm.phone" class="input" placeholder="Telefon" />
           <input v-model="operatorForm.username" class="input" placeholder="Login kiriting" />
           <input v-model="operatorForm.password" type="password" class="input" placeholder="Parol kiriting" />
+          <div class="branch-picker">
+            <label>Filial biriktiring</label>
+            <div class="branch-picker__grid">
+              <label v-for="branch in branchOptions" :key="`operator-${branch.value}`" class="branch-check">
+                <input type="checkbox" :value="branch.value" v-model="operatorForm.branch_names" />
+                <span>{{ branch.label }}</span>
+              </label>
+            </div>
+          </div>
           <button class="btn full">Yaratish</button>
         </form>
       </div>
@@ -1087,7 +1094,24 @@ const bulkAssignLoading = ref(false)
 const decisionLoadingId = ref(null)
 const paymentLoadingId = ref(null)
 const pendingDecision = ref('')
-const operatorForm = reactive({ username: '', password: '', full_name: '', phone: '' })
+const operatorForm = reactive({ username: '', password: '', branch_names: [] })
+const branchOptions = [
+  { label: '1-Niyozbosh', value: 'Niyozbosh' },
+  { label: '2-Xalqabod', value: 'Xalqabod' },
+  { label: '3-Gulbahor', value: 'Gulbahor' },
+  { label: '4-Kasblar', value: 'Kasblar' },
+  { label: '5-Kids1', value: 'Kids1' },
+  { label: '6-Kids2', value: 'Kids2' },
+  { label: '7-Do’stobod', value: 'Do’stobod' },
+  { label: '8-Olmazor', value: 'Olmazor' },
+  { label: '9-Chinoz', value: 'Chinoz' },
+  { label: '10-Krasin', value: 'Krasin' },
+  { label: '11-Pitiletka', value: 'Pitiletka' },
+  { label: '12-Qo’rg’oncha', value: 'Qo’rg’oncha' },
+  { label: '13-Kids 3', value: 'Kids 3' },
+  { label: '14-Oqqo’rg’on', value: 'Oqqo’rg’on' },
+  { label: '15-Alimkent', value: 'Alimkent' },
+]
 let successTimer = null
 let searchTimer = null
 let onlineSearchTimer = null
@@ -1575,8 +1599,7 @@ function closeOperatorModal() {
   openOperatorModal.value = false
   operatorForm.username = ''
   operatorForm.password = ''
-  operatorForm.full_name = ''
-  operatorForm.phone = ''
+  operatorForm.branch_names = []
 }
 
 function onFile(event) {
@@ -1951,16 +1974,15 @@ async function fetchLeads(message = 'Leadlar yuklanmoqda...') {
 
 async function createOperator() {
   error.value = ''
-  if (!operatorForm.username || !operatorForm.password || !operatorForm.full_name) {
-    error.value = 'Ism, login va parol kiriting.'
+  if (!operatorForm.username || !operatorForm.password || !operatorForm.branch_names.length) {
+    error.value = 'Login, parol va kamida bitta filial tanlang.'
     return
   }
   try {
     await client.post('boss/operators/', {
       username: operatorForm.username,
       password: operatorForm.password,
-      full_name: operatorForm.full_name,
-      phone: operatorForm.phone,
+      branch_names: operatorForm.branch_names,
     })
     closeOperatorModal()
     showSuccess('Operator muvaffaqiyatli yaratildi.')
@@ -2803,5 +2825,20 @@ onBeforeUnmount(() => {
     width: 100%;
   }
 }
+
+
+.branch-picker {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+.branch-picker > label { font-weight: 800; color: #0f172a; }
+.branch-picker__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.branch-check { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 14px; background: white; border: 1px solid rgba(148, 163, 184, .22); font-size: 13px; cursor: pointer; }
+.branch-check input { width: 16px; height: 16px; accent-color: #2563eb; }
+@media (max-width: 640px) { .branch-picker__grid { grid-template-columns: 1fr; } }
 
 </style>

@@ -4320,3 +4320,126 @@ tr:hover td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+.operator-visit-control {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 24px;
+}
+
+.operator-visit-control__summary,
+.operator-visit-control__filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.operator-visit-control__filters {
+  margin: 14px 0 16px;
+}
+
+.operator-visit-control__filters .select {
+  min-width: 220px;
+}
+
+.operator-visit-control__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.operator-visit-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(248,250,252,.94));
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+.operator-visit-card::before {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  right: -42px;
+  top: -46px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(59,130,246,.14), transparent 66%);
+}
+
+.operator-visit-card__top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.operator-visit-card h4 {
+  position: relative;
+  z-index: 1;
+  margin: 14px 0 10px;
+  font-size: 18px;
+}
+
+.operator-visit-card__meta {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.operator-visit-card__meta span {
+  min-width: 0;
+}
+
+.operator-visit-status,
+.operator-visit-payment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .03em;
+}
+
+.operator-visit-status--arrived {
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.operator-visit-status--not-arrived {
+  color: #991b1b;
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.operator-visit-payment--done {
+  color: #075985;
+  background: rgba(14, 165, 233, 0.14);
+}
+
+.operator-visit-payment--pending {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+@media (max-width: 640px) {
+  .operator-visit-control__filters .select {
+    min-width: 100%;
+  }
+
+  .operator-visit-card__meta {
+    grid-template-columns: 1fr;
+  }
+}

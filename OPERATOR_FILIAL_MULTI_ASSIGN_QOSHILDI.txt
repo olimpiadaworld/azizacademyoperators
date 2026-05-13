@@ -1,0 +1,8 @@
+O‘zgarishlar:
+1. Operator yaratishda telefon va ism so‘ralmaydi: faqat Login, Parol, Filial(lar).
+2. Filial rahbari yaratishda telefon va ism so‘ralmaydi: faqat Login, Parol, Filial(lar).
+3. 15 ta filial ro‘yxati checkbox orqali berildi.
+4. Bitta operator yoki filial rahbariga bir nechta filial biriktirish mumkin.
+5. Operator Sotuv bosganda lead faqat operatorga biriktirilgan filiallar rahbarlariga ko‘rinadi.
+6. Backend branch_name maydonida filiallar vergul bilan saqlanadi, eski ma’lumotlar o‘chmaydi.
+7. Frontend build va backend Python compile tekshirildi.

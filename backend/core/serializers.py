@@ -2,6 +2,25 @@ from collections import defaultdict
 from .models import LeadStatusHistory, OnlineLead, LeadVisitDecision
 
 
+def parse_branch_names(value):
+    if not value:
+        return []
+    if isinstance(value, (list, tuple)):
+        raw = []
+        for item in value:
+            raw.extend(parse_branch_names(item))
+        return list(dict.fromkeys(raw))
+    parts = []
+    for item in str(value).replace(';', ',').split(','):
+        item = item.strip()
+        if not item:
+            continue
+        if '-' in item and item.split('-', 1)[0].strip().isdigit():
+            item = item.split('-', 1)[1].strip()
+        parts.append(item)
+    return list(dict.fromkeys(parts))
+
+
 def user_to_dict(user):
     if not user:
         return None
@@ -14,6 +33,7 @@ def user_to_dict(user):
         'boss': user.boss_id,
         'boss_name': getattr(user.boss, 'full_name', '') if getattr(user, 'boss_id', None) else '',
         'branch_name': user.branch_name or '',
+        'branch_names': parse_branch_names(user.branch_name),
         'is_active': user.is_active,
         'deactivated_at': user.deactivated_at,
     }
@@ -51,16 +71,18 @@ def visit_decision_to_dict(item):
         'phone1': lead.phone1 if lead else '',
         'phone2': lead.phone2 if lead else '',
         'phone3': lead.phone3 if lead else '',
-        'operator_name': lead.assigned_operator.full_name if lead and lead.assigned_operator_id and lead.assigned_operator else '',
-        'boss_name': lead.boss.full_name if lead and lead.boss_id and lead.boss else '',
+        'operator_name': ((lead.assigned_operator.full_name or lead.assigned_operator.username) if lead and lead.assigned_operator_id and lead.assigned_operator else ''),
+        'boss_name': ((lead.boss.full_name or lead.boss.username) if lead and lead.boss_id and lead.boss else ''),
         'decision': item.decision,
         'payment_done': bool(getattr(item, 'payment_done', False)),
         'payment_done_at': getattr(item, 'payment_done_at', None),
         'payment_done_by': getattr(item, 'payment_done_by_id', None),
-        'payment_done_by_name': item.payment_done_by.full_name if getattr(item, 'payment_done_by_id', None) and getattr(item, 'payment_done_by', None) else '',
+        'payment_done_by_name': ((item.payment_done_by.full_name or item.payment_done_by.username) if getattr(item, 'payment_done_by_id', None) and getattr(item, 'payment_done_by', None) else ''),
         'decided_by': item.decided_by_id,
         'filial_rahbari_id': item.decided_by_id,
-        'filial_rahbari_name': item.decided_by.full_name if item.decided_by_id and item.decided_by else '',
+        'filial_rahbari_name': ((item.decided_by.full_name or item.decided_by.username) if item.decided_by_id and item.decided_by else ''),
+        'filial_rahbari_branch': item.decided_by.branch_name if item.decided_by_id and item.decided_by else '',
+        'operator_branch': lead.assigned_operator.branch_name if lead and lead.assigned_operator_id and lead.assigned_operator else '',
         'created_at': item.created_at,
         'updated_at': item.updated_at,
     }
