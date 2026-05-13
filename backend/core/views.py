@@ -628,9 +628,6 @@ def visit_decision(request, lead_id):
         )
         old_decision = '' if created else item.decision
 
-        if old_decision == 'arrived' and decision != 'arrived':
-            return ok({'detail': '“Keldi” belgilangan leadni “Kelmadi”ga qaytarib bo‘lmaydi.'}, status=400)
-
         if not created and item.decision != decision:
             item.decision = decision
             item.updated_at = timezone.now()
