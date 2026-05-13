@@ -411,17 +411,53 @@ def boss_leads(request):
     return ok(serialize_leads(qs.order_by('-updated_at', '-id'), include_visit_decisions=True))
 
 
+@csrf_exempt
 @require_auth('admin')
-def admin_leads(request):
-    qs = base_lead_qs()
-    if request.GET.get('current_status'):
-        qs = qs.filter(current_status=request.GET.get('current_status'))
-    if request.GET.get('assigned_operator'):
-        qs = qs.filter(assigned_operator_id=int(request.GET.get('assigned_operator')))
-    if request.GET.get('boss'):
-        qs = qs.filter(boss_id=int(request.GET.get('boss')))
-    qs = apply_lead_search(qs, request.GET.get('search'))
-    return ok(serialize_leads(qs.order_by('-updated_at', '-id'), include_visit_decisions=True))
+def admin_leads(request, lead_id=None):
+    if request.method == 'GET':
+        qs = base_lead_qs()
+        if request.GET.get('current_status'):
+            qs = qs.filter(current_status=request.GET.get('current_status'))
+        if request.GET.get('assigned_operator'):
+            qs = qs.filter(assigned_operator_id=int(request.GET.get('assigned_operator')))
+        if request.GET.get('boss'):
+            qs = qs.filter(boss_id=int(request.GET.get('boss')))
+        qs = apply_lead_search(qs, request.GET.get('search'))
+        return ok(serialize_leads(qs.order_by('-updated_at', '-id'), include_visit_decisions=True))
+
+    if request.method == 'DELETE':
+        if not lead_id:
+            return ok({'detail': 'Lead ID kerak.'}, status=400)
+        lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id).first()
+        if not lead:
+            return ok({'detail': 'Lead topilmadi.'}, status=404)
+        old_data = {
+            'id': lead.id,
+            'full_name': lead.full_name,
+            'tsh': lead.tsh,
+            'phone1': lead.phone1,
+            'phone2': lead.phone2,
+            'phone3': lead.phone3,
+            'school': lead.school,
+            'grade': lead.grade,
+            'subject': lead.subject,
+            'ball': lead.ball,
+            'current_status': lead.current_status,
+            'operator': (lead.assigned_operator.full_name or lead.assigned_operator.username) if lead.assigned_operator_id and lead.assigned_operator else '',
+            'boss': (lead.boss.full_name or lead.boss.username) if lead.boss_id and lead.boss else '',
+        }
+        lead.delete()
+        DataAuditLog.objects.create(
+            actor=request.app_user,
+            entity_type='lead',
+            entity_id=lead_id,
+            action='delete',
+            old_data=old_data,
+            new_data={},
+        )
+        return ok({'detail': 'Lead o‘chirildi.', 'id': lead_id})
+
+    return ok({'detail': 'Method not allowed'}, status=405)
 
 
 @csrf_exempt

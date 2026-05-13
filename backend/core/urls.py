@@ -15,6 +15,7 @@ urlpatterns = [
     path('admin/users/', views.admin_users),
     path('admin/users/<int:user_id>/', views.admin_users),
     path('admin/leads/', views.admin_leads),
+    path('admin/leads/<int:lead_id>/', views.admin_leads),
     path('admin/statistics/', views.admin_statistics),
     path('admin/lead-visit-decisions/', views.admin_visit_decisions),
     path('admin/operator-report/', views.admin_operator_report),

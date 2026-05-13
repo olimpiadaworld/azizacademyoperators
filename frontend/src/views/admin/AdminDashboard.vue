@@ -16,6 +16,93 @@
     <div v-if="error" class="error-banner">{{ error }}</div>
     <div v-if="success" class="success-banner">{{ success }}</div>
 
+    <div v-if="currentAdminTab === 'database'" class="panel glass admin-database-panel">
+      <div class="section-head section-head--wrap">
+        <div>
+          <div class="eyebrow">Ma'lumotlar bazasi</div>
+          <h3>Hamma leadlar ma'lumotlari</h3>
+          <p>Biriktirilgan, sotuv, atkaz va boshqa barcha leadlarni shu yerdan qidiring va kerak bo‘lsa o‘chiring.</p>
+        </div>
+        <div class="lead-toolbar-info lead-toolbar-info--wrap">
+          <span class="badge">Jami: {{ adminDatabaseLeads.length }}</span>
+          <span class="badge muted">Ko‘rinayotgan: {{ filteredAdminDatabaseLeads.length }}</span>
+        </div>
+      </div>
+
+      <div class="toolbar toolbar--responsive admin-database-toolbar">
+        <input
+          class="input admin-database-search"
+          v-model="adminLeadSearch"
+          placeholder="Lead qidirish: F.I.O, telefon, maktab, sinf, fan, operator..."
+        />
+        <select class="select" v-model="adminLeadStatusFilter">
+          <option value="">Status</option>
+          <option value="new">Biriktirilgan</option>
+          <option value="sale">Sotuv</option>
+          <option value="otkaz">Atkaz</option>
+          <option value="wrong_number">Xato nomer</option>
+          <option value="open_number">O‘chiq nomer</option>
+          <option value="advice">Maslahat</option>
+          <option value="other">O‘qiydi</option>
+        </select>
+        <button class="btn" :disabled="adminLeadsLoading" @click="fetchAdminDatabaseLeads">
+          {{ adminLeadsLoading ? 'Yuklanmoqda...' : 'Yangilash' }}
+        </button>
+        <button v-if="adminLeadSearch || adminLeadStatusFilter" class="btn ghost" type="button" @click="clearAdminLeadFilters">Tozalash</button>
+      </div>
+
+      <div class="table-wrap admin-database-table-wrap">
+        <table class="admin-database-table">
+          <thead>
+            <tr>
+              <th>F.I.O</th>
+              <th>T/SH</th>
+              <th>Maktab</th>
+              <th>Sinf</th>
+              <th>Fan</th>
+              <th>Ball</th>
+              <th>Telefonlar</th>
+              <th>Status</th>
+              <th>Operator</th>
+              <th>Boss</th>
+              <th>Izoh</th>
+              <th>Vaqt</th>
+              <th>Amal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="lead in filteredAdminDatabaseLeads" :key="`admin-db-lead-${lead.id}`">
+              <td>{{ lead.full_name || '-' }}</td>
+              <td>{{ lead.tsh || '-' }}</td>
+              <td>{{ lead.display_school || lead.school || '-' }}</td>
+              <td>{{ lead.grade || '-' }}</td>
+              <td>{{ lead.subject || '-' }}</td>
+              <td>{{ lead.ball || '-' }}</td>
+              <td>
+                <div class="lead-phone-list">
+                  <span>{{ lead.phone1 || '-' }}</span>
+                  <span v-if="lead.phone2">{{ lead.phone2 }}</span>
+                  <span v-if="lead.phone3">{{ lead.phone3 }}</span>
+                </div>
+              </td>
+              <td><span class="badge">{{ statusLabel(lead.current_status) }}</span></td>
+              <td>{{ lead.operator_name || '-' }}</td>
+              <td>{{ lead.boss_name || '-' }}</td>
+              <td>{{ lead.operator_note || latestLeadNote(lead) || '-' }}</td>
+              <td>{{ formatDateTime(lead.updated_at || lead.created_at) }}</td>
+              <td>
+                <button class="btn danger small" type="button" @click="openLeadDeleteModal(lead)">O‘chirish</button>
+              </td>
+            </tr>
+            <tr v-if="!filteredAdminDatabaseLeads.length">
+              <td colspan="13" class="empty-state">Lead topilmadi.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <template v-else>
     <ResponsiveSwiper
       v-if="isCompact"
       :items="summaryCards"
@@ -293,6 +380,8 @@
       </div>
     </div>
 
+    </template>
+
     <div v-if="openFilialModal" class="modal-overlay">
       <div class="modal-card glass">
         <div class="modal-card__head">
@@ -338,6 +427,27 @@
       </div>
     </div>
 
+    <div v-if="deleteLeadModalOpen" class="modal-overlay">
+      <div class="modal-card glass confirm-delete-modal">
+        <div class="modal-card__head">
+          <div>
+            <div class="eyebrow">Leadni o‘chirish</div>
+            <h3>O‘chirmoqchimisiz?</h3>
+          </div>
+          <button class="modal-close" @click="closeLeadDeleteModal">×</button>
+        </div>
+        <p class="confirm-delete-text">
+          <strong>{{ leadToDelete?.full_name || 'Nomsiz lead' }}</strong> ma’lumotlari o‘chiriladi. Bu amalni qaytarib bo‘lmaydi.
+        </p>
+        <div class="modal-actions modal-actions--split">
+          <button class="btn danger" :disabled="leadDeleteLoading" @click="confirmDeleteLead">
+            {{ leadDeleteLoading ? 'O‘chirilmoqda...' : 'Ha' }}
+          </button>
+          <button class="btn ghost" :disabled="leadDeleteLoading" @click="closeLeadDeleteModal">Yo‘q</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="openUserEditModal" class="modal-overlay">
       <div class="modal-card glass">
         <div class="modal-card__head">
@@ -368,17 +478,27 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import client from '../../api/client'
 import StatCard from '../../components/ui/StatCard.vue'
 import ResponsiveSwiper from '../../components/ui/ResponsiveSwiper.vue'
 import { useViewport } from '../../composables/useViewport'
+
+const route = useRoute()
 
 const stats = reactive({ bosses: 0, filial_rahbarlari: 0, operators: 0, leads: 0, sale: 0, otkaz: 0, open_number: 0, wrong_number: 0, advice: 0, other: 0, new: 0 })
 const bosses = ref([])
 const filialRahbarlari = ref([])
 const users = ref([])
 const adminVisitDecisions = ref([])
+const adminDatabaseLeads = ref([])
+const adminLeadSearch = ref('')
+const adminLeadStatusFilter = ref('')
+const adminLeadsLoading = ref(false)
+const deleteLeadModalOpen = ref(false)
+const leadToDelete = ref(null)
+const leadDeleteLoading = ref(false)
 const adminReportLoading = ref(false)
 const allReportsDownloading = ref(false)
 const adminReportData = ref(null)
@@ -478,6 +598,46 @@ function branchStringToArray(value) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean)
 }
 
+const currentAdminTab = computed(() => {
+  const tab = typeof route.query.tab === 'string' ? route.query.tab : 'main'
+  return tab === 'database' ? 'database' : 'main'
+})
+
+const statusLabels = {
+  new: 'Biriktirilgan',
+  sale: 'Sotuv',
+  otkaz: 'Atkaz',
+  wrong_number: 'Xato nomer',
+  open_number: 'O‘chiq nomer',
+  advice: 'Maslahat',
+  other: 'O‘qiydi',
+}
+
+const filteredAdminDatabaseLeads = computed(() => {
+  const search = adminLeadSearch.value.trim().toLowerCase()
+  return adminDatabaseLeads.value.filter((lead) => {
+    const statusOk = !adminLeadStatusFilter.value || lead.current_status === adminLeadStatusFilter.value
+    if (!statusOk) return false
+    if (!search) return true
+    return [
+      lead.full_name,
+      lead.tsh,
+      lead.school,
+      lead.display_school,
+      lead.grade,
+      lead.subject,
+      lead.ball,
+      lead.phone1,
+      lead.phone2,
+      lead.phone3,
+      lead.operator_name,
+      lead.boss_name,
+      lead.current_status,
+      lead.operator_note,
+    ].some(value => String(value || '').toLowerCase().includes(search))
+  })
+})
+
 const summaryCards = computed(() => ([
   { title: 'Boshliqlar', value: stats.bosses, subtitle: 'Tizimdagi boshliqlar' },
   { title: 'Filial Rahbarlari', value: stats.filial_rahbarlari, subtitle: 'Filial rahbarlari soni' },
@@ -575,6 +735,66 @@ function formatDateTime(value) {
   return new Intl.DateTimeFormat('uz-UZ', { dateStyle: 'short', timeStyle: 'short' }).format(date)
 }
 
+
+function statusLabel(status) {
+  return statusLabels[status] || status || '-'
+}
+
+function latestLeadNote(lead) {
+  const history = Array.isArray(lead?.history) ? lead.history : []
+  const saleNote = history.find(item => item.new_status === 'sale' && item.note)
+  const anyNote = history.find(item => item.note)
+  return saleNote?.note || anyNote?.note || ''
+}
+
+async function fetchAdminDatabaseLeads() {
+  adminLeadsLoading.value = true
+  resetMessages()
+  try {
+    const params = {}
+    if (adminLeadStatusFilter.value) params.current_status = adminLeadStatusFilter.value
+    const { data } = await client.get('admin/leads/', { params })
+    adminDatabaseLeads.value = data.results || data
+  } catch (e) {
+    error.value = e.response?.data?.detail || 'Leadlar bazasini yuklashda xatolik yuz berdi.'
+  } finally {
+    adminLeadsLoading.value = false
+  }
+}
+
+function clearAdminLeadFilters() {
+  adminLeadSearch.value = ''
+  adminLeadStatusFilter.value = ''
+  fetchAdminDatabaseLeads()
+}
+
+function openLeadDeleteModal(lead) {
+  leadToDelete.value = lead
+  deleteLeadModalOpen.value = true
+}
+
+function closeLeadDeleteModal() {
+  deleteLeadModalOpen.value = false
+  leadToDelete.value = null
+}
+
+async function confirmDeleteLead() {
+  if (!leadToDelete.value?.id) return
+  leadDeleteLoading.value = true
+  resetMessages()
+  try {
+    await client.delete(`admin/leads/${leadToDelete.value.id}/`)
+    success.value = 'Lead o‘chirildi.'
+    adminDatabaseLeads.value = adminDatabaseLeads.value.filter(item => item.id !== leadToDelete.value.id)
+    closeLeadDeleteModal()
+    await fetchStats()
+    await fetchAdminVisitDecisions()
+  } catch (e) {
+    error.value = e.response?.data?.detail || 'Leadni o‘chirishda xatolik yuz berdi.'
+  } finally {
+    leadDeleteLoading.value = false
+  }
+}
 
 function getFilenameFromDisposition(disposition, fallback) {
   if (!disposition) return fallback
@@ -743,12 +963,31 @@ onMounted(async () => {
   await fetchUsers()
   await fetchAdminVisitDecisions()
   await fetchAdminOperatorReport()
+  await fetchAdminDatabaseLeads()
+})
+
+watch(() => route.query.tab, (tab) => {
+  if (tab === 'database' && !adminDatabaseLeads.value.length) fetchAdminDatabaseLeads()
 })
 </script>
 
 <style scoped>
 .payment-paid-badge { background: rgba(34, 197, 94, 0.14) !important; color: #047857 !important; border-color: rgba(34, 197, 94, 0.28) !important; }
 .payment-unpaid-badge { background: rgba(239, 68, 68, 0.12) !important; color: #b91c1c !important; border-color: rgba(239, 68, 68, 0.24) !important; }
+
+.admin-database-panel { gap: 18px; }
+.admin-database-toolbar { margin-bottom: 16px; }
+.admin-database-search { min-width: min(100%, 420px); }
+.admin-database-table { min-width: 1280px; }
+.admin-database-table th { white-space: nowrap; }
+.lead-phone-list { display: grid; gap: 3px; font-size: 13px; }
+.btn.small { padding: 8px 12px; font-size: 12px; }
+.btn.danger { background: rgba(239, 68, 68, 0.12); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.24); }
+.btn.danger:hover { background: rgba(239, 68, 68, 0.18); }
+.confirm-delete-modal { max-width: 460px; }
+.confirm-delete-text { margin: 0; color: #475569; line-height: 1.6; }
+.modal-actions { display: flex; gap: 10px; margin-top: 10px; }
+.modal-actions--split { justify-content: flex-end; }
 
 .branch-picker {
   display: grid;

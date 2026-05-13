@@ -79,6 +79,11 @@ const operatorCurrentTab = computed(() => {
   return ['general', 'assigned', 'timed', 'report'].includes(tab) ? tab : 'general'
 })
 
+const adminCurrentTab = computed(() => {
+  const tab = typeof route.query.tab === 'string' ? route.query.tab : 'main'
+  return ['main', 'database'].includes(tab) ? tab : 'main'
+})
+
 const links = computed(() => {
   if (auth.role === 'boss') {
     return [
@@ -99,7 +104,10 @@ const links = computed(() => {
       { to: { path: '/boss', query: { tab: 'payment' } }, label: "Keldi/To'lov", tab: 'payment' },
     ]
   }
-  if (auth.role === 'admin') return [{ to: '/admin', label: 'Admin paneli', tab: 'admin' }]
+  if (auth.role === 'admin') return [
+    { to: { path: '/admin', query: { tab: 'main' } }, label: 'Admin paneli', tab: 'main' },
+    { to: { path: '/admin', query: { tab: 'database' } }, label: "Ma'lumotlar bazasi", tab: 'database' },
+  ]
   return [
     { to: { path: '/operator', query: { tab: 'general' } }, label: 'Leadlar', tab: 'general' },
     { to: { path: '/operator', query: { tab: 'assigned' } }, label: 'Biriktirilgan leadlar', tab: 'assigned' },
@@ -124,6 +132,9 @@ function isLinkActive(item) {
   }
   if (auth.role === 'operator') {
     return item.tab ? operatorCurrentTab.value === item.tab : false
+  }
+  if (auth.role === 'admin') {
+    return item.tab ? adminCurrentTab.value === item.tab : false
   }
   return route.path === (typeof item.to === 'string' ? item.to : item.to?.path)
 }

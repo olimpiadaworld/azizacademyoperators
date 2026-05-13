@@ -1,0 +1,18 @@
+Admin panelga "Ma'lumotlar bazasi" bo‘limi qo‘shildi.
+
+Qo‘shilgan funksiyalar:
+- Admin navigatsiyasida "Ma'lumotlar bazasi" bo‘limi chiqadi.
+- Barcha leadlar ma’lumotlari jadvalda ko‘rinadi.
+- Search: F.I.O, telefon, maktab, sinf, fan, operator va boshqa maydonlar bo‘yicha qidiradi.
+- Status filter: Biriktirilgan, Sotuv, Atkaz, Xato nomer, O‘chiq nomer, Maslahat, O‘qiydi.
+- Har bir lead yonida "O‘chirish" tugmasi bor.
+- O‘chirish bosilganda modal oyna ochiladi: "O‘chirmoqchimisiz?" Ha / Yo‘q.
+- Ha bosilsa lead database’dan o‘chiriladi, Yo‘q bosilsa o‘chirilmaydi.
+- Delete action DataAuditLog ichida saqlanadi.
+
+Backend:
+- DELETE /api/admin/leads/<id>/ endpoint qo‘shildi.
+
+Frontend:
+- DashboardLayout admin links: Admin paneli, Ma'lumotlar bazasi.
+- AdminDashboard ichida searchable database table va confirm modal qo‘shildi.
