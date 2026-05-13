@@ -396,21 +396,81 @@ const filialForm = reactive({ username: '', password: '', branch_names: [] })
 const editUserForm = reactive({ full_name: '', username: '', phone: '', branch_name: '', branch_names: [], password: '' })
 const { isCompact } = useViewport(960, 640)
 const branchOptions = [
-  { label: '1-Niyozbosh', value: 'Niyozbosh' },
-  { label: '2-Xalqabod', value: 'Xalqabod' },
-  { label: '3-Gulbahor', value: 'Gulbahor' },
-  { label: '4-Kasblar', value: 'Kasblar' },
-  { label: '5-Kids1', value: 'Kids1' },
-  { label: '6-Kids2', value: 'Kids2' },
-  { label: '7-Do’stobod', value: 'Do’stobod' },
-  { label: '8-Olmazor', value: 'Olmazor' },
-  { label: '9-Chinoz', value: 'Chinoz' },
-  { label: '10-Krasin', value: 'Krasin' },
-  { label: '11-Pitiletka', value: 'Pitiletka' },
-  { label: '12-Qo’rg’oncha', value: 'Qo’rg’oncha' },
-  { label: '13-Kids 3', value: 'Kids 3' },
-  { label: '14-Oqqo’rg’on', value: 'Oqqo’rg’on' },
-  { label: '15-Alimkent', value: 'Alimkent' },
+  {
+    "label": "Niyozbosh — Iroda",
+    "value": "Niyozbosh",
+    "leader": "Iroda"
+  },
+  {
+    "label": "Kids 1 — Lobar",
+    "value": "Kids 1",
+    "leader": "Lobar"
+  },
+  {
+    "label": "Kids 2 — Doniyor",
+    "value": "Kids 2",
+    "leader": "Doniyor"
+  },
+  {
+    "label": "Gulbahor — Anvar",
+    "value": "Gulbahor",
+    "leader": "Anvar"
+  },
+  {
+    "label": "Kids 3 — Nafisa",
+    "value": "Kids 3",
+    "leader": "Nafisa"
+  },
+  {
+    "label": "Kasblar — Nigora",
+    "value": "Kasblar",
+    "leader": "Nigora"
+  },
+  {
+    "label": "Xalqobod — Nilufar",
+    "value": "Xalqobod",
+    "leader": "Nilufar"
+  },
+  {
+    "label": "Chinoz — Hudobergan",
+    "value": "Chinoz",
+    "leader": "Hudobergan"
+  },
+  {
+    "label": "Olmozor — Suhrob",
+    "value": "Olmozor",
+    "leader": "Suhrob"
+  },
+  {
+    "label": "Paxtazor — Abdulloh",
+    "value": "Paxtazor",
+    "leader": "Abdulloh"
+  },
+  {
+    "label": "Mevazor — Dinara",
+    "value": "Mevazor",
+    "leader": "Dinara"
+  },
+  {
+    "label": "Dostobod — Shoxriddin",
+    "value": "Dostobod",
+    "leader": "Shoxriddin"
+  },
+  {
+    "label": "Qorg'onchi — Shoxriddin",
+    "value": "Qorg'onchi",
+    "leader": "Shoxriddin"
+  },
+  {
+    "label": "Oqqo'rg'on — Odilbek",
+    "value": "Oqqo'rg'on",
+    "leader": "Odilbek"
+  },
+  {
+    "label": "Qo'shyog'och",
+    "value": "Qo'shyog'och",
+    "leader": ""
+  }
 ]
 
 function branchStringToArray(value) {

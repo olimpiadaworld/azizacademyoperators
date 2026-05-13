@@ -32,19 +32,59 @@ def notify_telegram_after_commit(text):
 
 
 BRANCH_CHOICES = [
-    'Niyozbosh', 'Xalqabod', 'Gulbahor', 'Kasblar', 'Kids1', 'Kids2',
-    'Do’stobod', 'Olmazor', 'Chinoz', 'Krasin', 'Pitiletka', 'Qo’rg’oncha',
-    'Kids 3', 'Oqqo’rg’on', 'Alimkent'
+    'Niyozbosh',
+    'Kids 1',
+    'Kids 2',
+    'Gulbahor',
+    'Kids 3',
+    'Kasblar',
+    'Xalqobod',
+    'Chinoz',
+    'Olmozor',
+    'Paxtazor',
+    'Mevazor',
+    'Dostobod',
+    "Qorg'onchi",
+    "Oqqo'rg'on",
+    "Qo'shyog'och",
 ]
 
-BRANCH_ALIASES = {
-    'dostobod': 'Do’stobod', 'do‘stobod': 'Do’stobod', "do'stobod": 'Do’stobod', 'do’stobod': 'Do’stobod',
-    'qorgoncha': 'Qo’rg’oncha', "qo'rg'oncha": 'Qo’rg’oncha', 'qo’rg’oncha': 'Qo’rg’oncha', 'qo‘rg‘oncha': 'Qo’rg’oncha',
-    'oqqorgon': 'Oqqo’rg’on', "oqqo'rg'on": 'Oqqo’rg’on', 'oqqo’rg’on': 'Oqqo’rg’on', 'oqqo‘rg‘on': 'Oqqo’rg’on',
-    'xalqobod': 'Xalqabod', 'xalqabod': 'Xalqabod',
-    'kids 1': 'Kids1', 'kids1': 'Kids1', 'kids 2': 'Kids2', 'kids2': 'Kids2', 'kids3': 'Kids 3', 'kids 3': 'Kids 3',
+BRANCH_DEFAULT_LEADERS = {
+    'Niyozbosh': 'Iroda',
+    'Kids 1': 'Lobar',
+    'Kids 2': 'Doniyor',
+    'Gulbahor': 'Anvar',
+    'Kids 3': 'Nafisa',
+    'Kasblar': 'Nigora',
+    'Xalqobod': 'Nilufar',
+    'Chinoz': 'Hudobergan',
+    'Olmozor': 'Suhrob',
+    'Paxtazor': 'Abdulloh',
+    'Mevazor': 'Dinara',
+    'Dostobod': 'Shoxriddin',
+    "Qorg'onchi": 'Shoxriddin',
+    "Oqqo'rg'on": 'Odilbek',
+    "Qo'shyog'och": '',
 }
 
+BRANCH_ALIASES = {
+    'niyozbosh': 'Niyozbosh',
+    'kids1': 'Kids 1', 'kids 1': 'Kids 1',
+    'kids2': 'Kids 2', 'kids 2': 'Kids 2',
+    'kids3': 'Kids 3', 'kids 3': 'Kids 3',
+    'gulbahor': 'Gulbahor',
+    'kasblar': 'Kasblar',
+    'xalqobod': 'Xalqobod', 'xalqabod': 'Xalqobod',
+    'chinoz': 'Chinoz',
+    'olmazor': 'Olmozor', 'olmozor': 'Olmozor',
+    'paxtazor': 'Paxtazor',
+    'mevazor': 'Mevazor',
+    'dostobod': 'Dostobod', 'do‘stobod': 'Dostobod', "do'stobod": 'Dostobod', 'do’stobod': 'Dostobod',
+    'qorgonchi': "Qorg'onchi", "qorg'onchi": "Qorg'onchi", 'qorg’onchi': "Qorg'onchi",
+    'qorgoncha': "Qorg'onchi", "qo'rg'oncha": "Qorg'onchi", 'qo’rg’oncha': "Qorg'onchi", 'qo‘rg‘oncha': "Qorg'onchi",
+    'oqqorgon': "Oqqo'rg'on", "oqqo'rg'on": "Oqqo'rg'on", 'oqqo’rg’on': "Oqqo'rg'on", 'oqqo‘rg‘on': "Oqqo'rg'on",
+    'qoshyogoch': "Qo'shyog'och", "qo'shyog'och": "Qo'shyog'och", 'qo’shyog’och': "Qo'shyog'och", 'qo‘shyog‘och': "Qo'shyog'och",
+}
 
 def normalize_branch_label(value):
     value = clean_string(value)
@@ -84,6 +124,15 @@ def branch_names_string(body):
 
 def user_branch_set(user):
     return set(normalize_branch_names(getattr(user, 'branch_name', '') or ''))
+
+
+def default_leader_names_for_branches(branch_name_string):
+    names = []
+    for branch in normalize_branch_names(branch_name_string):
+        name = BRANCH_DEFAULT_LEADERS.get(branch, '')
+        if name and name not in names:
+            names.append(name)
+    return ', '.join(names)
 
 
 def users_branch_overlap(user_a, user_b):
@@ -173,7 +222,10 @@ def create_user(request, role, boss_id=None):
     phone = '' if role in ('operator', 'filial_rahbari') else clean_string(body.get('phone'))
     branch_name = branch_names_string(body)
     if role in ('operator', 'filial_rahbari'):
-        full_name = full_name or username
+        if role == 'filial_rahbari':
+            full_name = full_name or default_leader_names_for_branches(branch_name) or username
+        else:
+            full_name = full_name or username
         if not username or not password:
             return ok({'detail': 'Login va parol kiritish shart.'}, status=400)
         if not branch_name:
