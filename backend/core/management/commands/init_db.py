@@ -31,6 +31,7 @@ class Command(BaseCommand):
             # Productionda jadval allaqachon bor bo'lsa, yangi qo'shilgan ustunlarni
             # xavfsiz tarzda qo'shib ketadi. Mavjud ma'lumotlar o'chmaydi.
             self.ensure_missing_columns(schema_editor, OnlineLead, ['tsh', 'school', 'grade', 'subject'])
+            self.ensure_missing_columns(schema_editor, LeadVisitDecision, ['payment_done', 'payment_done_at', 'payment_done_by'])
         username = os.getenv('ADMIN_USERNAME', 'admin')
         password = os.getenv('ADMIN_PASSWORD', 'admin12345')
         full_name = os.getenv('ADMIN_FULL_NAME', 'Administrator')

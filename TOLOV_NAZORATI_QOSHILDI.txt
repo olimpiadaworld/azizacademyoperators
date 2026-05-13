@@ -1,0 +1,10 @@
+To‘lov nazorati qo‘shildi.
+
+1. Filial rahbari Keldi/Kelmadi bosgandan keyin Nazorat bo‘limidagi cardlarda qizil/yashil indikator ko‘rinadi.
+2. To‘lov qilindi tugmasi qo‘shildi.
+3. Tugma bosilganda qizil indikator yashil bo‘ladi.
+4. Filial rahbari panelida Keldi/Kelmadi filteri va To‘lov qildi/qilmadi filteri alohida ishlaydi.
+5. Boss panelida ham Keldi/Kelmadi va To‘lov qildi/qilmadi alohida filterlandi.
+6. Boss va Admin panelda kim Keldi/Kelmadi bosgani va kim To‘lov qilindi qilgani ko‘rinadi.
+7. Barcha hisobot Excel ichida Keldi/Kelmadi/To‘lov ma’lumotlari ham chiqadi.
+8. Railway PostgreSQL uchun yangi ustunlar init_db orqali xavfsiz qo‘shiladi: payment_done, payment_done_at, payment_done_by_id.

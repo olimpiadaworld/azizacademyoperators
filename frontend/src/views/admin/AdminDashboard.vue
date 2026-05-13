@@ -58,6 +58,52 @@
     <div class="panel glass">
       <div class="section-head section-head--wrap">
         <div>
+          <div class="eyebrow">Keldi / To‘lov nazorati</div>
+          <h3>Filial rahbarlari belgilari</h3>
+          <p>Kim Keldi/Kelmadi bosgani va kim To‘lov qilindi qilgani shu yerda ko‘rinadi.</p>
+        </div>
+        <div class="lead-toolbar-info lead-toolbar-info--wrap">
+          <span class="badge">Jami: {{ adminVisitDecisions.length }}</span>
+          <span class="badge arrived-badge">Keldi: {{ adminArrivedCount }}</span>
+          <span class="badge not-arrived-badge">Kelmadi: {{ adminNotArrivedCount }}</span>
+          <span class="badge payment-paid-badge">To‘lov qildi: {{ adminPaymentDoneCount }}</span>
+          <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ adminPaymentNotDoneCount }}</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>F.I.O</th>
+              <th>Filial rahbari</th>
+              <th>Operator</th>
+              <th>Qaror</th>
+              <th>To‘lov</th>
+              <th>To‘lov qilgan</th>
+              <th>Vaqt</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in adminVisitDecisions" :key="`admin-visit-${item.id}`">
+              <td>{{ item.lead_name || item.full_name || '-' }}</td>
+              <td>{{ item.filial_rahbari_name || '-' }}</td>
+              <td>{{ item.operator_name || '-' }}</td>
+              <td><span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span></td>
+              <td><span :class="['badge', item.payment_done ? 'payment-paid-badge' : 'payment-unpaid-badge']">{{ item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}</span></td>
+              <td>{{ item.payment_done_by_name || '-' }}</td>
+              <td>{{ formatDateTime(item.updated_at) }}</td>
+            </tr>
+            <tr v-if="!adminVisitDecisions.length">
+              <td colspan="7" class="empty-state">Hali Keldi/Kelmadi yoki To‘lov belgisi yo‘q.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel glass">
+      <div class="section-head section-head--wrap">
+        <div>
           <div class="eyebrow">Operator hisobotlari</div>
           <h3>Kunlik va 1 oylik natijalar</h3>
           <p>Admin kerakli boshliqni, operatorni va sanani tanlab, nechta sotuv va nechta atkaz bo‘lganini shu yerda ko‘radi.</p>
@@ -319,6 +365,7 @@ const stats = reactive({ bosses: 0, filial_rahbarlari: 0, operators: 0, leads: 0
 const bosses = ref([])
 const filialRahbarlari = ref([])
 const users = ref([])
+const adminVisitDecisions = ref([])
 const adminReportLoading = ref(false)
 const allReportsDownloading = ref(false)
 const adminReportData = ref(null)
@@ -343,6 +390,10 @@ const summaryCards = computed(() => ([
   { title: 'Sotuvlar', value: stats.sale, subtitle: 'Muvaffaqiyatli natija' },
 ]))
 const leaders = computed(() => (users.value.length ? users.value : [...bosses.value, ...filialRahbarlari.value]))
+const adminArrivedCount = computed(() => adminVisitDecisions.value.filter(item => item.decision === 'arrived').length)
+const adminNotArrivedCount = computed(() => adminVisitDecisions.value.filter(item => item.decision === 'not_arrived').length)
+const adminPaymentDoneCount = computed(() => adminVisitDecisions.value.filter(item => item.payment_done).length)
+const adminPaymentNotDoneCount = computed(() => adminVisitDecisions.value.filter(item => !item.payment_done).length)
 const adminOperatorRows = computed(() => adminReportData.value?.operator_rows || [])
 const adminDailyRows = computed(() => adminReportData.value?.daily || [])
 const adminReportSummaryCards = computed(() => {
@@ -420,6 +471,13 @@ function formatInputDate(value) {
   const [year, month, day] = String(value).split('-')
   if (!year || !month || !day) return value
   return `${day}.${month}.${year}`
+}
+
+function formatDateTime(value) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return new Intl.DateTimeFormat('uz-UZ', { dateStyle: 'short', timeStyle: 'short' }).format(date)
 }
 
 
@@ -519,6 +577,11 @@ async function fetchUsers() {
   users.value = data.results || data
 }
 
+async function fetchAdminVisitDecisions() {
+  const { data } = await client.get('admin/lead-visit-decisions/')
+  adminVisitDecisions.value = data.results || data
+}
+
 async function saveUserEdit() {
   if (!editingUser.value) return
   userEditLoading.value = true
@@ -578,6 +641,12 @@ onMounted(async () => {
   await fetchBosses()
   await fetchFilialRahbarlari()
   await fetchUsers()
+  await fetchAdminVisitDecisions()
   await fetchAdminOperatorReport()
 })
 </script>
+
+<style scoped>
+.payment-paid-badge { background: rgba(34, 197, 94, 0.14) !important; color: #047857 !important; border-color: rgba(34, 197, 94, 0.28) !important; }
+.payment-unpaid-badge { background: rgba(239, 68, 68, 0.12) !important; color: #b91c1c !important; border-color: rgba(239, 68, 68, 0.24) !important; }
+</style>
