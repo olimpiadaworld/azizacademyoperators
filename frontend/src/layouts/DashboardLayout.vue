@@ -67,8 +67,8 @@ const mobileMenuOpen = ref(false)
 
 const bossCurrentTab = computed(() => {
   const allowed = auth.role === 'filial_rahbari'
-    ? ['leads', 'manager']
-    : ['leads', 'operators', 'manager', 'online']
+    ? ['leads', 'manager', 'payment']
+    : ['leads', 'operators', 'manager', 'payment', 'online']
   const tab = typeof route.query.tab === 'string' ? route.query.tab : 'leads'
   return allowed.includes(tab) ? tab : 'leads'
 })
@@ -85,6 +85,7 @@ const links = computed(() => {
       { to: { path: '/boss', query: { tab: 'leads' } }, label: 'Leadlar', tab: 'leads' },
       { to: { path: '/boss', query: { tab: 'operators' } }, label: 'Operatorlar', tab: 'operators' },
       { to: { path: '/boss', query: { tab: 'manager' } }, label: 'Filial rahbar nazorati', tab: 'manager' },
+      { to: { path: '/boss', query: { tab: 'payment' } }, label: "Keldi/To'lov", tab: 'payment' },
       { to: { path: '/boss', query: { tab: 'online' } }, label: 'Online leadlar', tab: 'online' },
       { to: { path: '/boss', query: { tab: bossCurrentTab.value, action: 'daily-report' } }, label: 'Hisobot', action: 'daily-report' },
       { to: { path: '/boss', query: { tab: bossCurrentTab.value, action: 'full-report' } }, label: "To'liq hisobot", action: 'full-report' },
@@ -95,6 +96,7 @@ const links = computed(() => {
     return [
       { to: { path: '/boss', query: { tab: 'leads' } }, label: 'Leadlar', tab: 'leads' },
       { to: { path: '/boss', query: { tab: 'manager' } }, label: 'Filial nazorati', tab: 'manager' },
+      { to: { path: '/boss', query: { tab: 'payment' } }, label: "Keldi/To'lov", tab: 'payment' },
     ]
   }
   if (auth.role === 'admin') return [{ to: '/admin', label: 'Admin paneli', tab: 'admin' }]

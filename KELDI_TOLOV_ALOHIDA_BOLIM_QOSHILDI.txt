@@ -1,0 +1,9 @@
+Keldi/Kelmadi va To‘lov qildi/qilmadi uchun alohida bo‘lim qo‘shildi.
+
+Qo‘shilganlar:
+- Boss panel navigatsiyasida "Keldi/To'lov" bo‘limi.
+- Filial rahbari panel navigatsiyasida "Keldi/To'lov" bo‘limi.
+- Keldi/Kelmadi alohida filteri.
+- To‘lov qildi/To‘lov qilmadi alohida filteri.
+- Filial rahbari bo‘limida shu joydan Keldi/Kelmadi holatini o‘zgartirish va To‘lov qilindi bosish mumkin.
+- Boss bo‘limida filial rahbarlari bo‘yicha kim keldi, kim kelmadi, kim to‘lov qildi ko‘rinadi.

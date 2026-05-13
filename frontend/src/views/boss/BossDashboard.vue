@@ -627,6 +627,74 @@
       </section>
     </div>
 
+    <div v-if="currentView === 'payment'" class="panel glass panel--payment-section">
+      <div class="section-head section-head--wrap">
+        <div>
+          <div class="eyebrow">Keldi / Kelmadi va to‘lov</div>
+          <h3>{{ isFilialRahbari ? 'Filial nazorati bo‘yicha alohida bo‘lim' : 'Rahbarlar bo‘yicha keldi va to‘lov nazorati' }}</h3>
+          <p>{{ isFilialRahbari ? 'Bu bo‘limda siz belgilagan Keldi/Kelmadi va To‘lov qildi/qilmadi leadlarini alohida filterlab ko‘rasiz.' : 'Bu bo‘limda barcha filial rahbarlari bosgan Keldi/Kelmadi va To‘lov holatlari alohida filter bilan ko‘rinadi.' }}</p>
+        </div>
+        <div class="decision-filter-stack">
+          <div class="decision-filter-group">
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'all' }" @click="activeDecisionFilter = 'all'">Hammasi</button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'arrived' }" @click="activeDecisionFilter = 'arrived'">Keldi</button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'not_arrived' }" @click="activeDecisionFilter = 'not_arrived'">Kelmadi</button>
+          </div>
+          <div class="decision-filter-group payment-filter-group">
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="activePaymentFilter = 'all'">To‘lov: hammasi</button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'paid' }" @click="activePaymentFilter = 'paid'">To‘lov qildi</button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'unpaid' }" @click="activePaymentFilter = 'unpaid'">To‘lov qilmadi</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lead-toolbar-info lead-toolbar-info--wrap">
+        <span class="badge">Jami: {{ paymentSectionItems.length }} ta</span>
+        <span class="badge arrived-badge">Keldi: {{ paymentSectionArrivedCount }}</span>
+        <span class="badge not-arrived-badge">Kelmadi: {{ paymentSectionNotArrivedCount }}</span>
+        <span class="badge payment-paid-badge">To‘lov qildi: {{ paymentSectionPaidCount }}</span>
+        <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ paymentSectionUnpaidCount }}</span>
+        <span class="badge muted">Ko‘rinayotgan: {{ filteredPaymentSectionItems.length }} ta</span>
+      </div>
+
+      <div v-if="!filteredPaymentSectionItems.length" class="empty-state">Tanlangan filter bo‘yicha ma’lumot yo‘q.</div>
+      <div v-else class="payment-control-grid">
+        <article v-for="item in filteredPaymentSectionItems" :key="`payment-section-${item.key}`" class="visit-mini-card glass payment-control-card">
+          <div class="visit-mini-card__head visit-mini-card__head--payment">
+            <span :class="['payment-dot', item.payment_done ? 'is-paid' : 'is-unpaid']" :title="item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi'"></span>
+            <div>
+              <h4>{{ item.full_name || item.lead_name || 'Ism yo‘q' }}</h4>
+              <div class="boss-lead-item__chips">
+                <span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
+                <span :class="['badge', item.payment_done ? 'payment-paid-badge' : 'payment-unpaid-badge']">{{ item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}</span>
+                <span v-if="item.filial_rahbari_name" class="badge muted">{{ item.filial_rahbari_name }}</span>
+                <span v-if="item.operator_name" class="badge muted">{{ item.operator_name }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="visit-mini-card__meta">
+            <span><strong>tel1:</strong> {{ item.phone1 || item.lead_phone || '-' }}</span>
+            <span><strong>tel2:</strong> {{ item.phone2 || item.lead_phone2 || '-' }}</span>
+            <span><strong>tel3:</strong> {{ item.phone3 || item.lead_phone3 || '-' }}</span>
+            <span><strong>T/SH:</strong> {{ item.tsh || '-' }}</span>
+            <span><strong>Maktab:</strong> {{ item.display_school || item.school || '-' }}</span>
+            <span><strong>Sinf:</strong> {{ item.grade || '-' }}</span>
+            <span><strong>Fan:</strong> {{ item.subject || '-' }}</span>
+            <span><strong>Ball:</strong> {{ item.ball || '-' }}</span>
+            <span><strong>Belgilangan vaqt:</strong> {{ formatDateTime(item.updated_at) }}</span>
+            <span v-if="item.payment_done_by_name"><strong>To‘lov qilgan:</strong> {{ item.payment_done_by_name }}</span>
+            <span v-if="item.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(item.payment_done_at) }}</span>
+            <span v-if="item.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ item.operator_note }}</span>
+          </div>
+          <div v-if="isFilialRahbari" class="visit-mini-card__actions">
+            <button class="btn" :class="{ 'is-active-choice': item.decision === 'arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'arrived')">Keldi</button>
+            <button class="btn secondary" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'not_arrived')">Kelmadi</button>
+            <button class="btn payment-btn" :class="{ 'is-active-choice': item.payment_done }" :disabled="paymentLoadingId === item.id || item.payment_done" @click="markPaymentDone(item.id)">{{ item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilindi' }}</button>
+          </div>
+        </article>
+      </div>
+    </div>
+
     <div v-if="!isFilialRahbari && currentView === 'operators'" class="panel glass">
       <div class="section-head section-head--wrap">
         <div>
@@ -1084,6 +1152,8 @@ const filialDecisionFilter = ref('all')
 const filialPaymentFilter = ref('all')
 const bossDecisionFilter = ref('all')
 const bossPaymentFilter = ref('all')
+const paymentSectionDecisionFilter = ref('all')
+const paymentSectionPaymentFilter = ref('all')
 const selectedBossDecisionDate = ref('')
 const selectedBossRahbariFilter = ref('all')
 const reportLoading = ref(false)
@@ -1393,6 +1463,45 @@ const bossArrivedCount = computed(() => scopedBossVisitDecisions.value.filter(it
 const bossNotArrivedCount = computed(() => scopedBossVisitDecisions.value.filter(item => item.decision === 'not_arrived').length)
 const bossPaymentDoneCount = computed(() => scopedBossVisitDecisions.value.filter(item => item.payment_done).length)
 const bossPaymentNotDoneCount = computed(() => scopedBossVisitDecisions.value.filter(item => !item.payment_done).length)
+const activeDecisionFilter = computed({
+  get: () => isFilialRahbari.value ? filialDecisionFilter.value : paymentSectionDecisionFilter.value,
+  set: (value) => {
+    if (isFilialRahbari.value) filialDecisionFilter.value = value
+    else paymentSectionDecisionFilter.value = value
+  },
+})
+const activePaymentFilter = computed({
+  get: () => isFilialRahbari.value ? filialPaymentFilter.value : paymentSectionPaymentFilter.value,
+  set: (value) => {
+    if (isFilialRahbari.value) filialPaymentFilter.value = value
+    else paymentSectionPaymentFilter.value = value
+  },
+})
+const paymentSectionItems = computed(() => {
+  if (isFilialRahbari.value) {
+    return decidedLeads.value.map(item => ({ ...item, key: item.id }))
+  }
+  return scopedBossVisitDecisions.value.map(item => ({
+    ...item,
+    key: item.id || `${item.lead_id || item.lead}-${item.filial_rahbari_id || item.decided_by}`,
+    id: item.lead || item.lead_id,
+    full_name: item.full_name || item.lead_name || '',
+    phone1: item.phone1 || item.lead_phone || '',
+    phone2: item.phone2 || item.lead_phone2 || '',
+    phone3: item.phone3 || item.lead_phone3 || '',
+  }))
+})
+const filteredPaymentSectionItems = computed(() => paymentSectionItems.value.filter((item) => {
+  const decisionOk = activeDecisionFilter.value === 'all' || item.decision === activeDecisionFilter.value
+  const paymentOk = activePaymentFilter.value === 'all'
+    || (activePaymentFilter.value === 'paid' && item.payment_done)
+    || (activePaymentFilter.value === 'unpaid' && !item.payment_done)
+  return decisionOk && paymentOk
+}))
+const paymentSectionArrivedCount = computed(() => paymentSectionItems.value.filter(item => item.decision === 'arrived').length)
+const paymentSectionNotArrivedCount = computed(() => paymentSectionItems.value.filter(item => item.decision === 'not_arrived').length)
+const paymentSectionPaidCount = computed(() => paymentSectionItems.value.filter(item => item.payment_done).length)
+const paymentSectionUnpaidCount = computed(() => paymentSectionItems.value.filter(item => !item.payment_done).length)
 const bossDecisionSummaryCards = computed(() => ([
   { title: 'Jami belgi', value: scopedBossVisitDecisions.value.length, subtitle: 'Filial rahbarlari bosgan jami qarorlar' },
   { title: 'Keldi', value: bossArrivedCount.value, subtitle: 'Kelgan deb belgilangan leadlar' },
@@ -1718,7 +1827,7 @@ function formatInputDate(value) {
 }
 
 function normalizeView(view) {
-  const allowedViews = isFilialRahbari.value ? ['leads', 'manager'] : ['leads', 'operators', 'manager', 'online']
+  const allowedViews = isFilialRahbari.value ? ['leads', 'manager', 'payment'] : ['leads', 'operators', 'manager', 'payment', 'online']
   return allowedViews.includes(view) ? view : 'leads'
 }
 
@@ -1732,6 +1841,10 @@ async function syncViewFromRoute(query = route.query) {
 
   if (targetView === 'leads') {
     await refreshLeadSections('Leadlar yuklanmoqda...')
+  }
+
+  if (targetView === 'payment') {
+    await fetchVisitDecisions()
   }
 
   const action = typeof query.action === 'string' ? query.action : ''
@@ -1759,6 +1872,9 @@ async function setCurrentView(view) {
   }
   if (normalizedView === 'leads') {
     await refreshLeadSections('Leadlar yuklanmoqda...')
+  }
+  if (normalizedView === 'payment') {
+    await fetchVisitDecisions()
   }
 }
 
@@ -2687,6 +2803,30 @@ onBeforeUnmount(() => {
 
   .operator-donut-chart__center strong {
     font-size: 24px;
+  }
+}
+
+
+.payment-control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.payment-control-card {
+  min-height: 100%;
+}
+
+.panel--payment-section .section-head p {
+  margin: 6px 0 0;
+  color: #64748b;
+  max-width: 720px;
+}
+
+@media (max-width: 640px) {
+  .payment-control-grid {
+    grid-template-columns: 1fr;
   }
 }
 
