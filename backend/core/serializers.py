@@ -50,8 +50,30 @@ def history_to_dict(item):
     }
 
 
+def get_lead_operator_note(lead, history=None):
+    history = history or []
+    if history:
+        sale_history = next((h for h in history if h.new_status == 'sale' and (h.note or '').strip()), None)
+        latest_with_note = next((h for h in history if (h.note or '').strip()), None)
+        selected = sale_history or latest_with_note
+    else:
+        selected = None
+        if lead:
+            selected = LeadStatusHistory.objects.select_related('changed_by').filter(lead=lead, new_status='sale').exclude(note='').order_by('-changed_at', '-id').first()
+            if not selected:
+                selected = LeadStatusHistory.objects.select_related('changed_by').filter(lead=lead).exclude(note='').order_by('-changed_at', '-id').first()
+    if not selected:
+        return {'operator_note': '', 'operator_note_at': None, 'operator_note_by_name': ''}
+    return {
+        'operator_note': selected.note or '',
+        'operator_note_at': selected.changed_at,
+        'operator_note_by_name': ((selected.changed_by.full_name or selected.changed_by.username) if selected.changed_by_id and selected.changed_by else ''),
+    }
+
+
 def visit_decision_to_dict(item):
     lead = item.lead if item.lead_id and item.lead else None
+    note_info = get_lead_operator_note(lead)
     return {
         'id': item.id,
         'lead': item.lead_id,
@@ -83,6 +105,9 @@ def visit_decision_to_dict(item):
         'filial_rahbari_name': ((item.decided_by.full_name or item.decided_by.username) if item.decided_by_id and item.decided_by else ''),
         'filial_rahbari_branch': item.decided_by.branch_name if item.decided_by_id and item.decided_by else '',
         'operator_branch': lead.assigned_operator.branch_name if lead and lead.assigned_operator_id and lead.assigned_operator else '',
+        'operator_note': note_info.get('operator_note', ''),
+        'operator_note_at': note_info.get('operator_note_at'),
+        'operator_note_by_name': note_info.get('operator_note_by_name', ''),
         'created_at': item.created_at,
         'updated_at': item.updated_at,
     }
@@ -115,6 +140,7 @@ def online_lead_to_dict(item):
 def lead_to_dict(lead, history=None, online=None, decisions=None):
     history = history or []
     decisions = decisions or []
+    note_info = get_lead_operator_note(lead, history)
     return {
         'id': lead.id,
         'full_name': lead.full_name or '',
@@ -132,6 +158,9 @@ def lead_to_dict(lead, history=None, online=None, decisions=None):
         'current_status': lead.current_status or 'new',
         'operator_name': lead.assigned_operator.full_name if lead.assigned_operator_id and lead.assigned_operator else '',
         'assigned_operator': lead.assigned_operator_id,
+        'operator_note': note_info.get('operator_note', ''),
+        'operator_note_at': note_info.get('operator_note_at'),
+        'operator_note_by_name': note_info.get('operator_note_by_name', ''),
         'created_at': lead.created_at,
         'updated_at': lead.updated_at,
         'history': [history_to_dict(h) for h in history],

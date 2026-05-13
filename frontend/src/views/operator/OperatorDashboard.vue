@@ -214,6 +214,8 @@
               <span><strong>Sinf:</strong> {{ item.grade || '-' }}</span>
               <span><strong>Tel:</strong> {{ item.lead_phone || item.phone1 || '-' }}</span>
               <span><strong>Vaqt:</strong> {{ formatDateTime(item.updated_at) }}</span>
+              <span v-if="item.operator_note" class="operator-note-line"><strong>Sizning izohingiz:</strong> {{ item.operator_note }}</span>
+              <span v-if="item.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(item.operator_note_at) }}</span>
               <span v-if="item.payment_done"><strong>To‘lovni belgilagan:</strong> {{ item.payment_done_by_name || '-' }}</span>
               <span v-if="item.payment_done"><strong>To‘lov vaqti:</strong> {{ formatDateTime(item.payment_done_at) }}</span>
             </div>
@@ -1020,3 +1022,14 @@ onBeforeUnmount(() => {
   handleCardDragEnd()
 })
 </script>
+
+<style scoped>
+.operator-note-line {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  color: #0f172a;
+}
+</style>

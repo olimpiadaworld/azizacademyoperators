@@ -195,6 +195,8 @@
                     <span><strong>Sinf:</strong> {{ lead.grade || '-' }}</span>
                     <span><strong>Fan:</strong> {{ lead.subject || '-' }}</span>
                     <span><strong>Ball:</strong> {{ lead.ball || '-' }}</span>
+                    <span v-if="lead.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ lead.operator_note }}</span>
+                    <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
                     <span><strong>To‘lov:</strong> {{ lead.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}</span>
                     <span v-if="lead.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(lead.payment_done_at) }}</span>
                   </div>
@@ -363,6 +365,8 @@
                     <span><strong>Sinf:</strong> {{ lead.grade || '-' }}</span>
                     <span><strong>Fan:</strong> {{ lead.subject || '-' }}</span>
                     <span><strong>Ball:</strong> {{ lead.ball || '-' }}</span>
+                    <span v-if="lead.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ lead.operator_note }}</span>
+                    <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
                   </div>
                   <div class="visit-mini-card__actions">
                     <button class="btn" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
@@ -396,6 +400,8 @@
               <span><strong>Sinf:</strong> {{ lead.grade || '-' }}</span>
               <span><strong>Fan:</strong> {{ lead.subject || '-' }}</span>
               <span><strong>Ball:</strong> {{ lead.ball || '-' }}</span>
+                    <span v-if="lead.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ lead.operator_note }}</span>
+                    <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
               <span><strong>To‘lov:</strong> {{ lead.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}</span>
               <span v-if="lead.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(lead.payment_done_at) }}</span>
             </div>
@@ -533,6 +539,8 @@
                     <span><strong>Sinf:</strong> {{ item.grade || '-' }}</span>
                     <span><strong>Fan:</strong> {{ item.subject || '-' }}</span>
                     <span><strong>Ball:</strong> {{ item.ball || '-' }}</span>
+                    <span v-if="item.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ item.operator_note }}</span>
+                    <span v-if="item.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(item.operator_note_at) }}</span>
                     <span><strong>Operator:</strong> {{ item.operator_name || '-' }}</span>
                     <span><strong>Holat:</strong> {{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
                     <span><strong>To‘lov:</strong> {{ item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}</span>
@@ -2900,5 +2908,15 @@ onBeforeUnmount(() => {
 .branch-check { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 14px; background: white; border: 1px solid rgba(148, 163, 184, .22); font-size: 13px; cursor: pointer; }
 .branch-check input { width: 16px; height: 16px; accent-color: #2563eb; }
 @media (max-width: 640px) { .branch-picker__grid { grid-template-columns: 1fr; } }
+
+
+.operator-note-line {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  color: #0f172a;
+}
 
 </style>
