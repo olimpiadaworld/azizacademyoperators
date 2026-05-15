@@ -312,9 +312,28 @@
         <p>{{ loadingMessage }}</p>
       </div>
 
+      <div class="operator-status-page-tabs">
+        <button
+          type="button"
+          class="operator-status-page-tab"
+          :class="{ active: statusPage === 'main' }"
+          @click="statusPage = 'main'"
+        >
+          1-sahifa
+        </button>
+        <button
+          type="button"
+          class="operator-status-page-tab"
+          :class="{ active: statusPage === 'extra' }"
+          @click="statusPage = 'extra'"
+        >
+          2-sahifa
+        </button>
+      </div>
+
       <ResponsiveSwiper
         v-if="isCompact"
-        :items="displaySections"
+        :items="activeStatusPageSections"
         eyebrow="Statuslar swiper"
         title="Har bo'lim alohida card bo'lib yuradi"
         wrapper-class="glass-soft operator-status-mobile-swiper swipe-elevated"
@@ -360,7 +379,7 @@
 
       <div v-else class="operator-status-board" :class="{ 'content-dim': loading }">
         <section
-          v-for="section in displaySections"
+          v-for="section in activeStatusPageSections"
           :key="section.key"
           class="operator-status-column"
           :class="[`status-${section.key}`, { 'drop-active': dropTargetStatus === section.key }]"
@@ -408,6 +427,10 @@ import { useViewport } from '../../composables/useViewport'
 
 const fetchStatusOrder = ['new', 'sale', 'otkaz', 'wrong_number', 'open_number', 'advice', 'other']
 const sectionOrder = ['sale', 'otkaz', 'wrong_number', 'open_number', 'advice', 'other']
+const statusPageMap = {
+  main: ['sale', 'open_number', 'advice'],
+  extra: ['otkaz', 'wrong_number', 'other'],
+}
 const sectionMeta = {
   sale: { title: 'Sotuvlar' },
   otkaz: { title: 'Atkaz' },
@@ -440,6 +463,7 @@ const dailyHistory = ref([])
 const operatorVisitDecisions = ref([])
 const operatorDecisionFilter = ref('all')
 const operatorPaymentFilter = ref('all')
+const statusPage = ref('main')
 const draggedLead = ref(null)
 const dropTargetStatus = ref('')
 const statusModal = reactive({ open: false, lead: null, status: '', existingNote: '', newNote: '' })
@@ -575,11 +599,15 @@ const displaySections = computed(() => sectionOrder.map((key) => ({
   title: sectionMeta[key].title,
   leads: (leadsByStatus[key] || []).filter(leadMatchesFilters),
 })))
+const activeStatusPageSections = computed(() => {
+  const keys = statusPageMap[statusPage.value] || statusPageMap.main
+  return displaySections.value.filter(section => keys.includes(section.key))
+})
 const visibleLeadCount = computed(() => {
   if (currentTab.value === 'assigned') return filteredAssignedLeads.value.length
   if (currentTab.value === 'timed') return filteredTimedLeads.value.length
   if (currentTab.value === 'report') return dailyHistory.value.length
-  return displaySections.value.reduce((sum, item) => sum + item.leads.length, 0)
+  return activeStatusPageSections.value.reduce((sum, item) => sum + item.leads.length, 0)
 })
 const statusSummaryItems = computed(() => {
   if (currentTab.value === 'assigned') {
@@ -598,7 +626,7 @@ const statusSummaryItems = computed(() => {
       { key: 'other', title: "O'qiydi", count: latest.other },
     ]
   }
-  return displaySections.value.map(section => ({ key: section.key, title: section.title, count: section.leads.length }))
+  return activeStatusPageSections.value.map(section => ({ key: section.key, title: section.title, count: section.leads.length }))
 })
 
 const filteredOperatorVisitDecisions = computed(() => operatorVisitDecisions.value.filter((item) => {

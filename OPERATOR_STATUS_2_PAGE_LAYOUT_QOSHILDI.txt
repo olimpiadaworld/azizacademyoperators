@@ -1,0 +1,1 @@
+Operator status board ikki sahifaga bo‘lindi: 1-sahifa Sotuvlar/Ochiq nomer/Maslahat, 2-sahifa Atkaz/Xato nomer/O‘qiydi. Kartalar eni kattalashtirildi.
