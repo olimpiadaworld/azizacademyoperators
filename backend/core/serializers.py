@@ -96,13 +96,33 @@ def visit_decision_to_dict(item):
         'operator_name': ((lead.assigned_operator.full_name or lead.assigned_operator.username) if lead and lead.assigned_operator_id and lead.assigned_operator else ''),
         'boss_name': ((lead.boss.full_name or lead.boss.username) if lead and lead.boss_id and lead.boss else ''),
         'decision': item.decision,
+        'payment_status': (
+            'paid' if bool(getattr(item, 'payment_done', False))
+            else 'unpaid' if bool(getattr(item, 'left_without_payment', False))
+            else 'pending'
+        ),
         'payment_done': bool(getattr(item, 'payment_done', False)),
+        'payment_not_done': bool(getattr(item, 'left_without_payment', False)),
         'payment_done_at': getattr(item, 'payment_done_at', None),
         'payment_done_by': getattr(item, 'payment_done_by_id', None),
         'payment_done_by_name': ((item.payment_done_by.full_name or item.payment_done_by.username) if getattr(item, 'payment_done_by_id', None) and getattr(item, 'payment_done_by', None) else ''),
         'left_without_payment': bool(getattr(item, 'left_without_payment', False)),
         'left_without_payment_at': getattr(item, 'left_without_payment_at', None),
         'left_without_payment_by_name': ((item.left_without_payment_by.full_name or item.left_without_payment_by.username) if getattr(item, 'left_without_payment_by_id', None) and getattr(item, 'left_without_payment_by', None) else ''),
+        'payment_status_at': (
+            getattr(item, 'payment_done_at', None)
+            if bool(getattr(item, 'payment_done', False))
+            else getattr(item, 'left_without_payment_at', None)
+            if bool(getattr(item, 'left_without_payment', False))
+            else None
+        ),
+        'payment_status_by_name': (
+            ((item.payment_done_by.full_name or item.payment_done_by.username) if getattr(item, 'payment_done_by_id', None) and getattr(item, 'payment_done_by', None) else '')
+            if bool(getattr(item, 'payment_done', False))
+            else ((item.left_without_payment_by.full_name or item.left_without_payment_by.username) if getattr(item, 'left_without_payment_by_id', None) and getattr(item, 'left_without_payment_by', None) else '')
+            if bool(getattr(item, 'left_without_payment', False))
+            else ''
+        ),
         'decided_by': item.decided_by_id,
         'filial_rahbari_id': item.decided_by_id,
         'filial_rahbari_name': ((item.decided_by.full_name or item.decided_by.username) if item.decided_by_id and item.decided_by else ''),

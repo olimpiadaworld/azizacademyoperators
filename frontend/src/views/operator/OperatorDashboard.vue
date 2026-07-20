@@ -337,7 +337,8 @@
           <div class="operator-visit-control__summary">
             <span class="badge">Keldi: {{ operatorArrivedCount }}</span>
             <span class="badge muted">Kelmadi: {{ operatorNotArrivedCount }}</span>
-            <span class="badge">To‘lov: {{ operatorPaymentDoneCount }}</span>
+            <span class="badge">To‘lov qildi: {{ operatorPaymentDoneCount }}</span>
+            <span class="badge muted">To‘lov qilmadi: {{ operatorPaymentNotDoneCount }}</span>
           </div>
         </div>
 
@@ -349,8 +350,9 @@
           </select>
           <select class="select" v-model="operatorPaymentFilter">
             <option value="all">To‘lov</option>
-            <option value="done">To‘lov qilindi</option>
-            <option value="not_done">To‘lov qilinmadi</option>
+            <option value="paid">To‘lov qildi</option>
+            <option value="unpaid">To‘lov qilmadi</option>
+            <option value="pending">Belgilanmagan</option>
           </select>
         </div>
 
@@ -360,8 +362,8 @@
               <span class="operator-visit-status" :class="item.decision === 'arrived' ? 'operator-visit-status--arrived' : 'operator-visit-status--not-arrived'">
                 {{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}
               </span>
-              <span class="operator-visit-payment" :class="item.payment_done ? 'operator-visit-payment--done' : 'operator-visit-payment--pending'">
-                {{ item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}
+              <span class="operator-visit-payment" :class="`operator-visit-payment--${operatorPaymentStatus(item)}`">
+                {{ operatorPaymentStatusLabel(item) }}
               </span>
             </div>
             <h4>{{ item.lead_name || item.full_name || 'Lead' }}</h4>
@@ -374,8 +376,8 @@
               <span><strong>Vaqt:</strong> {{ formatDateTime(item.updated_at) }}</span>
               <span v-if="item.operator_note" class="operator-note-line"><strong>Sizning izohingiz:</strong> {{ item.operator_note }}</span>
               <span v-if="item.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(item.operator_note_at) }}</span>
-              <span v-if="item.payment_done"><strong>To‘lovni belgilagan:</strong> {{ item.payment_done_by_name || '-' }}</span>
-              <span v-if="item.payment_done"><strong>To‘lov vaqti:</strong> {{ formatDateTime(item.payment_done_at) }}</span>
+              <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>Holatni belgilagan:</strong> {{ item.payment_status_by_name || '-' }}</span>
+              <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>To‘lov holati vaqti:</strong> {{ formatDateTime(item.payment_status_at) }}</span>
             </div>
           </article>
         </div>
@@ -905,15 +907,29 @@ const statusSummaryItems = computed(() => {
   return activeStatusPageSections.value.map(section => ({ key: section.key, title: section.title, count: section.leads.length }))
 })
 
+function operatorPaymentStatus(item) {
+  if (item?.payment_status) return item.payment_status
+  if (item?.payment_done) return 'paid'
+  if (item?.payment_not_done || item?.left_without_payment) return 'unpaid'
+  return 'pending'
+}
+
+function operatorPaymentStatusLabel(item) {
+  const status = operatorPaymentStatus(item)
+  if (status === 'paid') return 'To‘lov qildi'
+  if (status === 'unpaid') return 'To‘lov qilmadi'
+  return 'Belgilanmagan'
+}
+
 const filteredOperatorVisitDecisions = computed(() => operatorVisitDecisions.value.filter((item) => {
   if (operatorDecisionFilter.value !== 'all' && item.decision !== operatorDecisionFilter.value) return false
-  if (operatorPaymentFilter.value === 'done' && !item.payment_done) return false
-  if (operatorPaymentFilter.value === 'not_done' && item.payment_done) return false
+  if (operatorPaymentFilter.value !== 'all' && operatorPaymentStatus(item) !== operatorPaymentFilter.value) return false
   return true
 }))
 const operatorArrivedCount = computed(() => operatorVisitDecisions.value.filter(item => item.decision === 'arrived').length)
 const operatorNotArrivedCount = computed(() => operatorVisitDecisions.value.filter(item => item.decision === 'not_arrived').length)
-const operatorPaymentDoneCount = computed(() => operatorVisitDecisions.value.filter(item => item.payment_done).length)
+const operatorPaymentDoneCount = computed(() => operatorVisitDecisions.value.filter(item => operatorPaymentStatus(item) === 'paid').length)
+const operatorPaymentNotDoneCount = computed(() => operatorVisitDecisions.value.filter(item => operatorPaymentStatus(item) === 'unpaid').length)
 
 function formatDateTime(value) {
   if (!value) return '-'

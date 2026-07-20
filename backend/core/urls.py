@@ -22,6 +22,7 @@ urlpatterns = [
     path('admin/monthly-report/', views.admin_monthly_report),
     path('admin/reports/monthly-sales-excel/', views.admin_monthly_sales_excel),
     path('admin/reports/all-excel/', views.admin_all_reports_excel),
+    path('admin/reports/visit-decisions-excel/', views.admin_visit_decisions_excel),
     path('admin/telegram/test/', views.telegram_test),
     path('admin/directors/', views.admin_directors),
     path('admin/directors/<int:user_id>/', views.admin_directors),
@@ -47,6 +48,7 @@ urlpatterns = [
     path('boss/statistics/accounting/', views.boss_accounting_report),
     path('boss/statistics/daily-report/', views.boss_daily_report_excel),
     path('boss/statistics/full-report-excel/', views.boss_full_report_excel),
+    path('boss/statistics/visit-decisions-excel/', views.boss_visit_decisions_excel),
 
     path('operator/leads/', views.operator_leads),
     path('operator/leads/create/', views.operator_create_lead),

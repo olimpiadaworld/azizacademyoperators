@@ -1,0 +1,35 @@
+MENENJER NAZORATI YANGILANDI
+
+1. Menenjer “Keldi” bosgandan keyin “Kelmadi” tugmasi bloklanadi.
+2. Backend ham Keldi -> Kelmadi o‘zgarishini 409 xato bilan rad etadi.
+3. To‘lov holatlari aniq ajratildi:
+   - To‘lov qildi
+   - To‘lov qilmadi
+   - Belgilanmagan
+4. “Kelmadi” yoki hali to‘lov belgilanmagan leadlar endi avtomatik
+   “To‘lov qilmadi” statistikasiga qo‘shilmaydi.
+5. Menenjer Keldi bosgandan keyin “To‘lov qildi” yoki “To‘lov qilmadi”ni tanlaydi.
+6. To‘lov holatini keyin xato bo‘lsa boshqa holatga almashtirish mumkin.
+7. Boss panelida menenjerlar kesimida Keldi, Kelmadi, To‘lov qildi,
+   To‘lov qilmadi va Belgilanmagan statistikasi ko‘rinadi.
+8. Boss paneliga alohida “Nazorat Excel yuklash” tugmasi qo‘shildi.
+9. Admin paneliga alohida “Nazorat Excel yuklash” tugmasi qo‘shildi.
+10. Excel faylida quyidagi listlar mavjud:
+    - Statistika
+    - Menenjerlar
+    - Barcha Natijalar
+    - Keldi
+    - Kelmadi
+    - To‘lov Qildi
+    - To‘lov Qilmadi
+    - Belgilanmagan
+11. Bossning umumiy Excel hisobotiga ham To‘lov Qilmaganlar va
+    Belgilanmagan listlari qo‘shildi.
+12. Operator panelida ham to‘lov holatlari to‘g‘ri ko‘rsatiladi.
+
+TEKSHIRUV:
+- Frontend production build: muvaffaqiyatli.
+- Django system check: xatosiz.
+- Keldi -> Kelmadi bloklash testi: muvaffaqiyatli.
+- To‘lov qildi / To‘lov qilmadi almashtirish testi: muvaffaqiyatli.
+- Admin va Boss Excel fayllari: ochildi va listlar tekshirildi.

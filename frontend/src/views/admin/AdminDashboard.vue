@@ -197,14 +197,18 @@
         <div>
           <div class="eyebrow">Keldi / To‘lov nazorati</div>
           <h3>Menenjerlar belgilari</h3>
-          <p>Kim Keldi/Kelmadi bosgani va kim To‘lov qilindi qilgani shu yerda ko‘rinadi.</p>
+          <p>Keldi, Kelmadi, To‘lov qildi va To‘lov qilmadi natijalari shu yerda ko‘rinadi.</p>
         </div>
         <div class="lead-toolbar-info lead-toolbar-info--wrap">
+          <button class="btn secondary" type="button" :disabled="visitDecisionsExcelDownloading" @click="downloadVisitDecisionsExcel">
+            {{ visitDecisionsExcelDownloading ? 'Excel tayyorlanmoqda...' : 'Nazorat Excel yuklash' }}
+          </button>
           <span class="badge">Jami: {{ adminVisitDecisions.length }}</span>
           <span class="badge arrived-badge">Keldi: {{ adminArrivedCount }}</span>
           <span class="badge not-arrived-badge">Kelmadi: {{ adminNotArrivedCount }}</span>
           <span class="badge payment-paid-badge">To‘lov qildi: {{ adminPaymentDoneCount }}</span>
           <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ adminPaymentNotDoneCount }}</span>
+          <span class="badge muted">Belgilanmagan: {{ adminPaymentPendingCount }}</span>
         </div>
       </div>
       <div class="table-wrap">
@@ -216,8 +220,9 @@
               <th>Operator</th>
               <th>Qaror</th>
               <th>To‘lov</th>
-              <th>To‘lov qilgan</th>
-              <th>Vaqt</th>
+              <th>Holatni belgilagan</th>
+              <th>To‘lov vaqti</th>
+              <th>Nazorat vaqti</th>
             </tr>
           </thead>
           <tbody>
@@ -226,12 +231,13 @@
               <td>{{ item.filial_rahbari_name || '-' }}</td>
               <td>{{ item.operator_name || '-' }}</td>
               <td><span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span></td>
-              <td><span :class="['badge', item.payment_done ? 'payment-paid-badge' : 'payment-unpaid-badge']">{{ item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}</span></td>
-              <td>{{ item.payment_done_by_name || '-' }}</td>
+              <td><span :class="['badge', adminPaymentBadgeClass(item)]">{{ adminPaymentStatusLabel(item) }}</span></td>
+              <td>{{ item.payment_status_by_name || '-' }}</td>
+              <td>{{ item.payment_status_at ? formatDateTime(item.payment_status_at) : '-' }}</td>
               <td>{{ formatDateTime(item.updated_at) }}</td>
             </tr>
             <tr v-if="!adminVisitDecisions.length">
-              <td colspan="7" class="empty-state">Hali Keldi/Kelmadi yoki To‘lov belgisi yo‘q.</td>
+              <td colspan="8" class="empty-state">Hali Keldi/Kelmadi yoki To‘lov belgisi yo‘q.</td>
             </tr>
           </tbody>
         </table>
@@ -768,6 +774,7 @@ const userDeleteLoading = ref(false)
 const transferTargetOperatorId = ref('')
 const adminReportLoading = ref(false)
 const allReportsDownloading = ref(false)
+const visitDecisionsExcelDownloading = ref(false)
 const monthlyReportModalOpen = ref(false)
 const monthlyReportDownloading = ref(false)
 const monthlyReportMonth = ref(new Date().toISOString().slice(0, 7))
@@ -896,8 +903,9 @@ const operatorTransferOptions = computed(() => (
 ))
 const adminArrivedCount = computed(() => adminVisitDecisions.value.filter(item => item.decision === 'arrived').length)
 const adminNotArrivedCount = computed(() => adminVisitDecisions.value.filter(item => item.decision === 'not_arrived').length)
-const adminPaymentDoneCount = computed(() => adminVisitDecisions.value.filter(item => item.payment_done).length)
-const adminPaymentNotDoneCount = computed(() => adminVisitDecisions.value.filter(item => !item.payment_done).length)
+const adminPaymentDoneCount = computed(() => adminVisitDecisions.value.filter(item => adminPaymentStatus(item) === 'paid').length)
+const adminPaymentNotDoneCount = computed(() => adminVisitDecisions.value.filter(item => adminPaymentStatus(item) === 'unpaid').length)
+const adminPaymentPendingCount = computed(() => adminVisitDecisions.value.filter(item => adminPaymentStatus(item) === 'pending').length)
 const adminOperatorRows = computed(() => adminReportData.value?.operator_rows || [])
 const adminDailyRows = computed(() => adminReportData.value?.daily || [])
 const adminMonthlyRows = computed(() => adminReportData.value?.monthly_archive || [])
@@ -1141,6 +1149,42 @@ async function confirmBulkDeleteLeads() {
     bulkLeadDeleteLoading.value = false
   }
 }
+
+function adminPaymentStatus(item) {
+  if (item?.payment_status) return item.payment_status
+  if (item?.payment_done) return 'paid'
+  if (item?.payment_not_done || item?.left_without_payment) return 'unpaid'
+  return 'pending'
+}
+
+function adminPaymentStatusLabel(item) {
+  const status = adminPaymentStatus(item)
+  if (status === 'paid') return 'To‘lov qildi'
+  if (status === 'unpaid') return 'To‘lov qilmadi'
+  return 'Belgilanmagan'
+}
+
+function adminPaymentBadgeClass(item) {
+  const status = adminPaymentStatus(item)
+  if (status === 'paid') return 'payment-paid-badge'
+  if (status === 'unpaid') return 'payment-unpaid-badge'
+  return 'muted'
+}
+
+async function downloadVisitDecisionsExcel() {
+  visitDecisionsExcelDownloading.value = true
+  resetMessages()
+  try {
+    const response = await client.get('admin/reports/visit-decisions-excel/', { responseType: 'blob' })
+    downloadBlob(response.data, response.headers, 'admin_keldi_kelmadi_tolov_hisoboti.xlsx')
+    success.value = 'Keldi, Kelmadi va to‘lov nazorati Excel formatda yuklandi.'
+  } catch (e) {
+    error.value = e.response?.data?.detail || 'Nazorat Excel hisobotini yuklashda xatolik yuz berdi.'
+  } finally {
+    visitDecisionsExcelDownloading.value = false
+  }
+}
+
 
 function getFilenameFromDisposition(disposition, fallback) {
   if (!disposition) return fallback

@@ -211,13 +211,13 @@
               <div v-for="lead in undecidedLeads" :key="lead.id" class="operator-swiper__slide">
                 <article class="visit-mini-card glass">
                   <div class="visit-mini-card__head visit-mini-card__head--payment">
-                    <span :class="['payment-dot', lead.payment_done ? 'is-paid' : 'is-unpaid']" :title="lead.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi'"></span>
+                    <span :class="['payment-dot', paymentDotClass(lead)]" :title="leadPaymentStatusLabel(lead)"></span>
                     <div>
                       <h4>{{ lead.full_name || "Ism yo'q" }}</h4>
                       <div class="boss-lead-item__chips">
                         <span class="badge">{{ currentStatusTitle }}</span>
                         <span class="badge muted">{{ lead.operator_name || 'Operator biriktirilmagan' }}</span>
-                        <span :class="['badge', lead.payment_done ? 'payment-paid-badge' : 'payment-unpaid-badge']">{{ lead.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi' }}</span>
+                        <span :class="['badge', paymentBadgeClass(lead)]">{{ leadPaymentStatusLabel(lead) }}</span>
                       </div>
                     </div>
                   </div>
@@ -315,6 +315,7 @@
             <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'all' }" @click="filialPaymentFilter = 'all'">To‘lov</button>
             <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'paid' }" @click="filialPaymentFilter = 'paid'">To‘lov qildi</button>
             <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'unpaid' }" @click="filialPaymentFilter = 'unpaid'">To‘lov qilmadi</button>
+            <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'pending' }" @click="filialPaymentFilter = 'pending'">Belgilanmagan</button>
           </div>
         </div>
       </div>
@@ -323,6 +324,7 @@
         <span class="badge not-arrived-badge">Kelmaganlar: {{ ownNotArrivedLeads.length }} ta</span>
         <span class="badge payment-paid-badge">To‘lov qildi: {{ filialPaymentDoneCount }}</span>
         <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ filialPaymentNotDoneCount }}</span>
+        <span class="badge muted">Belgilanmagan: {{ filialPaymentPendingCount }}</span>
         <span class="badge muted">Ko'rinayotgan: {{ filteredDecidedLeads.length }} ta</span>
       </div>
 
@@ -405,9 +407,9 @@
                   </div>
                   <div class="visit-mini-card__actions">
                     <button class="btn" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
-                    <button class="btn secondary" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
-                    <button class="btn payment-btn" :class="{ 'is-active-choice': lead.payment_done }" :disabled="paymentLoadingId === lead.id || lead.payment_done" @click="markPaymentDone(lead.id)">To‘lov qildi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn" :class="{ 'is-active-choice': lead.left_without_payment }" :disabled="paymentLoadingId === lead.id || lead.payment_done" @click="markLeftWithoutPaymentAction(lead.id)">Keldi, to‘lov qilmasdan ketdi</button>
+                    <button class="btn secondary" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="markPaymentDone(lead.id)">To‘lov qildi</button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="markPaymentNotDone(lead.id)">To‘lov qilmadi</button>
                   </div>
                 </article>
               </div>
@@ -440,13 +442,13 @@
                     <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
               <span><strong>To‘lov:</strong> {{ leadPaymentStatusLabel(lead) }}</span>
               <span v-if="lead.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(lead.payment_done_at) }}</span>
-              <span v-if="lead.left_without_payment_at"><strong>Ketgan vaqti:</strong> {{ formatDateTime(lead.left_without_payment_at) }}</span>
+              <span v-if="lead.left_without_payment_at"><strong>To‘lov qilmadi vaqti:</strong> {{ formatDateTime(lead.left_without_payment_at) }}</span>
             </div>
             <div class="visit-mini-card__actions">
               <button class="btn" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
-              <button class="btn secondary" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
-              <button class="btn payment-btn" :class="{ 'is-active-choice': lead.payment_done }" :disabled="paymentLoadingId === lead.id || lead.payment_done" @click="markPaymentDone(lead.id)">To‘lov qildi</button>
-              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn" :class="{ 'is-active-choice': lead.left_without_payment }" :disabled="paymentLoadingId === lead.id || lead.payment_done" @click="markLeftWithoutPaymentAction(lead.id)">Keldi, to‘lov qilmasdan ketdi</button>
+              <button class="btn secondary" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
+              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="markPaymentDone(lead.id)">To‘lov qildi</button>
+              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="markPaymentNotDone(lead.id)">To‘lov qilmadi</button>
             </div>
           </article>
         </div>
@@ -465,6 +467,9 @@
           <h3>Keldi / Kelmadi belgilari</h3>
         </div>
         <div class="decision-panel-tools">
+          <button class="btn secondary" type="button" :disabled="visitReportExcelLoading" @click="downloadVisitDecisionExcel">
+            {{ visitReportExcelLoading ? 'Excel tayyorlanmoqda...' : 'Nazorat Excel yuklash' }}
+          </button>
           <div class="decision-filter-stack">
             <div class="decision-filter-group">
               <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'all' }" @click="bossDecisionFilter = 'all'">Umumiy</button>
@@ -475,6 +480,7 @@
               <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'all' }" @click="bossPaymentFilter = 'all'">To‘lov</button>
               <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'paid' }" @click="bossPaymentFilter = 'paid'">To‘lov qildi</button>
               <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'unpaid' }" @click="bossPaymentFilter = 'unpaid'">To‘lov qilmadi</button>
+              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'pending' }" @click="bossPaymentFilter = 'pending'">Belgilanmagan</button>
             </div>
           </div>
           <div class="decision-date-filter decision-date-filter--stacked">
@@ -499,6 +505,7 @@
         <span class="badge not-arrived-badge">Kelmadi: {{ bossNotArrivedCount }}</span>
         <span class="badge payment-paid-badge">To‘lov qildi: {{ bossPaymentDoneCount }}</span>
         <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ bossPaymentNotDoneCount }}</span>
+        <span class="badge muted">Belgilanmagan: {{ bossPaymentPendingCount }}</span>
         <span class="badge muted">Ko'rinayotgan: {{ filteredBossVisitDecisions.length }} ta</span>
       </div>
 
@@ -520,6 +527,7 @@
               <th>Kelmadi</th>
               <th>To‘lov qildi</th>
               <th>To‘lov qilmadi</th>
+              <th>Belgilanmagan</th>
               <th>Oxirgi belgi</th>
             </tr>
           </thead>
@@ -531,6 +539,7 @@
               <td>{{ row.not_arrived }}</td>
               <td>{{ row.payment_done }}</td>
               <td>{{ row.payment_not_done }}</td>
+              <td>{{ row.payment_pending }}</td>
               <td>{{ formatDateTime(row.last_updated_at) }}</td>
             </tr>
           </tbody>
@@ -682,6 +691,7 @@
             <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="activePaymentFilter = 'all'">To‘lov</button>
             <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'paid' }" @click="activePaymentFilter = 'paid'">To‘lov qildi</button>
             <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'unpaid' }" @click="activePaymentFilter = 'unpaid'">To‘lov qilmadi</button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'pending' }" @click="activePaymentFilter = 'pending'">Belgilanmagan</button>
           </div>
         </div>
       </div>
@@ -692,6 +702,7 @@
         <span class="badge not-arrived-badge">Kelmadi: {{ paymentSectionNotArrivedCount }}</span>
         <span class="badge payment-paid-badge">To‘lov qildi: {{ paymentSectionPaidCount }}</span>
         <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ paymentSectionUnpaidCount }}</span>
+        <span class="badge muted">Belgilanmagan: {{ paymentSectionPendingCount }}</span>
         <span class="badge muted">Ko‘rinayotgan: {{ filteredPaymentSectionItems.length }} ta</span>
       </div>
 
@@ -726,8 +737,9 @@
           </div>
           <div v-if="isFilialRahbari" class="visit-mini-card__actions">
             <button class="btn" :class="{ 'is-active-choice': item.decision === 'arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'arrived')">Keldi</button>
-            <button class="btn secondary" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'not_arrived')">Kelmadi</button>
-            <button class="btn payment-btn" :class="{ 'is-active-choice': item.payment_done }" :disabled="paymentLoadingId === item.id || item.payment_done" @click="markPaymentDone(item.id)">{{ item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilindi' }}</button>
+            <button class="btn secondary" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id || item.decision === 'arrived'" :title="item.decision === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(item.id, 'not_arrived')">Kelmadi</button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-btn" :class="{ 'is-active-choice': paymentStatusValue(item) === 'paid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'paid'" @click="markPaymentDone(item.id)">To‘lov qildi</button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-left-btn" :class="{ 'is-active-choice': paymentStatusValue(item) === 'unpaid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'unpaid'" @click="markPaymentNotDone(item.id)">To‘lov qilmadi</button>
           </div>
         </article>
       </div>
@@ -1425,6 +1437,7 @@ const dailyReportDateInput = ref(null)
 const dailyReportDate = ref(localDateValue())
 const reportLoading = ref(false)
 const fullReportExcelLoading = ref(false)
+const visitReportExcelLoading = ref(false)
 const showFullReportModal = ref(false)
 const fullReportLoading = ref(false)
 const fullReportData = ref(null)
@@ -1667,9 +1680,16 @@ const decidedLeads = computed(() => {
       operator_name: decision.operator_name || '',
       branch_name: decision.branch_name || '',
       decision: decision.decision,
+      payment_status: decision.payment_status || (decision.payment_done ? 'paid' : decision.left_without_payment ? 'unpaid' : 'pending'),
       payment_done: !!decision.payment_done,
+      payment_not_done: !!decision.payment_not_done || !!decision.left_without_payment,
       payment_done_at: decision.payment_done_at,
       payment_done_by_name: decision.payment_done_by_name || '',
+      left_without_payment: !!decision.left_without_payment,
+      left_without_payment_at: decision.left_without_payment_at,
+      left_without_payment_by_name: decision.left_without_payment_by_name || '',
+      payment_status_at: decision.payment_status_at,
+      payment_status_by_name: decision.payment_status_by_name || '',
       updated_at: decision.updated_at,
     })).filter(item => item.id)
   }
@@ -1678,12 +1698,12 @@ const decidedLeads = computed(() => {
 const filteredDecidedLeads = computed(() => decidedLeads.value.filter((lead) => {
   const decisionOk = filialDecisionFilter.value === 'all' || (lead.decision || visitDecisionMap.value[lead.id]) === filialDecisionFilter.value
   const paymentOk = filialPaymentFilter.value === 'all'
-    || (filialPaymentFilter.value === 'paid' && lead.payment_done)
-    || (filialPaymentFilter.value === 'unpaid' && !lead.payment_done)
+    || paymentStatusValue(lead) === filialPaymentFilter.value
   return decisionOk && paymentOk
 }))
-const filialPaymentDoneCount = computed(() => decidedLeads.value.filter(lead => lead.payment_done).length)
-const filialPaymentNotDoneCount = computed(() => decidedLeads.value.filter(lead => !lead.payment_done).length)
+const filialPaymentDoneCount = computed(() => decidedLeads.value.filter(lead => paymentStatusValue(lead) === 'paid').length)
+const filialPaymentNotDoneCount = computed(() => decidedLeads.value.filter(lead => paymentStatusValue(lead) === 'unpaid').length)
+const filialPaymentPendingCount = computed(() => decidedLeads.value.filter(lead => paymentStatusValue(lead) === 'pending').length)
 const ownNotArrivedLeads = computed(() => decidedLeads.value.filter(lead => (lead.decision || visitDecisionMap.value[lead.id]) === 'not_arrived'))
 const dateFilteredBossVisitDecisions = computed(() => {
   if (!selectedBossDecisionDate.value) return visitDecisions.value
@@ -1705,14 +1725,14 @@ const scopedBossVisitDecisions = computed(() => {
 const filteredBossVisitDecisions = computed(() => scopedBossVisitDecisions.value.filter((item) => {
   const decisionOk = bossDecisionFilter.value === 'all' || item.decision === bossDecisionFilter.value
   const paymentOk = bossPaymentFilter.value === 'all'
-    || (bossPaymentFilter.value === 'paid' && item.payment_done)
-    || (bossPaymentFilter.value === 'unpaid' && !item.payment_done)
+    || paymentStatusValue(item) === bossPaymentFilter.value
   return decisionOk && paymentOk
 }))
 const bossArrivedCount = computed(() => scopedBossVisitDecisions.value.filter(item => item.decision === 'arrived').length)
 const bossNotArrivedCount = computed(() => scopedBossVisitDecisions.value.filter(item => item.decision === 'not_arrived').length)
-const bossPaymentDoneCount = computed(() => scopedBossVisitDecisions.value.filter(item => item.payment_done).length)
-const bossPaymentNotDoneCount = computed(() => scopedBossVisitDecisions.value.filter(item => !item.payment_done).length)
+const bossPaymentDoneCount = computed(() => scopedBossVisitDecisions.value.filter(item => paymentStatusValue(item) === 'paid').length)
+const bossPaymentNotDoneCount = computed(() => scopedBossVisitDecisions.value.filter(item => paymentStatusValue(item) === 'unpaid').length)
+const bossPaymentPendingCount = computed(() => scopedBossVisitDecisions.value.filter(item => paymentStatusValue(item) === 'pending').length)
 const activeDecisionFilter = computed({
   get: () => isFilialRahbari.value ? filialDecisionFilter.value : paymentSectionDecisionFilter.value,
   set: (value) => {
@@ -1744,19 +1764,21 @@ const paymentSectionItems = computed(() => {
 const filteredPaymentSectionItems = computed(() => paymentSectionItems.value.filter((item) => {
   const decisionOk = activeDecisionFilter.value === 'all' || item.decision === activeDecisionFilter.value
   const paymentOk = activePaymentFilter.value === 'all'
-    || (activePaymentFilter.value === 'paid' && item.payment_done)
-    || (activePaymentFilter.value === 'unpaid' && !item.payment_done)
+    || paymentStatusValue(item) === activePaymentFilter.value
   return decisionOk && paymentOk
 }))
 const paymentSectionArrivedCount = computed(() => paymentSectionItems.value.filter(item => item.decision === 'arrived').length)
 const paymentSectionNotArrivedCount = computed(() => paymentSectionItems.value.filter(item => item.decision === 'not_arrived').length)
-const paymentSectionPaidCount = computed(() => paymentSectionItems.value.filter(item => item.payment_done).length)
-const paymentSectionUnpaidCount = computed(() => paymentSectionItems.value.filter(item => !item.payment_done).length)
+const paymentSectionPaidCount = computed(() => paymentSectionItems.value.filter(item => paymentStatusValue(item) === 'paid').length)
+const paymentSectionUnpaidCount = computed(() => paymentSectionItems.value.filter(item => paymentStatusValue(item) === 'unpaid').length)
+const paymentSectionPendingCount = computed(() => paymentSectionItems.value.filter(item => paymentStatusValue(item) === 'pending').length)
 const bossDecisionSummaryCards = computed(() => ([
   { title: 'Jami belgi', value: scopedBossVisitDecisions.value.length, subtitle: 'Menenjerlar bosgan jami qarorlar' },
   { title: 'Keldi', value: bossArrivedCount.value, subtitle: 'Kelgan deb belgilangan leadlar' },
   { title: 'Kelmadi', value: bossNotArrivedCount.value, subtitle: 'Kelmagan deb belgilangan leadlar' },
-  { title: 'To‘lov qildi', value: bossPaymentDoneCount.value, subtitle: 'To‘lov qilingan leadlar' },
+  { title: 'To‘lov qildi', value: bossPaymentDoneCount.value, subtitle: 'To‘lov qilgan leadlar' },
+  { title: 'To‘lov qilmadi', value: bossPaymentNotDoneCount.value, subtitle: 'To‘lov qilmagan leadlar' },
+  { title: 'Belgilanmagan', value: bossPaymentPendingCount.value, subtitle: 'To‘lov holati kiritilmagan' },
   { title: 'Menenjerlar', value: bossRahbariDecisionStats.value.length, subtitle: 'Belgi qo‘ygan menenjerlar' },
 ]))
 const bossRahbariDecisionStats = computed(() => {
@@ -1772,13 +1794,15 @@ const bossRahbariDecisionStats = computed(() => {
       not_arrived: 0,
       payment_done: 0,
       payment_not_done: 0,
+      payment_pending: 0,
       last_updated_at: item.updated_at,
     }
     row.total += 1
     if (item.decision === 'arrived') row.arrived += 1
     if (item.decision === 'not_arrived') row.not_arrived += 1
-    if (item.payment_done) row.payment_done += 1
-    if (!item.payment_done) row.payment_not_done += 1
+    if (paymentStatusValue(item) === 'paid') row.payment_done += 1
+    if (paymentStatusValue(item) === 'unpaid') row.payment_not_done += 1
+    if (paymentStatusValue(item) === 'pending') row.payment_pending += 1
     if (!row.last_updated_at || new Date(item.updated_at) > new Date(row.last_updated_at)) row.last_updated_at = item.updated_at
     map.set(key, row)
   })
@@ -2255,19 +2279,36 @@ async function submitVisitDecision(leadId, decision) {
   }
 }
 
+function paymentStatusValue(item) {
+  if (item?.payment_status) return item.payment_status
+  if (item?.payment_done) return 'paid'
+  if (item?.left_without_payment || item?.payment_not_done) return 'unpaid'
+  return 'pending'
+}
+
 function leadPaymentStatusLabel(item) {
-  if (item.left_without_payment) return 'Keldi, to‘lov qilmasdan ketdi'
-  return item.payment_done ? 'To‘lov qilindi' : 'To‘lov qilinmadi'
+  const status = paymentStatusValue(item)
+  if (status === 'paid') return 'To‘lov qildi'
+  if (status === 'unpaid') return 'To‘lov qilmadi'
+  return 'Belgilanmagan'
 }
 
 function paymentDotClass(item) {
-  if (item.left_without_payment) return 'is-left'
-  return item.payment_done ? 'is-paid' : 'is-unpaid'
+  const status = paymentStatusValue(item)
+  if (status === 'paid') return 'is-paid'
+  if (status === 'unpaid') return 'is-left'
+  return 'is-pending'
 }
 
 function paymentBadgeClass(item) {
-  if (item.left_without_payment) return 'payment-left-badge'
-  return item.payment_done ? 'payment-paid-badge' : 'payment-unpaid-badge'
+  const status = paymentStatusValue(item)
+  if (status === 'paid') return 'payment-paid-badge'
+  if (status === 'unpaid') return 'payment-unpaid-badge'
+  return 'muted'
+}
+
+function isArrivalLocked(item) {
+  return String(item?.decision || visitDecisionMap.value[item?.id] || '') === 'arrived'
 }
 
 async function markPaymentDone(leadId) {
@@ -2275,7 +2316,7 @@ async function markPaymentDone(leadId) {
   error.value = ''
   try {
     await client.post(`boss/leads/${leadId}/payment-done/`)
-    showSuccess('To‘lov qilindi')
+    showSuccess('To‘lov qildi deb belgilandi')
     await fetchVisitDecisions()
   } catch (e) {
     error.value = e.response?.data?.detail || 'To‘lov belgisini saqlashda xatolik yuz berdi.'
@@ -2284,17 +2325,47 @@ async function markPaymentDone(leadId) {
   }
 }
 
-async function markLeftWithoutPaymentAction(leadId) {
+async function markPaymentNotDone(leadId) {
   paymentLoadingId.value = leadId
   error.value = ''
   try {
     await client.post(`boss/leads/${leadId}/left-without-payment/`)
-    showSuccess('Keldi, to‘lov qilmasdan ketdi deb belgilandi')
+    showSuccess('To‘lov qilmadi deb belgilandi')
     await fetchVisitDecisions()
   } catch (e) {
-    error.value = e.response?.data?.detail || 'Belgilashda xatolik yuz berdi.'
+    error.value = e.response?.data?.detail || 'To‘lov qilmadi belgisini saqlashda xatolik yuz berdi.'
   } finally {
     paymentLoadingId.value = null
+  }
+}
+
+async function downloadVisitDecisionExcel() {
+  visitReportExcelLoading.value = true
+  error.value = ''
+  try {
+    const params = {}
+    if (selectedBossDecisionDate.value) params.date = selectedBossDecisionDate.value
+    if (selectedBossRahbariFilter.value !== 'all') params.manager_id = selectedBossRahbariFilter.value
+    if (bossDecisionFilter.value !== 'all') params.decision = bossDecisionFilter.value
+    if (bossPaymentFilter.value !== 'all') params.payment = bossPaymentFilter.value
+    const response = await client.get('boss/statistics/visit-decisions-excel/', {
+      params,
+      responseType: 'blob',
+    })
+    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `boss_keldi_kelmadi_tolov_${selectedBossDecisionDate.value || 'barcha'}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    showSuccess('Keldi, Kelmadi va to‘lov hisoboti Excel formatda yuklandi.')
+  } catch (e) {
+    error.value = e.response?.data?.detail || 'Nazorat Excel hisobotini yuklashda xatolik yuz berdi.'
+  } finally {
+    visitReportExcelLoading.value = false
   }
 }
 
@@ -3864,6 +3935,11 @@ onBeforeUnmount(() => {
 .payment-dot.is-paid {
   background: #22c55e;
   box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.14), 0 0 18px rgba(34, 197, 94, 0.35);
+}
+
+.payment-dot.is-pending {
+  background: #94a3b8;
+  box-shadow: 0 0 0 5px rgba(148, 163, 184, 0.14), 0 0 18px rgba(148, 163, 184, 0.24);
 }
 
 .payment-dot.is-left {

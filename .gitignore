@@ -1,0 +1,27 @@
+# Environment va maxfiy sozlamalar
+.env
+.env.*
+!.env.example
+!.env.railway.example
+!.env.netlify.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.sqlite3
+staticfiles/
+
+# Node / Vite
+node_modules/
+dist/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

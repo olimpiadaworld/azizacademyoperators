@@ -145,6 +145,45 @@ def filial_can_see_lead(filial_user, lead):
     operator = getattr(lead, 'assigned_operator', None)
     return bool(operator and users_branch_overlap(filial_user, operator))
 
+def visit_payment_status(item):
+    """Menenjer aniq belgilagan to‘lov holatini qaytaradi.
+
+    payment_done=False holatini avtomatik "To‘lov qilmadi" deb hisoblamaymiz,
+    chunki Kelmadi yoki hali to‘lov belgilanmagan leadlar ham False bo‘ladi.
+    """
+    if bool(getattr(item, 'payment_done', False)):
+        return 'paid'
+    if bool(getattr(item, 'left_without_payment', False)):
+        return 'unpaid'
+    return 'pending'
+
+
+def visit_payment_label(item):
+    return {
+        'paid': 'To‘lov qildi',
+        'unpaid': 'To‘lov qilmadi',
+        'pending': 'Belgilanmagan',
+    }[visit_payment_status(item)]
+
+
+def visit_payment_status_at(item):
+    status = visit_payment_status(item)
+    if status == 'paid':
+        return getattr(item, 'payment_done_at', None)
+    if status == 'unpaid':
+        return getattr(item, 'left_without_payment_at', None)
+    return None
+
+
+def visit_payment_status_by_name(item):
+    status = visit_payment_status(item)
+    user = None
+    if status == 'paid':
+        user = getattr(item, 'payment_done_by', None)
+    elif status == 'unpaid':
+        user = getattr(item, 'left_without_payment_by', None)
+    return (user.full_name or user.username) if user else ''
+
 def status_text(value):
     return STATUS_LABELS.get(value, value or '')
 
@@ -386,6 +425,7 @@ def empty_month_row(key):
         'not_arrived': 0,
         'payment_done': 0,
         'payment_not_done': 0,
+        'payment_pending': 0,
     }
 
 
@@ -444,13 +484,18 @@ def build_monthly_archive_for_operators(op_ids, params=None, *, boss_user=None, 
         decisions_qs = LeadVisitDecision.objects.filter(
             lead__assigned_operator_id__in=op_ids,
             updated_at__range=(period['start_dt'], period['end_dt']),
-        ).only('updated_at', 'decision', 'payment_done')
+        ).only('updated_at', 'decision', 'payment_done', 'left_without_payment')
         for item in decisions_qs.iterator(chunk_size=1000):
             key = local_month_key(item.updated_at)
             if key not in rows:
                 continue
             rows[key]['arrived' if item.decision == 'arrived' else 'not_arrived'] += 1
-            rows[key]['payment_done' if getattr(item, 'payment_done', False) else 'payment_not_done'] += 1
+            payment_key = {
+                'paid': 'payment_done',
+                'unpaid': 'payment_not_done',
+                'pending': 'payment_pending',
+            }[visit_payment_status(item)]
+            rows[key][payment_key] += 1
 
     for row in rows.values():
         total_base = row['assigned_leads'] or row['actions_total']
@@ -1271,14 +1316,32 @@ def visit_decision(request, lead_id):
         )
         old_decision = '' if created else item.decision
 
+        # “Keldi” yakuniy nazorat hisoblanadi. Keldi bosilgandan keyin shu
+        # menenjer Kelmadi qilib o‘zgartira olmaydi. Bu qoida backendda ham
+        # tekshiriladi, shuning uchun tugmani brauzerdan aylanib o‘tib bo‘lmaydi.
+        if not created and item.decision == 'arrived' and decision == 'not_arrived':
+            return ok({'detail': 'Keldi bosilgandan keyin Kelmadi qilib o‘zgartirib bo‘lmaydi.'}, status=409)
+
         if not created and item.decision != decision:
             item.decision = decision
             item.updated_at = timezone.now()
             item.save(update_fields=['decision', 'updated_at'])
 
         if created or old_decision != decision:
-            LeadVisitDecisionHistory.objects.create(lead=lead, decided_by=request.app_user, old_decision=old_decision, new_decision=decision)
-            DataAuditLog.objects.create(actor=request.app_user, entity_type='lead_visit_decision', entity_id=item.id, action='upserted', old_data={'decision': old_decision}, new_data={'decision': decision})
+            LeadVisitDecisionHistory.objects.create(
+                lead=lead,
+                decided_by=request.app_user,
+                old_decision=old_decision,
+                new_decision=decision,
+            )
+            DataAuditLog.objects.create(
+                actor=request.app_user,
+                entity_type='lead_visit_decision',
+                entity_id=item.id,
+                action='upserted',
+                old_data={'decision': old_decision},
+                new_data={'decision': decision},
+            )
             decision_label = 'Keldi' if decision == 'arrived' else 'Kelmadi'
             emoji = '✅' if decision == 'arrived' else '❌'
             msg = (
@@ -1297,33 +1360,7 @@ def visit_decision(request, lead_id):
 @csrf_exempt
 @require_auth('filial_rahbari')
 def mark_visit_payment(request, lead_id):
-    lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
-    if not lead:
-        return ok({'detail': 'Lead topilmadi.'}, status=404)
-    if not filial_can_see_lead(request.app_user, lead):
-        return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
-    with transaction.atomic():
-        item = LeadVisitDecision.objects.select_for_update().filter(lead=lead, decided_by=request.app_user).first()
-        if not item:
-            return ok({'detail': 'Avval Keldi yoki Kelmadi belgilang.'}, status=400)
-        old_payment = bool(item.payment_done)
-        if not item.payment_done:
-            item.payment_done = True
-            item.payment_done_at = timezone.now()
-            item.payment_done_by = request.app_user
-            item.left_without_payment = False
-            item.updated_at = timezone.now()
-            item.save(update_fields=['payment_done', 'payment_done_at', 'payment_done_by', 'left_without_payment', 'updated_at'])
-            DataAuditLog.objects.create(actor=request.app_user, entity_type='lead_visit_payment', entity_id=item.id, action='payment_done', old_data={'payment_done': old_payment}, new_data={'payment_done': True})
-            msg = ('💳 <b>To‘lov qilindi</b>\n' + tg_line('Vaqt', tg_now_text()) + tg_line('Menenjer', tg_user_name(request.app_user)) + tg_line('Filial', request.app_user.branch_name) + tg_line('Operator', tg_user_name(lead.assigned_operator)) + '\n' + tg_lead_info(lead))
-            notify_telegram_after_commit(msg)
-    return ok(visit_decision_to_dict(item))
-
-
-@csrf_exempt
-@require_auth('filial_rahbari')
-def mark_left_without_payment(request, lead_id):
-    """Mijoz keldi, lekin to'lov qilmasdan ketib qoldi degan holatni belgilaydi."""
+    """Keldi deb belgilangan lead uchun “To‘lov qildi” holatini saqlaydi."""
     lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
     if not lead:
         return ok({'detail': 'Lead topilmadi.'}, status=404)
@@ -1334,25 +1371,84 @@ def mark_left_without_payment(request, lead_id):
         if not item:
             return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
         if item.decision != 'arrived':
-            return ok({'detail': 'Bu holatni faqat "Keldi" belgilangan leadlarga qo‘yish mumkin.'}, status=400)
-        old_value = bool(item.left_without_payment)
-        if not item.left_without_payment:
-            item.left_without_payment = True
-            item.left_without_payment_at = timezone.now()
-            item.left_without_payment_by = request.app_user
-            item.payment_done = False
-            item.updated_at = timezone.now()
-            item.save(update_fields=['left_without_payment', 'left_without_payment_at', 'left_without_payment_by', 'payment_done', 'updated_at'])
+            return ok({'detail': 'To‘lov holatini faqat Keldi belgilangan leadga qo‘yish mumkin.'}, status=400)
+
+        old_status = visit_payment_status(item)
+        if old_status != 'paid':
+            now = timezone.now()
+            item.payment_done = True
+            item.payment_done_at = now
+            item.payment_done_by = request.app_user
+            item.left_without_payment = False
+            item.left_without_payment_at = None
+            item.left_without_payment_by = None
+            item.updated_at = now
+            item.save(update_fields=[
+                'payment_done', 'payment_done_at', 'payment_done_by',
+                'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
+                'updated_at',
+            ])
             DataAuditLog.objects.create(
                 actor=request.app_user,
                 entity_type='lead_visit_payment',
                 entity_id=item.id,
-                action='left_without_payment',
-                old_data={'left_without_payment': old_value},
-                new_data={'left_without_payment': True},
+                action='payment_paid',
+                old_data={'payment_status': old_status},
+                new_data={'payment_status': 'paid'},
             )
             msg = (
-                '🚪 <b>Keldi, to‘lov qilmasdan ketdi</b>\n'
+                '💳 <b>To‘lov qildi</b>\n'
+                + tg_line('Vaqt', tg_now_text())
+                + tg_line('Menenjer', tg_user_name(request.app_user))
+                + tg_line('Filial', request.app_user.branch_name)
+                + tg_line('Operator', tg_user_name(lead.assigned_operator))
+                + '\n' + tg_lead_info(lead)
+            )
+            notify_telegram_after_commit(msg)
+    return ok(visit_decision_to_dict(item))
+
+
+@csrf_exempt
+@require_auth('filial_rahbari')
+def mark_left_without_payment(request, lead_id):
+    """Keldi deb belgilangan lead uchun “To‘lov qilmadi” holatini saqlaydi."""
+    lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
+    if not lead:
+        return ok({'detail': 'Lead topilmadi.'}, status=404)
+    if not filial_can_see_lead(request.app_user, lead):
+        return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
+    with transaction.atomic():
+        item = LeadVisitDecision.objects.select_for_update().filter(lead=lead, decided_by=request.app_user).first()
+        if not item:
+            return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
+        if item.decision != 'arrived':
+            return ok({'detail': 'To‘lov holatini faqat Keldi belgilangan leadga qo‘yish mumkin.'}, status=400)
+
+        old_status = visit_payment_status(item)
+        if old_status != 'unpaid':
+            now = timezone.now()
+            item.left_without_payment = True
+            item.left_without_payment_at = now
+            item.left_without_payment_by = request.app_user
+            item.payment_done = False
+            item.payment_done_at = None
+            item.payment_done_by = None
+            item.updated_at = now
+            item.save(update_fields=[
+                'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
+                'payment_done', 'payment_done_at', 'payment_done_by',
+                'updated_at',
+            ])
+            DataAuditLog.objects.create(
+                actor=request.app_user,
+                entity_type='lead_visit_payment',
+                entity_id=item.id,
+                action='payment_unpaid',
+                old_data={'payment_status': old_status},
+                new_data={'payment_status': 'unpaid'},
+            )
+            msg = (
+                '❌ <b>To‘lov qilmadi</b>\n'
                 + tg_line('Vaqt', tg_now_text())
                 + tg_line('Menenjer', tg_user_name(request.app_user))
                 + tg_line('Filial', request.app_user.branch_name)
@@ -1367,10 +1463,10 @@ def mark_left_without_payment(request, lead_id):
 def lead_visit_decisions(request):
     user = request.app_user
     if user.role == 'filial_rahbari':
-        qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by').filter(decided_by=user).order_by('-updated_at')
+        qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by', 'left_without_payment_by').filter(decided_by=user).order_by('-updated_at')
     else:
         operator_ids = list(AppUser.objects.filter(role='operator', boss=user).values_list('id', flat=True))
-        qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by').filter(lead__assigned_operator_id__in=operator_ids).order_by('-updated_at')
+        qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by', 'left_without_payment_by').filter(lead__assigned_operator_id__in=operator_ids).order_by('-updated_at')
     return ok([visit_decision_to_dict(x) for x in qs])
 
 
@@ -1378,7 +1474,7 @@ def lead_visit_decisions(request):
 def operator_visit_decisions(request):
     user = request.app_user
     qs = LeadVisitDecision.objects.select_related(
-        'lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by'
+        'lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by', 'left_without_payment_by'
     ).filter(lead__assigned_operator=user).order_by('-updated_at')
     # Operator faqat o‘ziga biriktirilgan filiallar menenjerlari bosgan Keldi/Kelmadi natijalarini ko‘radi.
     visible = [item for item in qs if item.decided_by and users_branch_overlap(user, item.decided_by)]
@@ -1386,10 +1482,12 @@ def operator_visit_decisions(request):
     payment = clean_string(request.GET.get('payment'))
     if decision in ('arrived', 'not_arrived'):
         visible = [item for item in visible if item.decision == decision]
-    if payment == 'done':
-        visible = [item for item in visible if bool(getattr(item, 'payment_done', False))]
-    elif payment == 'not_done':
-        visible = [item for item in visible if not bool(getattr(item, 'payment_done', False))]
+    if payment in ('done', 'paid'):
+        visible = [item for item in visible if visit_payment_status(item) == 'paid']
+    elif payment in ('not_done', 'unpaid'):
+        visible = [item for item in visible if visit_payment_status(item) == 'unpaid']
+    elif payment == 'pending':
+        visible = [item for item in visible if visit_payment_status(item) == 'pending']
     return ok([visit_decision_to_dict(x) for x in visible])
 
 
@@ -1880,8 +1978,19 @@ def build_boss_full_report(user, params):
     hist = list(LeadStatusHistory.objects.filter(changed_by_id__in=op_ids, changed_at__range=(date_info['start_dt'], date_info['end_dt']))) if op_ids else []
     online_submitted = OnlineLead.objects.filter(assigned_boss=user, submitted_at__range=(date_info['start_dt'], date_info['end_dt']))
     online_assigned = OnlineLead.objects.filter(assigned_operator_id__in=op_ids, assigned_at__range=(date_info['start_dt'], date_info['end_dt'])) if op_ids else OnlineLead.objects.none()
-    decisions = list(LeadVisitDecision.objects.select_related('decided_by', 'payment_done_by', 'lead', 'lead__assigned_operator', 'lead__boss').filter(lead__assigned_operator_id__in=op_ids, updated_at__range=(date_info['start_dt'], date_info['end_dt']))) if op_ids else []
-    summary = {'assigned_leads': assigned_qs.count(), **empty_status_counts(), 'actions_total': len(hist), 'online_submitted': online_submitted.count(), 'online_assigned': online_assigned.count(), 'arrived': sum(1 for d in decisions if d.decision == 'arrived'), 'not_arrived': sum(1 for d in decisions if d.decision == 'not_arrived'), 'payment_done': sum(1 for d in decisions if getattr(d, 'payment_done', False)), 'payment_not_done': sum(1 for d in decisions if not getattr(d, 'payment_done', False))}
+    decisions = list(LeadVisitDecision.objects.select_related('decided_by', 'payment_done_by', 'left_without_payment_by', 'lead', 'lead__assigned_operator', 'lead__boss').filter(lead__assigned_operator_id__in=op_ids, updated_at__range=(date_info['start_dt'], date_info['end_dt']))) if op_ids else []
+    summary = {
+        'assigned_leads': assigned_qs.count(),
+        **empty_status_counts(),
+        'actions_total': len(hist),
+        'online_submitted': online_submitted.count(),
+        'online_assigned': online_assigned.count(),
+        'arrived': sum(1 for d in decisions if d.decision == 'arrived'),
+        'not_arrived': sum(1 for d in decisions if d.decision == 'not_arrived'),
+        'payment_done': sum(1 for d in decisions if visit_payment_status(d) == 'paid'),
+        'payment_not_done': sum(1 for d in decisions if visit_payment_status(d) == 'unpaid'),
+        'payment_pending': sum(1 for d in decisions if visit_payment_status(d) == 'pending'),
+    }
     for h in hist:
         if h.new_status in summary: summary[h.new_status] += 1
     op_rows = []
@@ -1895,11 +2004,31 @@ def build_boss_full_report(user, params):
     filial_map = {}
     for d in decisions:
         key = d.decided_by_id or 0
-        filial_map.setdefault(key, {'filial_rahbari_id': d.decided_by_id, 'filial_rahbari_name': d.decided_by.full_name if d.decided_by else '-', 'arrived': 0, 'not_arrived': 0, 'payment_done': 0, 'payment_not_done': 0, 'total': 0})
+        filial_map.setdefault(key, {
+            'filial_rahbari_id': d.decided_by_id,
+            'filial_rahbari_name': d.decided_by.full_name if d.decided_by else '-',
+            'arrived': 0,
+            'not_arrived': 0,
+            'payment_done': 0,
+            'payment_not_done': 0,
+            'payment_pending': 0,
+            'total': 0,
+        })
         filial_map[key]['total'] += 1
         filial_map[key]['arrived' if d.decision == 'arrived' else 'not_arrived'] += 1
-        filial_map[key]['payment_done' if getattr(d, 'payment_done', False) else 'payment_not_done'] += 1
-    daily_map = defaultdict(lambda: {'date': '', 'assigned_leads': 0, 'sale': 0, 'otkaz': 0, 'wrong_number': 0, 'open_number': 0, 'advice': 0, 'other': 0, 'not_answered': 0, 'online_submitted': 0, 'online_assigned': 0, 'arrived': 0, 'not_arrived': 0, 'payment_done': 0, 'payment_not_done': 0})
+        payment_key = {
+            'paid': 'payment_done',
+            'unpaid': 'payment_not_done',
+            'pending': 'payment_pending',
+        }[visit_payment_status(d)]
+        filial_map[key][payment_key] += 1
+    daily_map = defaultdict(lambda: {
+        'date': '', 'assigned_leads': 0, 'sale': 0, 'otkaz': 0,
+        'wrong_number': 0, 'open_number': 0, 'advice': 0, 'other': 0,
+        'not_answered': 0, 'online_submitted': 0, 'online_assigned': 0,
+        'arrived': 0, 'not_arrived': 0, 'payment_done': 0,
+        'payment_not_done': 0, 'payment_pending': 0,
+    })
     for lead in assigned_qs:
         key = local_date_key(lead.created_at); daily_map[key]['date'] = key; daily_map[key]['assigned_leads'] += 1
     for h in hist:
@@ -1910,10 +2039,38 @@ def build_boss_full_report(user, params):
     for o in online_assigned:
         key = local_date_key(o.assigned_at); daily_map[key]['date'] = key; daily_map[key]['online_assigned'] += 1
     for d in decisions:
-        key = local_date_key(d.updated_at); daily_map[key]['date'] = key; daily_map[key]['arrived' if d.decision == 'arrived' else 'not_arrived'] += 1; daily_map[key]['payment_done' if getattr(d, 'payment_done', False) else 'payment_not_done'] += 1
+        key = local_date_key(d.updated_at)
+        daily_map[key]['date'] = key
+        daily_map[key]['arrived' if d.decision == 'arrived' else 'not_arrived'] += 1
+        payment_key = {
+            'paid': 'payment_done',
+            'unpaid': 'payment_not_done',
+            'pending': 'payment_pending',
+        }[visit_payment_status(d)]
+        daily_map[key][payment_key] += 1
     selected = ops[0] if len(ops) == 1 else None
     decision_rows = [visit_decision_to_dict(d) for d in sorted(decisions, key=lambda x: x.updated_at, reverse=True)]
-    return {'range': {'start_date': date_info['start_date'], 'end_date': date_info['end_date']}, 'selected_operator': {'id': selected.id if selected else None, 'name': (selected.full_name or selected.username) if selected else ''}, 'summary': summary, 'operators': op_rows, 'filial_rahbarlari': list(filial_map.values()), 'daily': [daily_map[k] for k in sorted(daily_map.keys(), reverse=True)], 'monthly_archive': build_monthly_archive_for_operators(op_ids, params, boss_user=user, include_online_submitted=True, include_decisions=True), 'visit_decisions': decision_rows, 'not_arrived_leads': [row for row in decision_rows if row.get('decision') == 'not_arrived'], 'arrived_leads': [row for row in decision_rows if row.get('decision') == 'arrived'], 'payment_done_leads': [row for row in decision_rows if row.get('payment_done')], 'payment_not_done_leads': [row for row in decision_rows if not row.get('payment_done')]}
+    return {
+        'range': {'start_date': date_info['start_date'], 'end_date': date_info['end_date']},
+        'selected_operator': {
+            'id': selected.id if selected else None,
+            'name': (selected.full_name or selected.username) if selected else '',
+        },
+        'summary': summary,
+        'operators': op_rows,
+        'filial_rahbarlari': list(filial_map.values()),
+        'daily': [daily_map[k] for k in sorted(daily_map.keys(), reverse=True)],
+        'monthly_archive': build_monthly_archive_for_operators(
+            op_ids, params, boss_user=user,
+            include_online_submitted=True, include_decisions=True,
+        ),
+        'visit_decisions': decision_rows,
+        'not_arrived_leads': [row for row in decision_rows if row.get('decision') == 'not_arrived'],
+        'arrived_leads': [row for row in decision_rows if row.get('decision') == 'arrived'],
+        'payment_done_leads': [row for row in decision_rows if row.get('payment_status') == 'paid'],
+        'payment_not_done_leads': [row for row in decision_rows if row.get('payment_status') == 'unpaid'],
+        'payment_pending_leads': [row for row in decision_rows if row.get('payment_status') == 'pending'],
+    }
 
 
 @require_auth('boss')
@@ -2147,27 +2304,97 @@ def boss_daily_report_excel(request):
 @require_auth('boss')
 def boss_full_report_excel(request):
     report = build_boss_full_report(request.app_user, request.GET)
-    wb = Workbook(); ws = wb.active; ws.title = 'Natijalar'
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Natijalar'
     ws.append(['Ko‘rsatkich', 'Soni'])
-    for key, val in report['summary'].items(): ws.append([key, val])
-    ws.append([]); ws.append(['Operator', 'Biriktirildi', 'Online', 'Sotuv', 'Atkaz', 'Xato nomer', "O'chiq nomer", 'Maslahat', "O'qiydi", "Ko'tarmadi", 'Jami action'])
-    for r in report['operators']:
-        ws.append([r['operator_name'], r['assigned_leads'], r['online_assigned'], r['sale'], r['otkaz'], r['wrong_number'], r['open_number'], r['advice'], r['other'], r.get('not_answered', 0), r['actions_total']])
+    summary_labels = {
+        'assigned_leads': 'Biriktirilgan leadlar',
+        'sale': 'Sotuv',
+        'otkaz': 'Atkaz',
+        'wrong_number': 'Xato nomer',
+        'open_number': "O‘chiq nomer",
+        'advice': 'Maslahat',
+        'other': "O‘qiydi",
+        'not_answered': "Ko‘tarmadi",
+        'actions_total': 'Jami harakatlar',
+        'online_submitted': 'Online yuborilgan',
+        'online_assigned': 'Online biriktirilgan',
+        'arrived': 'Keldi',
+        'not_arrived': 'Kelmadi',
+        'payment_done': 'To‘lov qildi',
+        'payment_not_done': 'To‘lov qilmadi',
+        'payment_pending': 'To‘lov belgilanmagan',
+    }
+    for key, val in report['summary'].items():
+        ws.append([summary_labels.get(key, key), val])
+    ws.append([])
+    ws.append([
+        'Operator', 'Biriktirildi', 'Online', 'Sotuv', 'Atkaz', 'Xato nomer',
+        "O‘chiq nomer", 'Maslahat', "O‘qiydi", "Ko‘tarmadi", 'Jami action',
+    ])
+    for row in report['operators']:
+        ws.append([
+            row['operator_name'], row['assigned_leads'], row['online_assigned'],
+            row['sale'], row['otkaz'], row['wrong_number'], row['open_number'],
+            row['advice'], row['other'], row.get('not_answered', 0), row['actions_total'],
+        ])
     add_header_style(ws)
+
     ws2 = wb.create_sheet('Menenjerlar')
-    ws2.append(['Menenjer', 'Jami', 'Keldi', 'Kelmadi', 'To‘lov qildi', 'To‘lov qilmadi'])
-    for r in report.get('filial_rahbarlari', []):
-        ws2.append([r.get('filial_rahbari_name', ''), r.get('total', 0), r.get('arrived', 0), r.get('not_arrived', 0), r.get('payment_done', 0), r.get('payment_not_done', 0)])
+    ws2.append([
+        'Menenjer', 'Jami', 'Keldi', 'Kelmadi',
+        'To‘lov qildi', 'To‘lov qilmadi', 'To‘lov belgilanmagan',
+    ])
+    for row in report.get('filial_rahbarlari', []):
+        ws2.append([
+            row.get('filial_rahbari_name', ''), row.get('total', 0),
+            row.get('arrived', 0), row.get('not_arrived', 0),
+            row.get('payment_done', 0), row.get('payment_not_done', 0),
+            row.get('payment_pending', 0),
+        ])
     add_header_style(ws2)
+
     def append_decision_sheet(sheet_name, rows):
         sheet = wb.create_sheet(sheet_name)
-        sheet.append(['Vaqt', 'Menenjer', 'Qaror', 'To‘lov', 'To‘lov qilgan', 'To‘lov vaqti', 'F.I.O', 'tel1', 'tel2', 'tel3', 'T/SH', 'Maktab', 'Sinf', 'Fan', 'Ball', 'Operator'])
+        sheet.append([
+            'Belgi vaqti', 'Menenjer', 'Filial', 'Qaror', 'To‘lov holati',
+            'To‘lov holatini belgilagan', 'To‘lov holati vaqti', 'F.I.O',
+            'tel1', 'tel2', 'tel3', 'T/SH', 'Maktab', 'Sinf', 'Fan',
+            'Ball', 'Operator',
+        ])
         for item in rows:
-            sheet.append([format_dt(item.get('updated_at')), item.get('filial_rahbari_name', ''), 'Keldi' if item.get('decision') == 'arrived' else 'Kelmadi', 'To‘lov qilindi' if item.get('payment_done') else 'To‘lov qilinmadi', item.get('payment_done_by_name') or '', format_dt(item.get('payment_done_at')), excel_safe(item.get('lead_name') or item.get('full_name') or ''), item.get('lead_phone') or item.get('phone1') or '', item.get('lead_phone2') or item.get('phone2') or '', item.get('lead_phone3') or item.get('phone3') or '', item.get('tsh') or '', item.get('display_school') or item.get('school') or '', item.get('grade') or '', item.get('subject') or '', item.get('ball') or '', item.get('operator_name') or ''])
+            sheet.append([
+                format_dt(item.get('updated_at')),
+                item.get('filial_rahbari_name', ''),
+                item.get('filial_rahbari_branch', ''),
+                'Keldi' if item.get('decision') == 'arrived' else 'Kelmadi',
+                {
+                    'paid': 'To‘lov qildi',
+                    'unpaid': 'To‘lov qilmadi',
+                    'pending': 'Belgilanmagan',
+                }.get(item.get('payment_status'), 'Belgilanmagan'),
+                item.get('payment_status_by_name') or '',
+                format_dt(item.get('payment_status_at')),
+                excel_safe(item.get('lead_name') or item.get('full_name') or ''),
+                item.get('lead_phone') or item.get('phone1') or '',
+                item.get('lead_phone2') or item.get('phone2') or '',
+                item.get('lead_phone3') or item.get('phone3') or '',
+                item.get('tsh') or '',
+                item.get('display_school') or item.get('school') or '',
+                item.get('grade') or '',
+                item.get('subject') or '',
+                item.get('ball') or '',
+                item.get('operator_name') or '',
+            ])
         add_header_style(sheet)
-    append_decision_sheet('Kelmadi Leadlar', report.get('not_arrived_leads', []))
+
+    append_decision_sheet('Barcha Nazorat', report.get('visit_decisions', []))
     append_decision_sheet('Keldi Leadlar', report.get('arrived_leads', []))
-    append_decision_sheet('To‘lov Qilinganlar', report.get('payment_done_leads', []))
+    append_decision_sheet('Kelmadi Leadlar', report.get('not_arrived_leads', []))
+    append_decision_sheet('To‘lov Qilganlar', report.get('payment_done_leads', []))
+    append_decision_sheet('To‘lov Qilmaganlar', report.get('payment_not_done_leads', []))
+    append_decision_sheet('To‘lov Belgilanmagan', report.get('payment_pending_leads', []))
     return excel_response(wb, 'umumiy_hisobot.xlsx')
 
 
@@ -2279,9 +2506,138 @@ def admin_monthly_sales_excel(request):
     return excel_response(wb, filename)
 
 
+def _apply_visit_decision_report_filters(qs, params):
+    if any(clean_string(params.get(key)) for key in ('date', 'month', 'start_date', 'end_date')):
+        date_info = parse_date_range(params)
+        qs = qs.filter(updated_at__range=(date_info['start_dt'], date_info['end_dt']))
+
+    manager_id = clean_string(params.get('manager_id') or params.get('filial_rahbari_id'))
+    if manager_id and manager_id.isdigit():
+        qs = qs.filter(decided_by_id=int(manager_id))
+
+    decision = clean_string(params.get('decision'))
+    if decision in ('arrived', 'not_arrived'):
+        qs = qs.filter(decision=decision)
+
+    payment = clean_string(params.get('payment'))
+    if payment == 'paid':
+        qs = qs.filter(payment_done=True)
+    elif payment == 'unpaid':
+        qs = qs.filter(left_without_payment=True)
+    elif payment == 'pending':
+        qs = qs.filter(payment_done=False, left_without_payment=False)
+    return qs
+
+
+def visit_decisions_excel_response(qs, filename):
+    decisions = list(qs.order_by('-updated_at', '-id'))
+    paid = [item for item in decisions if visit_payment_status(item) == 'paid']
+    unpaid = [item for item in decisions if visit_payment_status(item) == 'unpaid']
+    pending = [item for item in decisions if visit_payment_status(item) == 'pending']
+
+    wb = Workbook()
+    summary = wb.active
+    summary.title = 'Statistika'
+    summary.append(['Ko‘rsatkich', 'Soni'])
+    summary.append(['Jami nazorat', len(decisions)])
+    summary.append(['Keldi', sum(1 for item in decisions if item.decision == 'arrived')])
+    summary.append(['Kelmadi', sum(1 for item in decisions if item.decision == 'not_arrived')])
+    summary.append(['To‘lov qildi', len(paid)])
+    summary.append(['To‘lov qilmadi', len(unpaid)])
+    summary.append(['To‘lov belgilanmagan', len(pending)])
+    add_header_style(summary)
+
+    manager_rows = defaultdict(lambda: {
+        'name': '', 'branch': '', 'total': 0, 'arrived': 0, 'not_arrived': 0,
+        'paid': 0, 'unpaid': 0, 'pending': 0,
+    })
+    for item in decisions:
+        row = manager_rows[item.decided_by_id or 0]
+        row['name'] = (item.decided_by.full_name or item.decided_by.username) if item.decided_by else '-'
+        row['branch'] = item.decided_by.branch_name if item.decided_by else ''
+        row['total'] += 1
+        row['arrived' if item.decision == 'arrived' else 'not_arrived'] += 1
+        row[visit_payment_status(item)] += 1
+
+    managers = wb.create_sheet('Menenjerlar')
+    managers.append([
+        'Menenjer', 'Filial', 'Jami', 'Keldi', 'Kelmadi',
+        'To‘lov qildi', 'To‘lov qilmadi', 'Belgilanmagan',
+    ])
+    for row in sorted(manager_rows.values(), key=lambda value: (-value['total'], value['name'])):
+        managers.append([
+            row['name'], row['branch'], row['total'], row['arrived'], row['not_arrived'],
+            row['paid'], row['unpaid'], row['pending'],
+        ])
+    add_header_style(managers)
+
+    def add_rows(sheet_name, items):
+        sheet = wb.create_sheet(sheet_name)
+        sheet.append([
+            'Belgi vaqti', 'Menenjer', 'Filial', 'Qaror', 'To‘lov holati',
+            'To‘lov holatini belgilagan', 'To‘lov holati vaqti', 'F.I.O',
+            'tel1', 'tel2', 'tel3', 'T/SH', 'Maktab', 'Sinf', 'Fan',
+            'Ball', 'Operator', 'Boshliq',
+        ])
+        for item in items:
+            lead = item.lead
+            sheet.append([
+                format_dt(item.updated_at),
+                (item.decided_by.full_name or item.decided_by.username) if item.decided_by else '',
+                item.decided_by.branch_name if item.decided_by else '',
+                'Keldi' if item.decision == 'arrived' else 'Kelmadi',
+                visit_payment_label(item),
+                visit_payment_status_by_name(item),
+                format_dt(visit_payment_status_at(item)),
+                excel_safe(lead.full_name if lead else ''),
+                excel_safe(lead.phone1 if lead else ''),
+                excel_safe(lead.phone2 if lead else ''),
+                excel_safe(lead.phone3 if lead else ''),
+                excel_safe(lead.tsh if lead else ''),
+                excel_safe(lead.school if lead else ''),
+                excel_safe(lead.grade if lead else ''),
+                excel_safe(lead.subject if lead else ''),
+                excel_safe(lead.ball if lead else ''),
+                (lead.assigned_operator.full_name or lead.assigned_operator.username) if lead and lead.assigned_operator else '',
+                (lead.boss.full_name or lead.boss.username) if lead and lead.boss else '',
+            ])
+        add_header_style(sheet)
+
+    add_rows('Barcha Natijalar', decisions)
+    add_rows('Keldi', [item for item in decisions if item.decision == 'arrived'])
+    add_rows('Kelmadi', [item for item in decisions if item.decision == 'not_arrived'])
+    add_rows('To‘lov Qildi', paid)
+    add_rows('To‘lov Qilmadi', unpaid)
+    add_rows('Belgilanmagan', pending)
+    return excel_response(wb, filename)
+
+
+@require_auth('boss')
+def boss_visit_decisions_excel(request):
+    operator_ids = list(
+        AppUser.objects.filter(role='operator', boss=request.app_user).values_list('id', flat=True)
+    )
+    qs = LeadVisitDecision.objects.select_related(
+        'lead', 'lead__assigned_operator', 'lead__boss', 'decided_by',
+        'payment_done_by', 'left_without_payment_by',
+    ).filter(lead__assigned_operator_id__in=operator_ids)
+    qs = _apply_visit_decision_report_filters(qs, request.GET)
+    return visit_decisions_excel_response(qs, 'boss_keldi_kelmadi_tolov_hisoboti.xlsx')
+
+
+@require_auth('admin')
+def admin_visit_decisions_excel(request):
+    qs = LeadVisitDecision.objects.select_related(
+        'lead', 'lead__assigned_operator', 'lead__boss', 'decided_by',
+        'payment_done_by', 'left_without_payment_by',
+    )
+    qs = _apply_visit_decision_report_filters(qs, request.GET)
+    return visit_decisions_excel_response(qs, 'admin_keldi_kelmadi_tolov_hisoboti.xlsx')
+
+
 @require_auth('admin')
 def admin_visit_decisions(request):
-    qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by').order_by('-updated_at')
+    qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by', 'left_without_payment_by').order_by('-updated_at')
     return ok([visit_decision_to_dict(x) for x in qs[:1000]])
 
 
@@ -2402,9 +2758,24 @@ def admin_all_reports_excel(request):
         ws3.append([o.id, o.full_name, o.age, o.phone1, o.phone2, o.phone3, o.interest_subject, o.region, o.assigned_boss.full_name if o.assigned_boss else '', o.assigned_operator.full_name if o.assigned_operator else '', format_dt(o.submitted_at), format_dt(o.assigned_at)])
     add_header_style(ws3)
     ws4 = wb.create_sheet('Keldi Kelmadi Tolov')
-    ws4.append(['Vaqt', 'Lead', 'Telefon', 'Menenjer', 'Qaror', 'To‘lov', 'To‘lov qilgan', 'To‘lov vaqti'])
-    for d in LeadVisitDecision.objects.select_related('lead', 'decided_by', 'payment_done_by').order_by('-updated_at'):
-        ws4.append([format_dt(d.updated_at), d.lead.full_name if d.lead else '', d.lead.phone1 if d.lead else '', d.decided_by.full_name if d.decided_by else '', 'Keldi' if d.decision == 'arrived' else 'Kelmadi', 'To‘lov qilindi' if d.payment_done else 'To‘lov qilinmadi', d.payment_done_by.full_name if d.payment_done_by else '', format_dt(d.payment_done_at)])
+    ws4.append([
+        'Vaqt', 'Lead', 'Telefon', 'Menenjer', 'Filial', 'Qaror',
+        'To‘lov holati', 'Holatni belgilagan', 'To‘lov holati vaqti',
+    ])
+    for d in LeadVisitDecision.objects.select_related(
+        'lead', 'decided_by', 'payment_done_by', 'left_without_payment_by'
+    ).order_by('-updated_at'):
+        ws4.append([
+            format_dt(d.updated_at),
+            d.lead.full_name if d.lead else '',
+            d.lead.phone1 if d.lead else '',
+            (d.decided_by.full_name or d.decided_by.username) if d.decided_by else '',
+            d.decided_by.branch_name if d.decided_by else '',
+            'Keldi' if d.decision == 'arrived' else 'Kelmadi',
+            visit_payment_label(d),
+            visit_payment_status_by_name(d),
+            format_dt(visit_payment_status_at(d)),
+        ])
     add_header_style(ws4)
     ws5 = wb.create_sheet('Excel Import Qatorlari')
     ws5.append(['Import ID', 'Qator', 'Status', 'Lead ID', 'Xato', 'Raw data'])
