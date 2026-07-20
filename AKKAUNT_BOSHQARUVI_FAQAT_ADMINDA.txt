@@ -1,0 +1,8 @@
+YANGILANISHLAR:
+- Menenjerlar va operatorlar umumiy akkaunt boshqaruvi Boss panelidan olib tashlandi.
+- Bu bo'lim faqat Admin panelida qoldirildi.
+- Admin barcha faol menenjer va operatorlarni qidirishi mumkin.
+- Admin ism-familiya, login, parol va filialni tahrirlashi mumkin.
+- Admin bittalab yoki ko'p tanlab akkauntlarni o'chirishi mumkin.
+- Boss admin/staff API manzillariga kira olmaydi.
+- Boss panelidagi operator statistikasi va operator yaratish funksiyasi saqlab qolindi.

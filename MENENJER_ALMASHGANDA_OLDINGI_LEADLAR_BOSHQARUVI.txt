@@ -1,0 +1,9 @@
+MENENJER ALMASHGANDA OLDINGI LEADLARNI BOSHQARISH TUZATILDI
+
+1. Menenjer huquqi endi eski akkaunt ID bo‘yicha emas, filial nomi bo‘yicha tekshiriladi.
+2. Masalan, Olmazor menenjeri o‘chirilib, Olmazorga boshqa menenjer yaratilsa, yangi menenjer oldingi Keldi va Kelmadi leadlarni ko‘radi.
+3. Yangi menenjer oldingi Keldi leadlarda To‘lov qildi, To‘lov qilmadi va Keldi to‘lov qilmasdan ketdi holatlarini o‘zgartira oladi.
+4. Oldingi Kelmadi leadni yangi menenjer Keldi holatiga o‘tkaza oladi.
+5. Keldi bosilgan leadni Kelmadi holatiga qaytarish taqiqi saqlanadi.
+6. Boshqa filialning leadlari ko‘rinmaydi.
+7. Eski tarix va statistikalar o‘chirilmaydi.

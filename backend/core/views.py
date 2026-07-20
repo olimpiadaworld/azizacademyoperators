@@ -136,14 +136,59 @@ def users_branch_overlap(user_a, user_b):
 
 def filial_can_see_lead(filial_user, lead):
     # Agar Sotuv vaqtida operator aniq filial tanlagan bo‘lsa, lead faqat o‘sha
-    # menenjerga ko‘rinadi. Eski leadlarda branch_name bo‘lmasa, avvalgidek
-    # operatorga biriktirilgan filiallar bo‘yicha ko‘rinadi.
+    # filialga biriktirilgan faol menenjerga ko‘rinadi. Menenjer akkaunti
+    # almashtirilsa ham huquq menenjer ID bo‘yicha emas, filial bo‘yicha qoladi.
+    # Eski leadlarda branch_name bo‘lmasa, operator filiallari orqali aniqlanadi.
     lead_branches = set(normalize_branch_names(getattr(lead, 'branch_name', '') or ''))
     filial_branches = user_branch_set(filial_user)
     if lead_branches:
         return bool(filial_branches and lead_branches.intersection(filial_branches))
     operator = getattr(lead, 'assigned_operator', None)
     return bool(operator and users_branch_overlap(filial_user, operator))
+
+
+def manager_visible_visit_decisions(user):
+    """Menenjer filialiga tegishli eski va yangi nazorat yozuvlarini qaytaradi.
+
+    Akkaunt o‘chirilishi soft-delete bo‘lgani uchun eski qarorlar bazada qoladi.
+    Yangi menenjer ayni filialga biriktirilganda qarorlar decided_by ID bo‘yicha
+    emas, lead filiali bo‘yicha topiladi. Bir lead uchun bir nechta eski yozuv
+    bo‘lsa, Keldi yakuniy holati ustun; aks holda eng so‘nggi yozuv olinadi.
+    """
+    qs = LeadVisitDecision.objects.select_related(
+        'lead', 'lead__assigned_operator', 'lead__boss',
+        'decided_by', 'payment_done_by', 'payment_not_done_by', 'left_without_payment_by',
+    ).order_by('-updated_at', '-id')
+    selected = {}
+    for item in qs:
+        lead = getattr(item, 'lead', None)
+        if not lead or not filial_can_see_lead(user, lead):
+            continue
+        current = selected.get(item.lead_id)
+        if current is None or (item.decision == 'arrived' and current.decision != 'arrived'):
+            selected[item.lead_id] = item
+    return sorted(selected.values(), key=lambda item: (item.updated_at, item.id), reverse=True)
+
+
+def manager_existing_visit_decision(user, lead, *, for_update=False):
+    """Filial bo‘yicha boshqariladigan bitta asosiy qarorni topadi."""
+    qs = LeadVisitDecision.objects.select_related(
+        'lead', 'decided_by', 'payment_done_by', 'payment_not_done_by', 'left_without_payment_by'
+    ).filter(lead=lead)
+    if for_update:
+        qs = qs.select_for_update()
+    items = list(qs.order_by('-updated_at', '-id'))
+    if not items:
+        return None
+    # Keldi yakuniy qaror bo‘lgani uchun u har doim ustun turadi.
+    for item in items:
+        if item.decision == 'arrived':
+            return item
+    # Aks holda hozirgi menenjerning yozuvi yoki eng so‘nggi eski yozuv olinadi.
+    for item in items:
+        if item.decided_by_id == user.id:
+            return item
+    return items[0]
 
 def visit_payment_status(item):
     """Menenjer aniq belgilagan to‘lov holatini qaytaradi."""
@@ -838,9 +883,9 @@ def boss_operators(request, user_id=None):
 
 
 @csrf_exempt
-@require_auth('boss')
-def boss_staff(request, user_id=None):
-    """Boss panelida operator va menenjer akkauntlarini umumiy boshqarish."""
+@require_auth('admin')
+def admin_staff(request, user_id=None):
+    """Admin panelida barcha faol operator va menenjer akkauntlarini boshqarish."""
     allowed_roles = ('operator', 'filial_rahbari')
     if request.method == 'GET':
         qs = AppUser.objects.select_related('boss').filter(role__in=allowed_roles, is_active=True).order_by('role', 'full_name', 'username')
@@ -878,7 +923,7 @@ def boss_staff(request, user_id=None):
             actor=request.app_user,
             entity_type='app_user',
             entity_id=user.id,
-            action='boss_staff_updated',
+            action='admin_staff_updated',
             old_data=old,
             new_data=user_to_dict(user),
         )
@@ -894,7 +939,7 @@ def boss_staff(request, user_id=None):
             actor=request.app_user,
             entity_type='app_user',
             entity_id=user.id,
-            action='boss_staff_deactivated',
+            action='admin_staff_deactivated',
             old_data=old,
             new_data=user_to_dict(user),
         )
@@ -905,8 +950,8 @@ def boss_staff(request, user_id=None):
 
 @csrf_exempt
 @require_http_methods(['POST'])
-@require_auth('boss')
-def boss_staff_bulk_delete(request):
+@require_auth('admin')
+def admin_staff_bulk_delete(request):
     body = json_body(request)
     raw_ids = body.get('ids') or []
     if not isinstance(raw_ids, list):
@@ -938,7 +983,7 @@ def boss_staff_bulk_delete(request):
                 actor=request.app_user,
                 entity_type='app_user',
                 entity_id=user.id,
-                action='boss_staff_bulk_deactivated',
+                action='admin_staff_bulk_deactivated',
                 old_data=old,
                 new_data=user_to_dict(user),
             )
@@ -1457,27 +1502,30 @@ def visit_decision(request, lead_id):
         return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
 
     with transaction.atomic():
-        existing_arrived = LeadVisitDecision.objects.select_for_update().filter(lead=lead, decision='arrived').first()
-        if existing_arrived and existing_arrived.decided_by_id != request.app_user.id:
-            return ok({'detail': 'Bu lead bo‘yicha boshqa menenjer “Keldi” bosgan. Lead barcha menenjerlardan yopildi.'}, status=409)
+        # Qaror akkaunt ID bo‘yicha emas, filialga tegishli lead bo‘yicha olinadi.
+        # Shu sabab eski menenjer o‘chirilgach, ayni filialga yaratilgan yangi
+        # menenjer oldingi Keldi/Kelmadi yozuvini davom ettirib boshqara oladi.
+        item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
+        created = item is None
+        if created:
+            item = LeadVisitDecision.objects.create(
+                lead=lead,
+                decided_by=request.app_user,
+                decision=decision,
+            )
+            old_decision = ''
+        else:
+            old_decision = item.decision
 
-        item, created = LeadVisitDecision.objects.select_for_update().get_or_create(
-            lead=lead,
-            decided_by=request.app_user,
-            defaults={'decision': decision},
-        )
-        old_decision = '' if created else item.decision
+            # “Keldi” yakuniy nazorat hisoblanadi. Menenjer almashgan bo‘lsa ham
+            # Keldi bosilgan leadni Kelmadi holatiga qaytarib bo‘lmaydi.
+            if item.decision == 'arrived' and decision == 'not_arrived':
+                return ok({'detail': 'Keldi bosilgandan keyin Kelmadi qilib o‘zgartirib bo‘lmaydi.'}, status=409)
 
-        # “Keldi” yakuniy nazorat hisoblanadi. Keldi bosilgandan keyin shu
-        # menenjer Kelmadi qilib o‘zgartira olmaydi. Bu qoida backendda ham
-        # tekshiriladi, shuning uchun tugmani brauzerdan aylanib o‘tib bo‘lmaydi.
-        if not created and item.decision == 'arrived' and decision == 'not_arrived':
-            return ok({'detail': 'Keldi bosilgandan keyin Kelmadi qilib o‘zgartirib bo‘lmaydi.'}, status=409)
-
-        if not created and item.decision != decision:
-            item.decision = decision
-            item.updated_at = timezone.now()
-            item.save(update_fields=['decision', 'updated_at'])
+            if item.decision != decision:
+                item.decision = decision
+                item.updated_at = timezone.now()
+                item.save(update_fields=['decision', 'updated_at'])
 
         if created or old_decision != decision:
             LeadVisitDecisionHistory.objects.create(
@@ -1519,7 +1567,7 @@ def mark_visit_payment(request, lead_id):
     if not filial_can_see_lead(request.app_user, lead):
         return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
     with transaction.atomic():
-        item = LeadVisitDecision.objects.select_for_update().filter(lead=lead, decided_by=request.app_user).first()
+        item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
         if not item:
             return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
         if item.decision != 'arrived':
@@ -1574,7 +1622,7 @@ def mark_payment_not_done(request, lead_id):
     if not filial_can_see_lead(request.app_user, lead):
         return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
     with transaction.atomic():
-        item = LeadVisitDecision.objects.select_for_update().filter(lead=lead, decided_by=request.app_user).first()
+        item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
         if not item:
             return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
         if item.decision != 'arrived':
@@ -1629,7 +1677,7 @@ def mark_left_without_payment(request, lead_id):
     if not filial_can_see_lead(request.app_user, lead):
         return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
     with transaction.atomic():
-        item = LeadVisitDecision.objects.select_for_update().filter(lead=lead, decided_by=request.app_user).first()
+        item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
         if not item:
             return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
         if item.decision != 'arrived':
@@ -1678,10 +1726,16 @@ def mark_left_without_payment(request, lead_id):
 def lead_visit_decisions(request):
     user = request.app_user
     if user.role == 'filial_rahbari':
-        qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by', 'payment_not_done_by', 'left_without_payment_by').filter(decided_by=user).order_by('-updated_at')
-    else:
-        operator_ids = list(AppUser.objects.filter(role='operator', boss=user).values_list('id', flat=True))
-        qs = LeadVisitDecision.objects.select_related('lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by', 'payment_not_done_by', 'left_without_payment_by').filter(lead__assigned_operator_id__in=operator_ids).order_by('-updated_at')
+        # Eski akkaunt yaratgan qarorlar ham ayni filialga biriktirilgan yangi
+        # menenjerga ko‘rinadi. Huquq decided_by ID emas, lead filiali orqali.
+        items = manager_visible_visit_decisions(user)
+        return ok([visit_decision_to_dict(x) for x in items])
+
+    operator_ids = list(AppUser.objects.filter(role='operator', boss=user).values_list('id', flat=True))
+    qs = LeadVisitDecision.objects.select_related(
+        'lead', 'lead__assigned_operator', 'lead__boss', 'decided_by',
+        'payment_done_by', 'payment_not_done_by', 'left_without_payment_by',
+    ).filter(lead__assigned_operator_id__in=operator_ids).order_by('-updated_at')
     return ok([visit_decision_to_dict(x) for x in qs])
 
 

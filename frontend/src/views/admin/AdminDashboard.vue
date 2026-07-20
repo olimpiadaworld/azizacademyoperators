@@ -453,11 +453,72 @@
       </div>
     </div>
 
+    <div class="panel glass staff-management-panel">
+      <div class="section-head section-head--wrap">
+        <div>
+          <div class="eyebrow">Akkauntlar boshqaruvi</div>
+          <h3>Menenjerlar va operatorlar umumiy ro‘yxati</h3>
+          <p class="muted-text">Barcha menenjer va operatorlarni shu yerdan qidiring, tahrirlang yoki bir nechtasini belgilab o‘chiring.</p>
+        </div>
+        <div class="toolbar toolbar--compact">
+          <input v-model="staffSearch" class="input" placeholder="Ism, login yoki filial bo‘yicha qidirish" />
+          <button class="btn ghost" type="button" :disabled="staffLoading" @click="fetchStaffAccounts">Yangilash</button>
+          <button class="btn" type="button" @click="openFilialModal = true">Yangi menenjer</button>
+        </div>
+      </div>
+
+      <div class="staff-toolbar">
+        <label class="staff-select-all">
+          <input type="checkbox" :checked="allFilteredStaffSelected" :disabled="!filteredStaffAccounts.length" @change="toggleAllStaff" />
+          <span>Ko‘rinayotganlarning barchasini tanlash</span>
+        </label>
+        <div class="staff-toolbar__actions">
+          <span class="badge">Jami: {{ staffAccounts.length }}</span>
+          <span class="badge">Tanlangan: {{ selectedStaffIds.length }}</span>
+          <button class="btn danger" type="button" :disabled="staffDeleting || !selectedStaffIds.length" @click="deleteSelectedStaff">
+            {{ staffDeleting ? 'O‘chirilmoqda...' : 'Tanlanganlarni o‘chirish' }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="staffLoading" class="empty-state">Akkauntlar yuklanmoqda...</div>
+      <div v-else-if="!filteredStaffAccounts.length" class="empty-state">Operator yoki menenjer topilmadi.</div>
+      <div v-else class="table-wrap staff-table-wrap">
+        <table class="staff-table">
+          <thead>
+            <tr>
+              <th>Tanlash</th>
+              <th>Ism-familiya</th>
+              <th>Rol</th>
+              <th>Login</th>
+              <th>Filial</th>
+              <th>Amallar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="person in filteredStaffAccounts" :key="`admin-staff-${person.id}`">
+              <td><input type="checkbox" :value="person.id" v-model="selectedStaffIds" /></td>
+              <td><strong>{{ person.full_name || '-' }}</strong></td>
+              <td><span :class="['badge', person.role === 'filial_rahbari' ? 'arrived-badge' : 'muted']">{{ roleLabel(person.role) }}</span></td>
+              <td>{{ person.username }}</td>
+              <td>{{ person.branch_name || '-' }}</td>
+              <td>
+                <div class="staff-row-actions">
+                  <button class="btn ghost small" type="button" @click="openUserEdit(person)">Tahrirlash</button>
+                  <button class="btn danger small" type="button" :disabled="staffDeleting" @click="deleteOneStaff(person)">O‘chirish</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="panel glass">
       <div class="section-head section-head--wrap">
         <div>
-          <div class="eyebrow">Foydalanuvchilar</div>
-          <h3>Faol foydalanuvchilar ro'yxati</h3>
+          <div class="eyebrow">Rahbariyat</div>
+          <h3>Boshliqlar va direktorlar</h3>
         </div>
       </div>
       <div class="table-wrap">
@@ -468,24 +529,22 @@
               <th>F.I.SH</th>
               <th>Login</th>
               <th>Telefon</th>
-              <th>Filial</th>
               <th>Holati</th>
               <th>Amal</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="person in leaders" :key="`${person.role}-${person.id}`">
+            <tr v-for="person in nonStaffLeaders" :key="`${person.role}-${person.id}`">
               <td><span class="badge">{{ roleLabel(person.role) }}</span></td>
               <td>{{ person.full_name || '-' }}</td>
               <td>{{ person.username }}</td>
               <td>{{ person.phone || '-' }}</td>
-              <td>{{ person.branch_name || person.boss_name || '-' }}</td>
               <td><span class="badge">{{ person.is_active ? 'Faol' : 'Nofaol' }}</span></td>
               <td>
                 <div class="user-actions">
-                  <button class="btn ghost small" type="button" @click="openUserEdit(person)">Login/parol</button>
+                  <button class="btn ghost small" type="button" @click="openUserEdit(person)">Tahrirlash</button>
                   <button
-                    v-if="['operator', 'filial_rahbari', 'director', 'director_deputy'].includes(person.role)"
+                    v-if="['director', 'director_deputy'].includes(person.role)"
                     class="btn danger small"
                     type="button"
                     :disabled="userDeleteLoading && userToDelete?.id === person.id"
@@ -496,8 +555,8 @@
                 </div>
               </td>
             </tr>
-            <tr v-if="!leaders.length">
-              <td colspan="7" class="empty-state">Hali foydalanuvchi yaratilmagan.</td>
+            <tr v-if="!nonStaffLeaders.length">
+              <td colspan="6" class="empty-state">Hali boshliq yoki direktor yaratilmagan.</td>
             </tr>
           </tbody>
         </table>
@@ -703,13 +762,13 @@
       <div class="modal-card glass">
         <div class="modal-card__head">
           <div>
-            <div class="eyebrow">Login va parol</div>
+            <div class="eyebrow">Akkauntni tahrirlash</div>
             <h3>{{ editUserForm.full_name || editUserForm.username }} ma'lumotlarini o'zgartirish</h3>
           </div>
           <button class="modal-close" @click="closeUserEdit">×</button>
         </div>
         <form class="grid" @submit.prevent="saveUserEdit">
-          <input v-if="editingUser?.role === 'boss'" v-model="editUserForm.full_name" class="input" placeholder="To'liq ism" />
+          <input v-model="editUserForm.full_name" class="input" placeholder="To'liq ism" />
           <input v-model="editUserForm.username" class="input" placeholder="Yangi login" />
           <div v-if="editingUser?.role === 'filial_rahbari' || editingUser?.role === 'operator'" class="branch-picker">
             <label>Filial(lar)</label>
@@ -757,6 +816,11 @@ const bosses = ref([])
 const filialRahbarlari = ref([])
 const users = ref([])
 const directors = ref([])
+const staffAccounts = ref([])
+const selectedStaffIds = ref([])
+const staffSearch = ref('')
+const staffLoading = ref(false)
+const staffDeleting = ref(false)
 const adminVisitDecisions = ref([])
 const adminDatabaseLeads = ref([])
 const adminLeadSearch = ref('')
@@ -896,6 +960,15 @@ const leaders = computed(() => (
     ? [...users.value, ...directors.value]
     : [...bosses.value, ...filialRahbarlari.value]
 ))
+const nonStaffLeaders = computed(() => leaders.value.filter(person => !['operator', 'filial_rahbari'].includes(person.role)))
+const filteredStaffAccounts = computed(() => {
+  const search = staffSearch.value.trim().toLowerCase()
+  if (!search) return staffAccounts.value
+  return staffAccounts.value.filter(person => [person.full_name, person.username, person.branch_name, roleLabel(person.role)]
+    .some(value => String(value || '').toLowerCase().includes(search)))
+})
+const allFilteredStaffSelected = computed(() => filteredStaffAccounts.value.length > 0
+  && filteredStaffAccounts.value.every(person => selectedStaffIds.value.includes(person.id)))
 const operatorTransferOptions = computed(() => (
   leaders.value
     .filter(person => person.role === 'operator' && person.is_active && person.id !== userToDelete.value?.id)
@@ -941,6 +1014,62 @@ function roleLabel(role) {
   if (role === 'director') return 'Bosh direktor'
   if (role === 'director_deputy') return "Bosh direktor o'rinbosari"
   return role || '-'
+}
+
+function toggleAllStaff(event) {
+  const ids = filteredStaffAccounts.value.map(person => person.id)
+  if (event.target.checked) {
+    selectedStaffIds.value = Array.from(new Set([...selectedStaffIds.value, ...ids]))
+  } else {
+    selectedStaffIds.value = selectedStaffIds.value.filter(id => !ids.includes(id))
+  }
+}
+
+async function fetchStaffAccounts() {
+  staffLoading.value = true
+  try {
+    const { data } = await client.get('admin/staff/')
+    staffAccounts.value = data.results || data || []
+    const activeIds = new Set(staffAccounts.value.map(person => person.id))
+    selectedStaffIds.value = selectedStaffIds.value.filter(id => activeIds.has(id))
+  } catch (e) {
+    error.value = e.response?.data?.detail || 'Akkauntlarni yuklashda xatolik yuz berdi.'
+  } finally {
+    staffLoading.value = false
+  }
+}
+
+async function deleteOneStaff(person) {
+  if (!window.confirm(`${person.full_name || person.username} akkauntini o‘chirasizmi?`)) return
+  staffDeleting.value = true
+  resetMessages()
+  try {
+    await client.delete(`admin/staff/${person.id}/`)
+    selectedStaffIds.value = selectedStaffIds.value.filter(id => id !== person.id)
+    success.value = 'Akkaunt o‘chirildi.'
+    await Promise.all([fetchStaffAccounts(), fetchUsers(), fetchFilialRahbarlari(), fetchStats()])
+  } catch (e) {
+    error.value = e.response?.data?.detail || 'Akkauntni o‘chirishda xatolik yuz berdi.'
+  } finally {
+    staffDeleting.value = false
+  }
+}
+
+async function deleteSelectedStaff() {
+  if (!selectedStaffIds.value.length) return
+  if (!window.confirm(`${selectedStaffIds.value.length} ta akkauntni o‘chirasizmi?`)) return
+  staffDeleting.value = true
+  resetMessages()
+  try {
+    const { data } = await client.post('admin/staff/bulk-delete/', { ids: selectedStaffIds.value })
+    success.value = data.detail || 'Tanlangan akkauntlar o‘chirildi.'
+    selectedStaffIds.value = []
+    await Promise.all([fetchStaffAccounts(), fetchUsers(), fetchFilialRahbarlari(), fetchStats()])
+  } catch (e) {
+    error.value = e.response?.data?.detail || 'Tanlangan akkauntlarni o‘chirishda xatolik yuz berdi.'
+  } finally {
+    staffDeleting.value = false
+  }
 }
 
 function resetMessages() {
@@ -1354,13 +1483,14 @@ async function saveUserEdit() {
     }
     if (editUserForm.password) payload.password = editUserForm.password
     await client.patch(`${userApiBase(editingUser.value.role)}/${editingUser.value.id}/`, payload)
-    success.value = 'Login/parol ma’lumotlari yangilandi.'
+    success.value = 'Akkaunt ma’lumotlari yangilandi.'
     closeUserEdit()
     await fetchBosses()
     await fetchFilialRahbarlari()
     await fetchUsers()
     await fetchDirectors()
     await fetchStats()
+    await fetchStaffAccounts()
   } catch (e) {
     error.value = e.response?.data?.username?.[0] || e.response?.data?.detail || 'Foydalanuvchini yangilashda xatolik yuz berdi.'
   } finally {
@@ -1429,6 +1559,7 @@ async function createFilialRahbari() {
     await fetchFilialRahbarlari()
     await fetchUsers()
     await fetchStats()
+    await fetchStaffAccounts()
   } catch (e) {
     error.value = e.response?.data?.username?.[0] || e.response?.data?.detail || 'Menenjer yaratishda xatolik yuz berdi.'
   }
@@ -1448,6 +1579,7 @@ onMounted(async () => {
   await fetchBosses()
   await fetchFilialRahbarlari()
   await fetchUsers()
+  await fetchStaffAccounts()
   await fetchDirectors()
   await fetchAdminVisitDecisions()
   await fetchAdminOperatorReport()
@@ -1554,5 +1686,20 @@ watch(() => route.query.tab, (tab) => {
 @media (max-width: 640px) { .branch-picker__grid { grid-template-columns: 1fr; } }
 
 .payment-left-without-badge { background: rgba(249, 115, 22, 0.14) !important; color: #c2410c !important; border-color: rgba(249, 115, 22, 0.3) !important; }
+
+.staff-management-panel { display: grid; gap: 18px; }
+.staff-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.staff-select-all { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; color: #334155; }
+.staff-select-all input, .staff-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: #2563eb; }
+.staff-toolbar__actions, .staff-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.staff-table th, .staff-table td { vertical-align: middle; }
+.staff-table td:first-child, .staff-table th:first-child { text-align: center; width: 86px; }
+
+@media (max-width: 760px) {
+  .staff-toolbar { align-items: stretch; }
+  .staff-toolbar__actions { width: 100%; }
+  .staff-toolbar__actions .btn { flex: 1 1 100%; }
+  .staff-row-actions { min-width: 220px; }
+}
 
 </style>
