@@ -1,0 +1,25 @@
+Boss panelga Kunlik hisobot Excel export yangilandi.
+
+Nimalar qo'shildi:
+1) Boss menyusidagi Hisobot tugmasi nomi Kunlik hisobot bo'ldi.
+2) Kunlik hisobot Excel birinchi listida operatorlar bo'yicha:
+   - Operator ism familyasi
+   - Sotuv
+   - O'chiq Nomer
+   - Maslahat
+   - Atkaz
+   - Xato nomer
+   - O'qiydi
+   - Ko'tarmadi
+   - Umumiy bog'langanlar
+   - Qo'shimcha vazifa (bo'sh yacheyka)
+   - Qo'shimcha vazifa vaqti (bo'sh yacheyka)
+3) Birinchi list pastida Bugungi umumiy sotuvlar soni chiqadi.
+4) Barcha sotuvlar alohida listda chiqadi.
+5) Har bir operator uchun alohida Excel list ochiladi va bugungi sotuvdagi o'quvchilar ma'lumotlari chiqadi.
+6) Excel fayl nomi sana bilan: kunlik_hisobot_YYYY-MM-DD.xlsx
+
+Tekshirildi:
+- backend/core/views.py py_compile OK
+- python manage.py check OK
+- frontend npm run build OK

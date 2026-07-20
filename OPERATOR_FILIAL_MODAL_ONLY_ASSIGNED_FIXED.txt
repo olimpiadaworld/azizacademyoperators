@@ -1,0 +1,5 @@
+Sotuv filial tanlash modali tuzatildi.
+
+Endi operator 2+ filialga biriktirilgan bo'lsa modalda faqat shu operatorning o'ziga biriktirilgan filiallari chiqadi.
+Masalan operator Olmazor va Chinozga biriktirilgan bo'lsa, modalda faqat Olmazor va Chinoz ko'rinadi.
+Backend ham himoyalangan: operator o'ziga biriktirilmagan filialni yuborsa status qabul qilinmaydi.

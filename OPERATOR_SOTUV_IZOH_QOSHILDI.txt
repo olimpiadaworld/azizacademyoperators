@@ -1,0 +1,9 @@
+Operator Sotuv qilganda lead ma'lumotlari bilan birga operator yozgan izoh ham ko'rinadigan qilindi.
+
+Ko'rinadigan joylar:
+- Menenjer Sotuv cardlarida
+- Menenjer Nazorat cardlarida
+- Boss Menenjer nazorati bo'limida
+- Operator Kunlik hisobot / Filial nazorati bo'limida
+
+Backend serializer lead/visit decision javoblariga operator_note, operator_note_at, operator_note_by_name maydonlarini qo'shadi.

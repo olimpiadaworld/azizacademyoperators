@@ -1,0 +1,8 @@
+Sotuv logikasi yangilandi:
+
+1) Sotuv bosilganda har doim avval izoh so'raladi.
+2) Izoh kiritilmasa Sotuv qilinmaydi.
+3) Operator 1 ta filialga biriktirilgan bo'lsa, izohdan keyin avtomatik shu filialga Sotuv bo'ladi.
+4) Operator 2 yoki undan ortiq filialga biriktirilgan bo'lsa, izohdan keyin faqat o'ziga biriktirilgan filiallar modali chiqadi.
+5) Tanlangan filial lead.branch_name ga yoziladi va shu menenjer paneliga tushadi.
+6) Backend ham Sotuv uchun izoh talab qiladi va operatorga biriktirilmagan filial yuborilsa qabul qilmaydi.

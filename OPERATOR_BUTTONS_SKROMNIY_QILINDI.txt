@@ -1,0 +1,15 @@
+Operator panelidagi status tugmalari skromniy premium ko‘rinishga keltirildi.
+
+Yangilandi:
+- Emoji iconlar olib tashlandi.
+- Tugmalar ixchamlashtirildi.
+- Ranglar yumshatildi.
+- Bir xil balandlik va radius berildi.
+- Hover/active animatsiyalari qo‘shildi.
+- Eslatma Saqlash/Tozalash tugmalari ham tartiblandi.
+
+Asosiy fayl:
+frontend/src/components/ui/OperatorLeadCompactCard.vue
+
+Tekshirildi:
+npm run build — muvaffaqiyatli.

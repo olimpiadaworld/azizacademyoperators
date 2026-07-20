@@ -1,0 +1,17 @@
+Login oynasi premium light dizaynga yangilandi.
+
+O'zgargan fayl:
+- frontend/src/views/auth/LoginView.vue
+
+Qo'shildi:
+- rasmga o'xshash oq login card
+- AZIZ ACADEMY brend bloki
+- login/parol inputlari ikonka bilan
+- parolni ko'rsatish/yashirish tugmasi
+- meni eslab qolish checkbox
+- xavfsiz kirish bloki
+- o'ng tomonda CSS bilan chizilgan login/security illustration
+- mobilga mos responsive ko'rinish
+
+Tekshirildi:
+- frontend npm run build muvaffaqiyatli o'tdi.

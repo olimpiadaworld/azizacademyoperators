@@ -1,0 +1,16 @@
+Railway backend service sozlamalari:
+
+Root Directory: backend
+Start Command: sh /app/start.sh
+
+Agar logda faqat "No migrations to apply" chiqib, "=== Starting Gunicorn ===" chiqmasa,
+Railway hali eski start commandni ishlatyapti. Service Settings > Deploy > Start Command ichida
+eski "python manage.py migrate" commandini o'chirib, "sh /app/start.sh" yozing.
+
+Deploy logda quyidagilar chiqishi kerak:
+=== Railway start.sh boshlandi ===
+=== Migrations ===
+=== Init DB / Admin ===
+=== Starting Gunicorn ===
+[INFO] Starting gunicorn
+[INFO] Listening at: http://0.0.0.0:...

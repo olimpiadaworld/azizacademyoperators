@@ -1,0 +1,8 @@
+Keldi/Kelmadi qarorini Nazorat bo‘limida ham o‘zgartirish imkoniyati qo‘shildi.
+
+Oldin: Keldi bosilgan leadni Kelmadi holatiga qaytarish backendda bloklangan edi.
+Endi: Menenjer o‘zining Nazorat bo‘limidagi cardda Keldi yoki Kelmadi tugmasini qayta bosib qarorni almashtira oladi.
+
+Eslatma:
+- Agar boshqa menenjer allaqachon Keldi bosgan bo‘lsa, boshqa rahbarlar o‘zgartira olmaydi.
+- O‘z qarorini esa Nazorat bo‘limidan yangilash mumkin.

@@ -1,0 +1,8 @@
+Logotip bosilganda bosh sahifaga qaytish qo'shildi.
+
+Dashboard ichida:
+- Admin logotipni bossа /admin sahifasiga qaytadi.
+- Boss va menenjer logotipni bossa /boss?tab=leads sahifasiga qaytadi.
+- Operator logotipni bossa /operator?tab=general sahifasiga qaytadi.
+
+Login sahifasida ham AZIZ ACADEMY logotipi bosilsa '/' ga qaytadi; foydalanuvchi login bo'lgan bo'lsa router avtomatik o'z paneliga yo'naltiradi.

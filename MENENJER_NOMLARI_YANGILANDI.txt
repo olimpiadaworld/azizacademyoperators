@@ -1,0 +1,10 @@
+MENENJER NOMLARI YANGILANDI
+
+- Foydalanuvchiga ko‘rinadigan barcha "Filial rahbari" yozuvlari "Menenjer"ga o‘zgartirildi.
+- Bo‘lim va hisobotlarda "Menenjerlar" yozuvi ishlatiladi.
+- Yangi menenjer filial nomi asosida avtomatik nomlanadi:
+  Olmozor -> Olmazor Menenjeri
+  Niyozbosh -> Niyozbosh Menenjeri
+- Bir nechta filial tanlansa, har bir filial alohida "Menenjeri" ko‘rinishida yoziladi.
+- Railway qayta deploy qilinganda init_db eski menenjer nomlarini ham avtomatik yangilaydi.
+- Ichki role qiymati filial_rahbari holida qoldirildi, shu sabab mavjud baza va API buzilmaydi.

@@ -1,0 +1,9 @@
+Sotuv / Menenjer qoidalari
+
+1. Operator lead statusini “Sotuv” qilsa, lead barcha menenjerlar panelida ko‘rinadi.
+2. Menenjer “Keldi” bossa, lead barcha menenjerlar panelidan yopiladi.
+3. Menenjer “Kelmadi” bossa, lead faqat o‘sha menenjer panelidan yopiladi; boshqa menenjerlar ko‘ra oladi.
+4. Kim “Keldi” yoki “Kelmadi” bosgani LeadVisitDecision va LeadVisitDecisionHistory jadvallarida saqlanadi.
+5. Boss panelidagi Keldi/Kelmadi statistikasi qaysi menenjer bosganini ko‘rsatadi.
+6. Menenjer panelida o‘zining Keldi/Kelmadi statistikasi ko‘rinadi.
+7. Keldi bosilgan lead final hisoblanadi va uni Kelmadi qilib qaytarib bo‘lmaydi.

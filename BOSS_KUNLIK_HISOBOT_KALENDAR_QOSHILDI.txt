@@ -1,0 +1,15 @@
+Boss panelga Kunlik hisobot kalendar bilan qo'shildi.
+
+Nima o'zgardi:
+1) Boss paneldagi tugma endi "Kunlik hisobot" deb turadi.
+2) Tugma bosilganda kun tanlash kalendari ochiladi.
+3) Tanlangan kun backendga date=YYYY-MM-DD qilib yuboriladi.
+4) Excel faylda shu kundagi operator natijalari chiqadi:
+   - qaysi operator nechta sotuv qilgani
+   - statuslar bo'yicha statistika
+   - barcha sotuv qilingan o'quvchilar ma'lumotlari
+   - har bir operator uchun alohida sotuv listi
+5) Excel nomi tanlangan sana bilan yuklanadi: boss_kunlik_hisobot_YYYY-MM-DD.xlsx
+
+Backend endpoint:
+/api/boss/statistics/daily-report/?date=YYYY-MM-DD

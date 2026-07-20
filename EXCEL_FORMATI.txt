@@ -1,0 +1,8 @@
+Excel import uchun majburiy ustunlar:
+№	T/SH	Maktab	Sinf	F.I.O	Fan	Ball	tel1	tel2	tel3
+
+Eslatma:
+- Faqat .xlsx fayl yuklang.
+- 1-qator ustun nomlari bo'lishi shart.
+- Telefonlarni 901234567 yoki +998901234567 formatida yozish mumkin.
+- Filial ustuni ixtiyoriy, kerak bo'lsa oxiriga qo'shish mumkin.

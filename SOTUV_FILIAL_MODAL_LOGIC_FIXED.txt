@@ -1,0 +1,14 @@
+Sotuv filial tanlash logikasi tuzatildi.
+
+1) Operator 2 yoki undan ko‘p filialga biriktirilgan bo‘lsa:
+   - Sotuv bosilganda modal chiqadi
+   - biriktirilgan filiallar ro‘yxati ko‘rinadi
+   - tanlangan filial backendga selected_branch bo‘lib yuboriladi
+   - lead aynan shu menenjer Sotuvlar bo‘limiga tushadi
+
+2) Operator 1 ta filialga biriktirilgan bo‘lsa:
+   - Sotuv bosilganda filial so‘ralmaydi
+   - o‘sha bitta filial avtomatik selected_branch bo‘lib yuboriladi
+   - lead Sotuvlar bo‘limiga va shu menenjer paneliga tushadi
+
+3) Carddagi Sotuv tugmasi, Biriktirilgan lead modalidagi Sotuv tugmasi va drag/drop orqali Sotuvga o‘tkazish ham bir xil logika bilan ishlaydi.

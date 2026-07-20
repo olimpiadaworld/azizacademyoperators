@@ -1,0 +1,10 @@
+Sotuv logikasi yangilandi:
+
+1) Operator Sotuv tugmasini bosganda avval izoh kiritadi.
+2) Izohdan keyin modalda operatorga biriktirilgan filiallar emas, barcha filiallar chiqadi.
+3) Qaysi filial tanlansa, lead Sotuvlar bo'limiga o'tadi va aynan tanlangan menenjer panelida ko'rinadi.
+4) Backend operatorga biriktirilgan filialni tekshirmaydi, faqat tanlangan filial mavjud filiallar ro'yxatida borligini tekshiradi.
+
+O'zgargan fayllar:
+- frontend/src/views/operator/OperatorDashboard.vue
+- backend/core/views.py

@@ -1,0 +1,12 @@
+OPERATORLAR BOSHLIG'I HISOB KITOB BO'LIMI QO'SHILDI
+
+Qo'shildi:
+- Boss panel oxiriga "Hisob kitob" bo'limi qo'shildi.
+- Oy filteri orqali tanlangan oyda har bir operator nechta sotuv qilgani ko'rinadi.
+- Operatorlar sotuv soniga qarab reyting ko'rinishida chiqadi.
+- Oyma-oy arxiv qo'shildi: qaysi oyda nechta sotuv bo'lgani ko'rinadi.
+- Backend API: /api/boss/statistics/accounting/
+
+Tekshirildi:
+- python manage.py check
+- npm run build

@@ -1,0 +1,21 @@
+OYMA-OY HISOBOT VA AVTOMATIK YANGI OY LOGIKASI QO'SHILDI
+
+Qilingan o'zgarishlar:
+1) Backend endi natijalarni current_status bo'yicha umumiy/all-time emas, LeadStatusHistory.changed_at bo'yicha oyma-oy hisoblaydi.
+2) May oyidagi sotuv/atkaz/maslahat/o'chiq nomer/xato nomer natijalari May oyida, Iyun oyidagi natijalar Iyun oyida alohida turadi.
+3) Oy almashganda yangi oy avtomatik ochiladi. Alohida jadval yaratish shart emas.
+4) Admin panelda operator hisobotlari ichida oyma-oy arxiv jadvali qo'shildi.
+5) Boss paneldagi to'liq hisobot modalida oyma-oy arxiv jadvali qo'shildi.
+6) Operator panelidagi hisobot qismida faqat o'zining oyma-oy natijalari ko'rinadi.
+7) Boss/operator boshlig'i faqat o'z operatorlari natijasini ko'radi. Admin esa umumiy nazoratni ko'radi.
+8) Backendga qo'shilgan APIlar:
+   - GET /api/admin/monthly-report/
+   - GET /api/boss/statistics/monthly-report/
+   - GET /api/operator/monthly-report/
+
+Deploy qilish:
+- Backend: Railway avtomatik deploy bo'ladi, model o'zgarmagani uchun migration shart emas.
+- Frontend: Netlify/Vercel GitHubdan avtomatik build qiladi.
+- Agar local tekshirmoqchi bo'lsangiz:
+  backend: python manage.py check
+  frontend: npm ci && npm run build

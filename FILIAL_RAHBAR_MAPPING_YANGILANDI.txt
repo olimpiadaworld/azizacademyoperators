@@ -1,0 +1,21 @@
+Filiallar va rahbar mapping yangilandi:
+
+Niyozbosh — Iroda
+Kids 1 — Lobar
+Kids 2 — Doniyor
+Gulbahor — Anvar
+Kids 3 — Nafisa
+Kasblar — Nigora
+Xalqobod — Nilufar
+Chinoz — Hudobergan
+Olmozor — Suhrob
+Paxtazor — Abdulloh
+Mevazor — Dinara
+Dostobod — Shoxriddin
+Qorg'onchi — Shoxriddin
+Oqqo'rg'on — Odilbek
+Qo'shyog'och — -
+
+Operator va menenjer yaratishda filiallar shu ro'yxat bo'yicha chiqadi.
+Menenjer full_name bo'sh bo'lsa, tanlangan filial mappingidagi rahbar nomi avtomatik qo'yiladi.
+Eski nomlar uchun aliaslar qo'shildi: Kids1/Kids2, Olmazor -> Olmozor, Do'stobod -> Dostobod, Qo'rg'oncha -> Qorg'onchi.

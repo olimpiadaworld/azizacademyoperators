@@ -1,0 +1,1 @@
+Status xatoligi tuzatildi: backend status endpoint mustahkamlandi, frontend xatoliklarni to'g'ri ko'rsatadi, init_db eski bazada yetishmayotgan ustunlarni qo'shadi.

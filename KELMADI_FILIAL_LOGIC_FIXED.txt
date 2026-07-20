@@ -1,0 +1,8 @@
+Kelmadi menenjer logikasi:
+
+1) Operator leadni "Sotuv" qilsa, lead barcha menenjerlar panelida ko'rinadi.
+2) Qaysi menenjer "Kelmadi" bossa, lead faqat o'sha rahbarning "Sotuvlar" qatoridan yo'qoladi.
+3) Boshqa menenjerlar panelida o'sha lead ko'rinib turadi.
+4) "Kelmadi" bosgan rahbar panelida lead "Kelmaganlar qatori"ga to'liq ma'lumotlari bilan qo'shiladi.
+5) Qaysi menenjer "Keldi" bossa, lead barcha menenjerlar panelidan yopiladi.
+6) Boss panelida Keldi/Kelmadi statistikasi va lead ma'lumotlari saqlanadi.

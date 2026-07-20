@@ -1,0 +1,19 @@
+Operator panel dizayni screenshotga o'xshash qilib yangilandi.
+
+O'zgargan asosiy joylar:
+- frontend/src/views/operator/OperatorDashboard.vue
+- frontend/src/components/ui/OperatorLeadCompactCard.vue
+- frontend/src/layouts/DashboardLayout.vue
+- frontend/src/styles/main.scss
+
+Natija:
+- Operator panel top filter/search qismi premium light dashboard ko'rinishiga keltirildi.
+- 4 ta statistika card kattaroq va chiroyliroq qilindi.
+- 1-sahifa / 2-sahifa tugmalari screenshotga yaqinlashtirildi.
+- Sotuvlar, O'chiq Nomer, Maslahat cardlari rang, soya, radius va spacing bo'yicha yangilandi.
+- Lead card ichida telefon qatorlari copy ikonka bilan ko'rinadi.
+- Eslatma vaqti bloki va Saqlash tugmasi status rangiga moslandi.
+- Status tugmalariga ikonka qo'shildi.
+
+Tekshirildi:
+- frontend ichida npm run build muvaffaqiyatli ishladi.
