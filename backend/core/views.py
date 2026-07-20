@@ -578,6 +578,45 @@ def create_user(request, role, boss_id=None):
             return ok({'branch_name': ['Kamida bitta filial tanlash shart.'], 'detail': 'Kamida bitta filial tanlash shart.'}, status=400)
     elif not username or not password or not full_name:
         return ok({'detail': 'Ism, login va parol kiritish shart.'}, status=400)
+    # O‘chirilgan akkaunt bazadan butunlay o‘chirilmaydi: tarix, lead va
+    # statistika yo‘qolmasligi uchun u faqat is_active=False qilinadi. Shu
+    # sabab avval ishlatilgan login bilan qayta yaratishda eski yozuvni qayta
+    # faollashtiramiz. Bu login unique xatosini bartaraf qiladi va eski
+    # menenjer qayta ochilsa uning tarixiy qarorlari ham saqlanib qoladi.
+    inactive_user = AppUser.objects.filter(username=username, is_active=False).first()
+    if inactive_user:
+        if inactive_user.role != role:
+            return ok({
+                'username': ['Bu login boshqa turdagi o‘chirilgan akkauntga tegishli. Boshqa login kiriting.'],
+                'detail': 'Bu login boshqa turdagi o‘chirilgan akkauntga tegishli.',
+            }, status=400)
+        old = user_to_dict(inactive_user)
+        inactive_user.password_hash = make_password(password)
+        inactive_user.full_name = full_name
+        inactive_user.phone = phone
+        inactive_user.role = role
+        inactive_user.boss_id = boss_id
+        inactive_user.branch_name = branch_name
+        inactive_user.is_active = bool(body.get('is_active', True))
+        inactive_user.deactivated_at = None if inactive_user.is_active else (inactive_user.deactivated_at or timezone.now())
+        inactive_user.updated_at = timezone.now()
+        inactive_user.save(update_fields=[
+            'password_hash', 'full_name', 'phone', 'role', 'boss_id',
+            'branch_name', 'is_active', 'deactivated_at', 'updated_at',
+        ])
+        DataAuditLog.objects.create(
+            actor=request.app_user,
+            entity_type='app_user',
+            entity_id=inactive_user.id,
+            action='reactivated',
+            old_data=old,
+            new_data=user_to_dict(inactive_user),
+        )
+        payload = user_to_dict(inactive_user)
+        payload['detail'] = 'O‘chirilgan akkaunt qayta faollashtirildi.'
+        payload['reactivated'] = True
+        return ok(payload, status=201)
+
     if AppUser.objects.filter(username=username).exists():
         return ok({'username': ['Bu login allaqachon mavjud.']}, status=400)
     try:

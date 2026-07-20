@@ -1,0 +1,7 @@
+LOGIN QAYTA ISHLATISH VA FILIAL LEADLARI TUZATILDI
+
+1. Menenjer yoki operator akkaunti o‘chirilganda ma’lumotlar tarixi saqlanishi uchun bazada nofaol holatda qoladi.
+2. Xuddi shu login bilan yana akkaunt yaratilsa, endi “Bu login allaqachon mavjud” xatosi chiqmaydi.
+3. Tizim o‘chirilgan akkauntni qayta faollashtiradi, yangi parol, ism-familiya va filialni saqlaydi.
+4. Bir filialdagi menenjer o‘chirilgach, boshqa loginli yangi menenjer o‘sha filialga biriktirilsa, filialning faol Sotuv leadlari unga ko‘rinadi.
+5. Leadlar menenjer ID bo‘yicha emas, tanlangan filial nomi bo‘yicha ko‘rsatiladi; shu sabab menenjer almashishi leadlarni yo‘qotmaydi.
