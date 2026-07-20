@@ -1,27 +1,24 @@
-# Environment va maxfiy sozlamalar
+# Environment / secrets
 .env
 .env.*
 !.env.example
-!.env.railway.example
 !.env.netlify.example
+!.env.railway.example
 
 # Python
 __pycache__/
 *.py[cod]
+*.sqlite3
 .venv/
 venv/
-*.sqlite3
 staticfiles/
 
-# Node / Vite
+# Node
 node_modules/
 dist/
 
-# Editor / OS
+# IDE / OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log

@@ -1,0 +1,22 @@
+YANGILANISHLAR
+
+1. Menenjer paneliga alohida "Keldi to'lov qilmasdan ketdi" tugmasi qo'shildi.
+2. To'lov holatlari alohida saqlanadi:
+   - To'lov qildi
+   - To'lov qilmadi
+   - Keldi, to'lov qilmasdan ketdi
+   - Belgilanmagan
+3. Keldi bosilgandan keyin Kelmadi qilib o'zgartirish backend va frontendda bloklandi.
+4. Boss paneliga operator va menenjerlarning umumiy akkauntlar ro'yxati qo'shildi.
+5. Boss bir nechta akkauntni belgilab, bir vaqtda o'chira oladi.
+6. Boss ism-familiya, login, parol va filialni tahrirlay oladi.
+7. Tahrirlangan menenjer ismi deploy vaqtida avtomatik qayta o'zgartirilmaydi.
+8. Boss va admin nazorat Excel hisobotlariga yangi to'lovsiz ketdi holati qo'shildi.
+
+TEKSHIRUV:
+- Frontend production build: muvaffaqiyatli.
+- Django manage.py check: xatosiz.
+- Boss akkaunt tahrirlash va ko'p tanlab o'chirish API: sinovdan o'tdi.
+- Keldi -> Kelmadi bloklash: sinovdan o'tdi.
+- 3 ta to'lov holatini almashtirish: sinovdan o'tdi.
+- Boss/Admin Excel: sinovdan o'tdi.

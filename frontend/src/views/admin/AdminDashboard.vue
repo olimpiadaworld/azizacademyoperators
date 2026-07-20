@@ -197,7 +197,7 @@
         <div>
           <div class="eyebrow">Keldi / To‘lov nazorati</div>
           <h3>Menenjerlar belgilari</h3>
-          <p>Keldi, Kelmadi, To‘lov qildi va To‘lov qilmadi natijalari shu yerda ko‘rinadi.</p>
+          <p>Keldi, Kelmadi, To‘lov qildi, To‘lov qilmadi va to‘lov qilmasdan ketganlar shu yerda ko‘rinadi.</p>
         </div>
         <div class="lead-toolbar-info lead-toolbar-info--wrap">
           <button class="btn secondary" type="button" :disabled="visitDecisionsExcelDownloading" @click="downloadVisitDecisionsExcel">
@@ -208,6 +208,7 @@
           <span class="badge not-arrived-badge">Kelmadi: {{ adminNotArrivedCount }}</span>
           <span class="badge payment-paid-badge">To‘lov qildi: {{ adminPaymentDoneCount }}</span>
           <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ adminPaymentNotDoneCount }}</span>
+          <span class="badge payment-left-without-badge">To‘lovsiz ketdi: {{ adminLeftWithoutPaymentCount }}</span>
           <span class="badge muted">Belgilanmagan: {{ adminPaymentPendingCount }}</span>
         </div>
       </div>
@@ -905,6 +906,7 @@ const adminArrivedCount = computed(() => adminVisitDecisions.value.filter(item =
 const adminNotArrivedCount = computed(() => adminVisitDecisions.value.filter(item => item.decision === 'not_arrived').length)
 const adminPaymentDoneCount = computed(() => adminVisitDecisions.value.filter(item => adminPaymentStatus(item) === 'paid').length)
 const adminPaymentNotDoneCount = computed(() => adminVisitDecisions.value.filter(item => adminPaymentStatus(item) === 'unpaid').length)
+const adminLeftWithoutPaymentCount = computed(() => adminVisitDecisions.value.filter(item => adminPaymentStatus(item) === 'left_without_payment').length)
 const adminPaymentPendingCount = computed(() => adminVisitDecisions.value.filter(item => adminPaymentStatus(item) === 'pending').length)
 const adminOperatorRows = computed(() => adminReportData.value?.operator_rows || [])
 const adminDailyRows = computed(() => adminReportData.value?.daily || [])
@@ -1153,7 +1155,8 @@ async function confirmBulkDeleteLeads() {
 function adminPaymentStatus(item) {
   if (item?.payment_status) return item.payment_status
   if (item?.payment_done) return 'paid'
-  if (item?.payment_not_done || item?.left_without_payment) return 'unpaid'
+  if (item?.payment_not_done) return 'unpaid'
+  if (item?.left_without_payment) return 'left_without_payment'
   return 'pending'
 }
 
@@ -1161,6 +1164,7 @@ function adminPaymentStatusLabel(item) {
   const status = adminPaymentStatus(item)
   if (status === 'paid') return 'To‘lov qildi'
   if (status === 'unpaid') return 'To‘lov qilmadi'
+  if (status === 'left_without_payment') return 'Keldi, to‘lov qilmasdan ketdi'
   return 'Belgilanmagan'
 }
 
@@ -1168,6 +1172,7 @@ function adminPaymentBadgeClass(item) {
   const status = adminPaymentStatus(item)
   if (status === 'paid') return 'payment-paid-badge'
   if (status === 'unpaid') return 'payment-unpaid-badge'
+  if (status === 'left_without_payment') return 'payment-left-without-badge'
   return 'muted'
 }
 
@@ -1547,5 +1552,7 @@ watch(() => route.query.tab, (tab) => {
 .branch-check { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 14px; background: white; border: 1px solid rgba(148, 163, 184, .22); font-size: 13px; cursor: pointer; }
 .branch-check input { width: 16px; height: 16px; accent-color: #2563eb; }
 @media (max-width: 640px) { .branch-picker__grid { grid-template-columns: 1fr; } }
+
+.payment-left-without-badge { background: rgba(249, 115, 22, 0.14) !important; color: #c2410c !important; border-color: rgba(249, 115, 22, 0.3) !important; }
 
 </style>

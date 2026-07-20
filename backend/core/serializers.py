@@ -98,20 +98,26 @@ def visit_decision_to_dict(item):
         'decision': item.decision,
         'payment_status': (
             'paid' if bool(getattr(item, 'payment_done', False))
-            else 'unpaid' if bool(getattr(item, 'left_without_payment', False))
+            else 'unpaid' if bool(getattr(item, 'payment_not_done', False))
+            else 'left_without_payment' if bool(getattr(item, 'left_without_payment', False))
             else 'pending'
         ),
         'payment_done': bool(getattr(item, 'payment_done', False)),
-        'payment_not_done': bool(getattr(item, 'left_without_payment', False)),
+        'payment_not_done': bool(getattr(item, 'payment_not_done', False)),
         'payment_done_at': getattr(item, 'payment_done_at', None),
         'payment_done_by': getattr(item, 'payment_done_by_id', None),
         'payment_done_by_name': ((item.payment_done_by.full_name or item.payment_done_by.username) if getattr(item, 'payment_done_by_id', None) and getattr(item, 'payment_done_by', None) else ''),
+        'payment_not_done_at': getattr(item, 'payment_not_done_at', None),
+        'payment_not_done_by': getattr(item, 'payment_not_done_by_id', None),
+        'payment_not_done_by_name': ((item.payment_not_done_by.full_name or item.payment_not_done_by.username) if getattr(item, 'payment_not_done_by_id', None) and getattr(item, 'payment_not_done_by', None) else ''),
         'left_without_payment': bool(getattr(item, 'left_without_payment', False)),
         'left_without_payment_at': getattr(item, 'left_without_payment_at', None),
         'left_without_payment_by_name': ((item.left_without_payment_by.full_name or item.left_without_payment_by.username) if getattr(item, 'left_without_payment_by_id', None) and getattr(item, 'left_without_payment_by', None) else ''),
         'payment_status_at': (
             getattr(item, 'payment_done_at', None)
             if bool(getattr(item, 'payment_done', False))
+            else getattr(item, 'payment_not_done_at', None)
+            if bool(getattr(item, 'payment_not_done', False))
             else getattr(item, 'left_without_payment_at', None)
             if bool(getattr(item, 'left_without_payment', False))
             else None
@@ -119,6 +125,8 @@ def visit_decision_to_dict(item):
         'payment_status_by_name': (
             ((item.payment_done_by.full_name or item.payment_done_by.username) if getattr(item, 'payment_done_by_id', None) and getattr(item, 'payment_done_by', None) else '')
             if bool(getattr(item, 'payment_done', False))
+            else ((item.payment_not_done_by.full_name or item.payment_not_done_by.username) if getattr(item, 'payment_not_done_by_id', None) and getattr(item, 'payment_not_done_by', None) else '')
+            if bool(getattr(item, 'payment_not_done', False))
             else ((item.left_without_payment_by.full_name or item.left_without_payment_by.username) if getattr(item, 'left_without_payment_by_id', None) and getattr(item, 'left_without_payment_by', None) else '')
             if bool(getattr(item, 'left_without_payment', False))
             else ''
@@ -214,6 +222,6 @@ def serialize_leads(leads, include_visit_decisions=True):
         for o in OnlineLead.objects.select_related('assigned_operator').filter(created_lead_id__in=ids).order_by('-submitted_at'):
             online_map.setdefault(o.created_lead_id, o)
         if include_visit_decisions:
-            for d in LeadVisitDecision.objects.select_related('lead', 'decided_by').filter(lead_id__in=ids).order_by('-updated_at'):
+            for d in LeadVisitDecision.objects.select_related('lead', 'decided_by', 'payment_done_by', 'payment_not_done_by', 'left_without_payment_by').filter(lead_id__in=ids).order_by('-updated_at'):
                 decision_map[d.lead_id].append(d)
     return [lead_to_dict(l, hist_map.get(l.id, []), online_map.get(l.id), decision_map.get(l.id, [])) for l in leads]

@@ -28,6 +28,12 @@ class Command(BaseCommand):
         managers = list(AppUser.objects.filter(role='filial_rahbari'))
         changed = []
         for manager in managers:
+            # Boss yoki admin tahrirlagan ism-familiyani deploy paytida qayta
+            # filial nomiga almashtirmaymiz. Faqat nomi bo‘sh yoki login bilan
+            # bir xil bo‘lgan eski akkauntlar avtomatik to‘ldiriladi.
+            current_name = str(manager.full_name or '').strip()
+            if current_name and current_name != manager.username:
+                continue
             branches = [item.strip() for item in str(manager.branch_name or '').split(',') if item.strip()]
             names = []
             for branch in branches:
