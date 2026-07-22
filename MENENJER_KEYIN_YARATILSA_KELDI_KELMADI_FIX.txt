@@ -1,0 +1,15 @@
+MENENJER KEYIN YARATILSA HAM KELDI/KELMADI TUZATILDI
+
+Tuzatilgan holat:
+1. Operator avval leadni Sotuv qiladi va filial tanlaydi.
+2. O‘sha filial menenjeri hali yaratilmagan bo‘lishi mumkin.
+3. Menenjer keyin yaratilganda oldingi sotuvlar avtomatik uning panelida ko‘rinadi.
+4. Menenjer Keldi yoki Kelmadi tugmasini bosa oladi.
+5. Eski sotuvlarda lead.branch_name noto‘g‘ri yoki Excel filiali bo‘lib qolgan bo‘lsa,
+   tizim Sotuv tarixidagi "Filial: ..." yozuvidan to‘g‘ri filialni aniqlaydi.
+6. Railway qayta deploy bo‘lganda init_db eski Sotuv leadlarining filialini avtomatik tiklaydi.
+7. "Niyazbosh" kabi eski yozilishlar "Niyozbosh" sifatida taniladi.
+8. Eski menenjer Kelmadi bosgan leadni yangi menenjer davom ettirsa,
+   nazorat yozuvi yangi menenjer akkauntiga o‘tadi.
+
+Ma'lumotlar o‘chirilmaydi. Mavjud PostgreSQL baza saqlanadi.

@@ -1,4 +1,5 @@
 import os
+import re
 from django.core.management.base import BaseCommand
 from django.db import connection
 from django.contrib.auth.hashers import make_password
@@ -7,6 +8,90 @@ from core.models import AppUser, Lead, LeadStatusHistory, OnlineLead, LeadVisitD
 
 class Command(BaseCommand):
     help = 'Create database tables if missing and create first admin user.'
+
+    BRANCH_ALIASES = {
+        'niyozbosh': 'Niyozbosh', 'niyazbosh': 'Niyozbosh', 'niyoz bosh': 'Niyozbosh', 'niyaz bosh': 'Niyozbosh',
+        'kids1': 'Kids 1', 'kids 1': 'Kids 1', 'kids2': 'Kids 2', 'kids 2': 'Kids 2',
+        'kids3': 'Kids 3', 'kids 3': 'Kids 3', 'gulbahor': 'Gulbahor', 'kasblar': 'Kasblar',
+        'xalqobod': 'Xalqobod', 'xalqabod': 'Xalqobod', 'chinoz': 'Chinoz',
+        'olmazor': 'Olmozor', 'olmozor': 'Olmozor', 'paxtazor': 'Paxtazor', 'mevazor': 'Mevazor',
+        'dostobod': 'Dostobod', "do'stobod": 'Dostobod', 'do‘stobod': 'Dostobod',
+        'qorgonchi': "Qorg'onchi", "qorg'onchi": "Qorg'onchi", 'qorgoncha': "Qorg'onchi", "qo'rg'oncha": "Qorg'onchi",
+        'oqqorgon': "Oqqo'rg'on", "oqqo'rg'on": "Oqqo'rg'on",
+        'qoshyogoch': "Qo'shyog'och", "qo'shyog'och": "Qo'shyog'och",
+    }
+
+    def normalize_branch(self, value):
+        text = str(value or '').strip()
+        if not text:
+            return ''
+        if '-' in text and text.split('-', 1)[0].strip().isdigit():
+            text = text.split('-', 1)[1].strip()
+        key = text.lower().replace('ʼ', "'").replace('’', "'").replace('‘', "'")
+        key = ' '.join(key.split())
+        return self.BRANCH_ALIASES.get(key, '')
+
+    def branch_from_sale_note(self, note):
+        text = str(note or '').strip()
+        if not text:
+            return ''
+        for match in re.finditer(r'(?:^|[|;\n])\s*filial\s*:\s*([^|;\n]+)', text, flags=re.IGNORECASE):
+            branch = self.normalize_branch(match.group(1))
+            if branch:
+                return branch
+        return ''
+
+    def backfill_sale_lead_branches(self):
+        """Eski sotuvlarda filialni status tarixidan lead.branch_name ga tiklaydi.
+
+        Menenjer akkaunti sotuvdan keyin yaratilgan bo‘lsa ham ayni filialdagi
+        oldingi sotuvlar uning paneliga tushishi uchun bu backfill deployda ishlaydi.
+        """
+        sale_lead_ids = list(Lead.objects.filter(current_status='sale').values_list('id', flat=True))
+        if not sale_lead_ids:
+            return
+
+        branch_by_lead = {}
+        history_rows = LeadStatusHistory.objects.filter(
+            lead_id__in=sale_lead_ids,
+            new_status='sale',
+        ).only('lead_id', 'note', 'changed_at', 'id').order_by('-changed_at', '-id')
+        for row in history_rows:
+            if row.lead_id in branch_by_lead:
+                continue
+            branch = self.branch_from_sale_note(row.note)
+            if branch:
+                branch_by_lead[row.lead_id] = branch
+
+        # Ayrim juda eski yozuvlarda filial faqat audit JSON ichida qolgan bo‘lishi mumkin.
+        missing_ids = [lead_id for lead_id in sale_lead_ids if lead_id not in branch_by_lead]
+        if missing_ids:
+            audit_rows = DataAuditLog.objects.filter(
+                entity_type='lead',
+                entity_id__in=missing_ids,
+                action='status_changed',
+            ).only('entity_id', 'new_data', 'created_at', 'id').order_by('-created_at', '-id')
+            for row in audit_rows:
+                if row.entity_id in branch_by_lead:
+                    continue
+                data = row.new_data if isinstance(row.new_data, dict) else {}
+                if data.get('current_status') != 'sale':
+                    continue
+                branch = self.normalize_branch(data.get('selected_branch') or data.get('branch_name') or data.get('filial'))
+                if branch:
+                    branch_by_lead[row.entity_id] = branch
+
+        if not branch_by_lead:
+            return
+        changed = []
+        for lead in Lead.objects.filter(id__in=branch_by_lead.keys()):
+            branch = branch_by_lead.get(lead.id, '')
+            if branch and lead.branch_name != branch:
+                lead.branch_name = branch
+                changed.append(lead)
+        if changed:
+            Lead.objects.bulk_update(changed, ['branch_name'])
+            self.stdout.write(self.style.SUCCESS(f'{len(changed)} ta eski sotuv leadining filiali tiklandi.'))
 
     def ensure_missing_columns(self, schema_editor, model, field_names=None):
         table = model._meta.db_table
@@ -92,6 +177,7 @@ class Command(BaseCommand):
                 self.ensure_missing_columns(schema_editor, model)
             self.remove_branch_unique_constraints(schema_editor)
         self.rename_existing_managers()
+        self.backfill_sale_lead_branches()
         username = os.getenv('ADMIN_USERNAME', 'admin')
         password = os.getenv('ADMIN_PASSWORD', 'admin12345')
         full_name = os.getenv('ADMIN_FULL_NAME', 'Administrator')

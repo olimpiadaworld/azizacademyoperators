@@ -1,5 +1,6 @@
 import json
 import mimetypes
+import re
 from collections import defaultdict
 from io import BytesIO
 from datetime import datetime, time, timedelta
@@ -55,7 +56,7 @@ BRANCH_MANAGER_DISPLAY_NAMES = {
 }
 
 BRANCH_ALIASES = {
-    'niyozbosh': 'Niyozbosh',
+    'niyozbosh': 'Niyozbosh', 'niyazbosh': 'Niyozbosh', 'niyoz bosh': 'Niyozbosh', 'niyaz bosh': 'Niyozbosh',
     'kids1': 'Kids 1', 'kids 1': 'Kids 1',
     'kids2': 'Kids 2', 'kids 2': 'Kids 2',
     'kids3': 'Kids 3', 'kids 3': 'Kids 3',
@@ -134,17 +135,81 @@ def users_branch_overlap(user_a, user_b):
     return bool(a and b and a.intersection(b))
 
 
-def filial_can_see_lead(filial_user, lead):
-    # Agar Sotuv vaqtida operator aniq filial tanlagan bo‘lsa, lead faqat o‘sha
-    # filialga biriktirilgan faol menenjerga ko‘rinadi. Menenjer akkaunti
-    # almashtirilsa ham huquq menenjer ID bo‘yicha emas, filial bo‘yicha qoladi.
-    # Eski leadlarda branch_name bo‘lmasa, operator filiallari orqali aniqlanadi.
-    lead_branches = set(normalize_branch_names(getattr(lead, 'branch_name', '') or ''))
-    filial_branches = user_branch_set(filial_user)
-    if lead_branches:
-        return bool(filial_branches and lead_branches.intersection(filial_branches))
+def known_branch_set(value):
+    """Filial qiymatini faqat tizimdagi aniq filial nomlariga normallashtiradi."""
+    return {branch for branch in normalize_branch_names(value) if branch in BRANCH_CHOICES}
+
+
+def sale_branches_from_note(note):
+    """Eski sotuv tarixidagi ``Filial: ...`` yozuvidan filialni topadi."""
+    text = clean_string(note)
+    if not text:
+        return set()
+    branches = set()
+    # Izoh odatda: "izoh | Filial: Niyozbosh" ko‘rinishida saqlangan.
+    for match in re.finditer(r'(?:^|[|;\n])\s*filial\s*:\s*([^|;\n]+)', text, flags=re.IGNORECASE):
+        branches.update(known_branch_set(match.group(1)))
+    return branches
+
+
+def sale_history_map_for_leads(lead_ids):
+    """Leadlar uchun sotuv vaqtida tanlangan filiallarni bitta so‘rovda oladi."""
+    ids = [int(item) for item in lead_ids if item]
+    if not ids:
+        return {}
+    result = defaultdict(set)
+    rows = LeadStatusHistory.objects.filter(
+        lead_id__in=ids,
+        new_status='sale',
+    ).only('lead_id', 'note', 'changed_at', 'id').order_by('-changed_at', '-id')
+    for row in rows:
+        if result.get(row.lead_id):
+            continue
+        branches = sale_branches_from_note(row.note)
+        if branches:
+            result[row.lead_id] = branches
+    return result
+
+
+def lead_sale_branch_set(lead, sale_history_branches=None):
+    """Sotilgan lead qaysi filialga tegishli ekanini ishonchli aniqlaydi.
+
+    Ustuvorlik:
+    1) sotuv statusi tarixidagi ``Filial: ...``;
+    2) leadning hozirgi ``branch_name`` qiymati;
+    3) juda eski leadlarda operatorga biriktirilgan filiallar.
+
+    Shu tartib eski Excel/import filiali ``branch_name``da qolib ketgan holatda ham
+    keyin yaratilgan menenjerga sotuv leadini ko‘rsatadi.
+    """
+    history_branches = set(sale_history_branches or ())
+    if sale_history_branches is None and getattr(lead, 'id', None):
+        rows = LeadStatusHistory.objects.filter(
+            lead_id=lead.id,
+            new_status='sale',
+        ).only('note').order_by('-changed_at', '-id')
+        for row in rows:
+            branches = sale_branches_from_note(row.note)
+            if branches:
+                history_branches = branches
+                break
+    if history_branches:
+        return history_branches
+
+    direct_branches = known_branch_set(getattr(lead, 'branch_name', '') or '')
+    if direct_branches:
+        return direct_branches
+
     operator = getattr(lead, 'assigned_operator', None)
-    return bool(operator and users_branch_overlap(filial_user, operator))
+    return user_branch_set(operator) if operator else set()
+
+
+def filial_can_see_lead(filial_user, lead, sale_history_branches=None):
+    # Huquq menenjer akkaunti yaratilgan vaqt yoki menenjer ID bo‘yicha emas,
+    # sotuv vaqtida tanlangan filial bo‘yicha tekshiriladi.
+    filial_branches = user_branch_set(filial_user)
+    lead_branches = lead_sale_branch_set(lead, sale_history_branches)
+    return bool(filial_branches and lead_branches and filial_branches.intersection(lead_branches))
 
 
 def manager_visible_visit_decisions(user):
@@ -159,10 +224,12 @@ def manager_visible_visit_decisions(user):
         'lead', 'lead__assigned_operator', 'lead__boss',
         'decided_by', 'payment_done_by', 'payment_not_done_by', 'left_without_payment_by',
     ).order_by('-updated_at', '-id')
+    items = list(qs)
+    history_map = sale_history_map_for_leads([item.lead_id for item in items])
     selected = {}
-    for item in qs:
+    for item in items:
         lead = getattr(item, 'lead', None)
-        if not lead or not filial_can_see_lead(user, lead):
+        if not lead or not filial_can_see_lead(user, lead, history_map.get(item.lead_id, set())):
             continue
         current = selected.get(item.lead_id)
         if current is None or (item.decision == 'arrived' and current.decision != 'arrived'):
@@ -1139,7 +1206,12 @@ def boss_leads(request):
         own_not_arrived_ids = LeadVisitDecision.objects.filter(decided_by=user, decision='not_arrived').values('lead_id')
         qs = qs.filter(current_status='sale').exclude(id__in=arrived_lead_ids).exclude(id__in=own_not_arrived_ids)
         qs = apply_lead_search(qs, request.GET.get('search')).order_by('-updated_at', '-id')
-        visible = [lead for lead in qs if filial_can_see_lead(user, lead)]
+        sale_leads = list(qs)
+        history_map = sale_history_map_for_leads([lead.id for lead in sale_leads])
+        visible = [
+            lead for lead in sale_leads
+            if filial_can_see_lead(user, lead, history_map.get(lead.id, set()))
+        ]
         return ok(serialize_leads(visible, include_visit_decisions=True))
     else:
         qs = qs.filter(boss=user)
@@ -1507,6 +1579,7 @@ def visit_decision(request, lead_id):
         # menenjer oldingi Keldi/Kelmadi yozuvini davom ettirib boshqara oladi.
         item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
         created = item is None
+        ownership_changed = False
         if created:
             item = LeadVisitDecision.objects.create(
                 lead=lead,
@@ -1522,12 +1595,23 @@ def visit_decision(request, lead_id):
             if item.decision == 'arrived' and decision == 'not_arrived':
                 return ok({'detail': 'Keldi bosilgandan keyin Kelmadi qilib o‘zgartirib bo‘lmaydi.'}, status=409)
 
+            ownership_changed = item.decided_by_id != request.app_user.id and item.decision != 'arrived'
+            update_fields = []
             if item.decision != decision:
                 item.decision = decision
+                update_fields.append('decision')
+            # Eski menenjerning Kelmadi yozuvini yangi menenjer davom ettirsa,
+            # yozuv yangi akkauntga o‘tadi. Bu keyingi filter va hisobotlarda ham
+            # aynan hozirgi menenjer nomi ko‘rinishini ta'minlaydi.
+            if ownership_changed:
+                item.decided_by = request.app_user
+                update_fields.append('decided_by')
+            if update_fields:
                 item.updated_at = timezone.now()
-                item.save(update_fields=['decision', 'updated_at'])
+                update_fields.append('updated_at')
+                item.save(update_fields=update_fields)
 
-        if created or old_decision != decision:
+        if created or old_decision != decision or ownership_changed:
             LeadVisitDecisionHistory.objects.create(
                 lead=lead,
                 decided_by=request.app_user,
