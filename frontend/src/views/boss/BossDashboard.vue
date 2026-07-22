@@ -412,7 +412,7 @@
                     <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
                     <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')">To‘lov qildi</button>
                     <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')">To‘lov qilmadi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" @click="setPaymentStatus(lead, 'left_without_payment')">Keldi to‘lov qilmasdan ketdi</button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(lead, 'left_without_payment')">To‘lovsiz ketdi</button>
                   </div>
                 </article>
               </div>
@@ -452,7 +452,7 @@
               <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
               <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')">To‘lov qildi</button>
               <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')">To‘lov qilmadi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" @click="setPaymentStatus(lead, 'left_without_payment')">Keldi to‘lov qilmasdan ketdi</button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(lead, 'left_without_payment')">To‘lovsiz ketdi</button>
             </div>
           </article>
         </div>
@@ -750,7 +750,7 @@
             <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id || item.decision === 'arrived'" :title="item.decision === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(item.id, 'not_arrived')">Kelmadi</button>
             <button v-if="item.decision === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'paid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'paid'" @click="setPaymentStatus(item, 'paid')">To‘lov qildi</button>
             <button v-if="item.decision === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'unpaid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'unpaid'" @click="setPaymentStatus(item, 'unpaid')">To‘lov qilmadi</button>
-            <button v-if="item.decision === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(item) === 'left_without_payment' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'left_without_payment'" @click="setPaymentStatus(item, 'left_without_payment')">Keldi to‘lov qilmasdan ketdi</button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(item) === 'left_without_payment' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(item, 'left_without_payment')">To‘lovsiz ketdi</button>
           </div>
         </article>
       </div>
@@ -4092,26 +4092,35 @@ onBeforeUnmount(() => {
 .visit-action-btn,
 .payment-action-btn {
   position: relative;
+  min-width: 0;
   min-height: 46px;
+  padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
+  font-size: clamp(11px, 1.8vw, 13px);
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
   font-weight: 800;
-  letter-spacing: .01em;
+  letter-spacing: 0;
   box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
   transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
 }
 
 .visit-action-btn { grid-column: span 3; }
-.payment-action-btn { grid-column: span 2; }
+.payment-action-btn { grid-column: span 3; }
+.payment-action-btn--left { grid-column: 1 / -1; }
 
 .visit-action-btn::before,
 .payment-action-btn::before {
-  width: 22px;
-  height: 22px;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
   display: inline-grid;
   place-items: center;

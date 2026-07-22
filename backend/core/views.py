@@ -241,12 +241,24 @@ def manager_visible_visit_decisions(user):
 
 
 def manager_existing_visit_decision(user, lead, *, for_update=False):
-    """Filial bo‘yicha boshqariladigan bitta asosiy qarorni topadi."""
-    qs = LeadVisitDecision.objects.select_related(
-        'lead', 'decided_by', 'payment_done_by', 'payment_not_done_by', 'left_without_payment_by'
-    ).filter(lead=lead)
+    """Filial bo‘yicha boshqariladigan bitta asosiy qarorni topadi.
+
+    PostgreSQL nullable ``select_related`` JOINlariga ``FOR UPDATE`` qo‘llashni
+    rad etadi ("FOR UPDATE cannot be applied to the nullable side of an outer
+    join"). To‘lov tugmalaridagi 500 xato aynan shundan chiqardi. Yozuvni
+    bloklash kerak bo‘lganda faqat asosiy ``lead_visit_decisions`` jadvalini
+    so‘raymiz; oddiy o‘qishda esa bog‘langan foydalanuvchilarni oldindan olamiz.
+    """
+    qs = LeadVisitDecision.objects.filter(lead=lead)
     if for_update:
+        # Nullable payment_*_by foreign keylariga LEFT JOIN qilmasdan yozuvni
+        # bloklaydi. PostgreSQL va SQLite bilan bir xil xavfsiz ishlaydi.
         qs = qs.select_for_update()
+    else:
+        qs = qs.select_related(
+            'lead', 'decided_by', 'payment_done_by',
+            'payment_not_done_by', 'left_without_payment_by',
+        )
     items = list(qs.order_by('-updated_at', '-id'))
     if not items:
         return None

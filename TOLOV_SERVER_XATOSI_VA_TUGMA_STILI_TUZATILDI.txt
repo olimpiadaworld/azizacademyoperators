@@ -1,0 +1,8 @@
+TO‘LOV SERVER XATOSI VA TUGMALAR TUZATILDI
+
+1. PostgreSQLda nullable payment foreign keylariga LEFT JOIN bilan FOR UPDATE
+   ishlatilgani sabab 500 server xatosi chiqayotgan edi. Endi tranzaksiya vaqtida
+   faqat lead_visit_decisions jadvali bloklanadi.
+2. To‘lov qildi va To‘lov qilmadi tugmalari kengroq joy oladi.
+3. Uzoq yozuvli tugma “To‘lovsiz ketdi” deb qisqartirildi; to‘liq izoh title’da qoladi.
+4. Matnlar kichik ekranlarda avtomatik qatorga tushadi va tugmadan chiqib ketmaydi.
