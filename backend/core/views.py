@@ -1,4 +1,5 @@
 import json
+import logging
 import mimetypes
 import re
 from collections import defaultdict
@@ -23,6 +24,8 @@ from .utils import (
     apply_lead_search, excel_safe, format_dt, local_date_key,
 )
 from .telegram import send_telegram_message, line as tg_line, lead_info as tg_lead_info, user_name as tg_user_name, now_text as tg_now_text
+
+logger = logging.getLogger(__name__)
 
 
 def notify_telegram_after_commit(text):
@@ -1668,12 +1671,80 @@ def visit_decision(request, lead_id):
 
 @csrf_exempt
 @require_auth('filial_rahbari')
-def mark_visit_payment(request, lead_id):
-    """Keldi deb belgilangan lead uchun “To‘lov qildi” holatini saqlaydi."""
+def mark_payment_status(request, lead_id):
+    """Keldi deb belgilangan lead uchun to‘lov holatini bitta xavfsiz endpointda saqlaydi.
+
+    Frontend ayrim eski ekranlarda lead ID o‘rniga LeadVisitDecision ID yuborgan
+    bo‘lishi mumkin. Shu sabab ``lead_id`` avval lead sifatida, topilmasa nazorat
+    yozuvi ID sifatida ham tekshiriladi.
+    """
     if request.method not in ('POST', 'PATCH', 'PUT'):
         return ok({'detail': 'Method not allowed'}, status=405)
 
-    lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
+    body = json_body(request)
+    status_value = clean_string(body.get('status') or body.get('payment_status')).lower()
+    aliases = {
+        'paid': 'paid',
+        'done': 'paid',
+        'payment_done': 'paid',
+        'unpaid': 'unpaid',
+        'not_done': 'unpaid',
+        'payment_not_done': 'unpaid',
+        'left': 'left_without_payment',
+        'left_without_payment': 'left_without_payment',
+    }
+    payment_status = aliases.get(status_value)
+    if not payment_status:
+        return ok({'detail': 'To‘lov holati noto‘g‘ri yuborildi.'}, status=400)
+
+    return _save_visit_payment_status(request, lead_id, payment_status)
+
+
+def _resolve_payment_lead(identifier):
+    """Lead ID yoki nazorat yozuvi ID orqali sotuv leadini topadi."""
+    lead = Lead.objects.select_related('assigned_operator', 'boss').filter(
+        id=identifier,
+        current_status='sale',
+    ).first()
+    if lead:
+        return lead
+
+    decision = LeadVisitDecision.objects.select_related(
+        'lead', 'lead__assigned_operator', 'lead__boss'
+    ).filter(id=identifier).first()
+    if decision and decision.lead and decision.lead.current_status == 'sale':
+        return decision.lead
+    return None
+
+
+def _payment_response_payload(item):
+    """Belgi saqlangandan keyin serializerdagi ikkilamchi xato 500 qaytarmasin."""
+    try:
+        payload = visit_decision_to_dict(item)
+    except Exception:
+        logger.exception('To‘lov belgisi saqlandi, ammo javob serializerida xato yuz berdi.')
+        payload = {
+            'id': item.id,
+            'lead': item.lead_id,
+            'lead_id': item.lead_id,
+            'decision': item.decision,
+            'payment_status': visit_payment_status(item),
+            'payment_done': bool(item.payment_done),
+            'payment_not_done': bool(item.payment_not_done),
+            'left_without_payment': bool(item.left_without_payment),
+            'payment_done_at': item.payment_done_at,
+            'payment_not_done_at': item.payment_not_done_at,
+            'left_without_payment_at': item.left_without_payment_at,
+            'payment_status_at': visit_payment_status_at(item),
+            'payment_status_by_name': visit_payment_status_by_name(item),
+            'updated_at': item.updated_at,
+        }
+    payload['saved'] = True
+    return payload
+
+
+def _save_visit_payment_status(request, lead_identifier, payment_status):
+    lead = _resolve_payment_lead(lead_identifier)
     if not lead:
         return ok({'detail': 'Lead topilmadi yoki u Sotuv holatida emas.'}, status=404)
     if not filial_can_see_lead(request.app_user, lead):
@@ -1681,50 +1752,74 @@ def mark_visit_payment(request, lead_id):
 
     changed = False
     old_status = 'pending'
-    with transaction.atomic():
-        item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
-        if not item:
-            return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
-        if item.decision != 'arrived':
-            return ok({'detail': 'To‘lov holatini faqat Keldi belgilangan leadga qo‘yish mumkin.'}, status=400)
+    try:
+        with transaction.atomic():
+            item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
+            if not item:
+                return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
+            if item.decision != 'arrived':
+                return ok({'detail': 'To‘lov holatini faqat Keldi belgilangan leadga qo‘yish mumkin.'}, status=400)
 
-        old_status = visit_payment_status(item)
-        if old_status != 'paid':
-            now = timezone.now()
-            item.payment_done = True
-            item.payment_done_at = now
-            item.payment_done_by = request.app_user
-            item.payment_not_done = False
-            item.payment_not_done_at = None
-            item.payment_not_done_by = None
-            item.left_without_payment = False
-            item.left_without_payment_at = None
-            item.left_without_payment_by = None
-            item.updated_at = now
-            item.save(update_fields=[
-                'payment_done', 'payment_done_at', 'payment_done_by',
-                'payment_not_done', 'payment_not_done_at', 'payment_not_done_by',
-                'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
-                'updated_at',
-            ])
-            changed = True
+            old_status = visit_payment_status(item)
+            if old_status != payment_status:
+                now = timezone.now()
+                item.payment_done = payment_status == 'paid'
+                item.payment_done_at = now if payment_status == 'paid' else None
+                item.payment_done_by = request.app_user if payment_status == 'paid' else None
+                item.payment_not_done = payment_status == 'unpaid'
+                item.payment_not_done_at = now if payment_status == 'unpaid' else None
+                item.payment_not_done_by = request.app_user if payment_status == 'unpaid' else None
+                item.left_without_payment = payment_status == 'left_without_payment'
+                item.left_without_payment_at = now if payment_status == 'left_without_payment' else None
+                item.left_without_payment_by = request.app_user if payment_status == 'left_without_payment' else None
+                item.updated_at = now
+                item.save(update_fields=[
+                    'payment_done', 'payment_done_at', 'payment_done_by',
+                    'payment_not_done', 'payment_not_done_at', 'payment_not_done_by',
+                    'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
+                    'updated_at',
+                ])
+                changed = True
+    except Exception:
+        request_id = getattr(request, 'request_id', '')
+        logger.exception(
+            'To‘lov holatini saqlashda xato. request_id=%s lead=%s status=%s manager=%s',
+            request_id,
+            getattr(lead, 'id', lead_identifier),
+            payment_status,
+            getattr(request.app_user, 'id', None),
+        )
+        return ok({
+            'detail': 'To‘lov holatini bazaga saqlashda server xatosi yuz berdi.',
+            'request_id': request_id,
+        }, status=500)
 
-    # Asosiy to‘lov belgisi saqlandi. Audit yoki Telegramdagi vaqtinchalik
-    # muammo asosiy amalni 500 xato bilan bekor qilmasligi kerak.
     if changed:
+        action_map = {
+            'paid': 'payment_paid',
+            'unpaid': 'payment_unpaid',
+            'left_without_payment': 'left_without_payment',
+        }
         try:
             DataAuditLog.objects.create(
                 actor=request.app_user,
                 entity_type='lead_visit_payment',
                 entity_id=item.id,
-                action='payment_paid',
+                action=action_map[payment_status],
                 old_data={'payment_status': old_status},
-                new_data={'payment_status': 'paid'},
+                new_data={'payment_status': payment_status},
             )
         except Exception:
-            pass
+            logger.exception('To‘lov audit yozuvini saqlashda xato.')
+
+        label_map = {
+            'paid': ('💳', 'To‘lov qildi'),
+            'unpaid': ('❌', 'To‘lov qilmadi'),
+            'left_without_payment': ('🚶', 'Keldi, to‘lov qilmasdan ketdi'),
+        }
+        emoji, label = label_map[payment_status]
         msg = (
-            '💳 <b>To‘lov qildi</b>\n'
+            f'{emoji} <b>{label}</b>\n'
             + tg_line('Vaqt', tg_now_text())
             + tg_line('Menenjer', tg_user_name(request.app_user))
             + tg_line('Filial', request.app_user.branch_name)
@@ -1734,151 +1829,36 @@ def mark_visit_payment(request, lead_id):
         try:
             notify_telegram_after_commit(msg)
         except Exception:
-            pass
+            logger.exception('To‘lov Telegram xabarini navbatga qo‘yishda xato.')
 
-    return ok(visit_decision_to_dict(item))
+    return ok(_payment_response_payload(item))
+
+
+@csrf_exempt
+@require_auth('filial_rahbari')
+def mark_visit_payment(request, lead_id):
+    """Eski endpoint: “To‘lov qildi”."""
+    if request.method not in ('POST', 'PATCH', 'PUT'):
+        return ok({'detail': 'Method not allowed'}, status=405)
+    return _save_visit_payment_status(request, lead_id, 'paid')
 
 
 @csrf_exempt
 @require_auth('filial_rahbari')
 def mark_payment_not_done(request, lead_id):
-    """Keldi deb belgilangan lead uchun “To‘lov qilmadi” holatini saqlaydi."""
+    """Eski endpoint: “To‘lov qilmadi”."""
     if request.method not in ('POST', 'PATCH', 'PUT'):
         return ok({'detail': 'Method not allowed'}, status=405)
-
-    lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
-    if not lead:
-        return ok({'detail': 'Lead topilmadi yoki u Sotuv holatida emas.'}, status=404)
-    if not filial_can_see_lead(request.app_user, lead):
-        return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
-
-    changed = False
-    old_status = 'pending'
-    with transaction.atomic():
-        item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
-        if not item:
-            return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
-        if item.decision != 'arrived':
-            return ok({'detail': 'To‘lov holatini faqat Keldi belgilangan leadga qo‘yish mumkin.'}, status=400)
-
-        old_status = visit_payment_status(item)
-        if old_status != 'unpaid':
-            now = timezone.now()
-            item.payment_not_done = True
-            item.payment_not_done_at = now
-            item.payment_not_done_by = request.app_user
-            item.payment_done = False
-            item.payment_done_at = None
-            item.payment_done_by = None
-            item.left_without_payment = False
-            item.left_without_payment_at = None
-            item.left_without_payment_by = None
-            item.updated_at = now
-            item.save(update_fields=[
-                'payment_not_done', 'payment_not_done_at', 'payment_not_done_by',
-                'payment_done', 'payment_done_at', 'payment_done_by',
-                'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
-                'updated_at',
-            ])
-            changed = True
-
-    if changed:
-        try:
-            DataAuditLog.objects.create(
-                actor=request.app_user,
-                entity_type='lead_visit_payment',
-                entity_id=item.id,
-                action='payment_unpaid',
-                old_data={'payment_status': old_status},
-                new_data={'payment_status': 'unpaid'},
-            )
-        except Exception:
-            pass
-        msg = (
-            '❌ <b>To‘lov qilmadi</b>\n'
-            + tg_line('Vaqt', tg_now_text())
-            + tg_line('Menenjer', tg_user_name(request.app_user))
-            + tg_line('Filial', request.app_user.branch_name)
-            + tg_line('Operator', tg_user_name(lead.assigned_operator))
-            + '\n' + tg_lead_info(lead)
-        )
-        try:
-            notify_telegram_after_commit(msg)
-        except Exception:
-            pass
-
-    return ok(visit_decision_to_dict(item))
+    return _save_visit_payment_status(request, lead_id, 'unpaid')
 
 
 @csrf_exempt
 @require_auth('filial_rahbari')
 def mark_left_without_payment(request, lead_id):
-    """Keldi, lekin to‘lov qilmasdan ketgan lead holatini saqlaydi."""
+    """Eski endpoint: “Keldi, to‘lov qilmasdan ketdi”."""
     if request.method not in ('POST', 'PATCH', 'PUT'):
         return ok({'detail': 'Method not allowed'}, status=405)
-
-    lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
-    if not lead:
-        return ok({'detail': 'Lead topilmadi yoki u Sotuv holatida emas.'}, status=404)
-    if not filial_can_see_lead(request.app_user, lead):
-        return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
-
-    changed = False
-    old_status = 'pending'
-    with transaction.atomic():
-        item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
-        if not item:
-            return ok({'detail': 'Avval Keldi deb belgilang.'}, status=400)
-        if item.decision != 'arrived':
-            return ok({'detail': 'To‘lov holatini faqat Keldi belgilangan leadga qo‘yish mumkin.'}, status=400)
-
-        old_status = visit_payment_status(item)
-        if old_status != 'left_without_payment':
-            now = timezone.now()
-            item.left_without_payment = True
-            item.left_without_payment_at = now
-            item.left_without_payment_by = request.app_user
-            item.payment_done = False
-            item.payment_done_at = None
-            item.payment_done_by = None
-            item.payment_not_done = False
-            item.payment_not_done_at = None
-            item.payment_not_done_by = None
-            item.updated_at = now
-            item.save(update_fields=[
-                'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
-                'payment_done', 'payment_done_at', 'payment_done_by',
-                'payment_not_done', 'payment_not_done_at', 'payment_not_done_by',
-                'updated_at',
-            ])
-            changed = True
-
-    if changed:
-        try:
-            DataAuditLog.objects.create(
-                actor=request.app_user,
-                entity_type='lead_visit_payment',
-                entity_id=item.id,
-                action='left_without_payment',
-                old_data={'payment_status': old_status},
-                new_data={'payment_status': 'left_without_payment'},
-            )
-        except Exception:
-            pass
-        msg = (
-            '🚶 <b>Keldi, to‘lov qilmasdan ketdi</b>\n'
-            + tg_line('Vaqt', tg_now_text())
-            + tg_line('Menenjer', tg_user_name(request.app_user))
-            + tg_line('Filial', request.app_user.branch_name)
-            + tg_line('Operator', tg_user_name(lead.assigned_operator))
-            + '\n' + tg_lead_info(lead)
-        )
-        try:
-            notify_telegram_after_commit(msg)
-        except Exception:
-            pass
-
-    return ok(visit_decision_to_dict(item))
+    return _save_visit_payment_status(request, lead_id, 'left_without_payment')
 
 
 @require_auth('boss', 'filial_rahbari')

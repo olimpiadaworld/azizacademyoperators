@@ -1,0 +1,9 @@
+TO'LOV SAQLASH VA TUGMA DIZAYNI FINAL TUZATILDI
+
+1. To'lov qildi / qilmadi / to'lovsiz ketdi bitta payment-status endpoint orqali ishlaydi.
+2. Frontend Lead ID ni lead_id, lead yoki id maydonidan xavfsiz aniqlaydi.
+3. Backend noto'g'ri yuborilgan nazorat yozuvi ID sini ham leadga aylantira oladi.
+4. Serializer yoki Telegramdagi ikkilamchi xato saqlangan to'lovni 500 xatoga aylantirmaydi.
+5. Yangi backend route deploy bo'lguncha eski endpointlarga avtomatik fallback mavjud.
+6. Keldi, Kelmadi va uchta to'lov tugmasi responsive premium dizaynga o'tkazildi.
+7. Server xatosida request ID ko'rsatiladi, Railway logidan topish osonlashadi.

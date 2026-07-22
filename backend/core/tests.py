@@ -272,6 +272,43 @@ class ManagerPaymentStatusTests(TestCase):
         self.assertFalse(self.decision.payment_done)
         self.assertEqual(self.decision.payment_not_done_by_id, self.new_manager.id)
 
+    def test_unified_payment_endpoint_accepts_lead_id(self):
+        response = self.client.post(
+            f'/api/boss/leads/{self.lead.id}/payment-status/',
+            data=json.dumps({'status': 'paid'}),
+            content_type='application/json',
+            **self.auth_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.decision.refresh_from_db()
+        self.assertTrue(self.decision.payment_done)
+        self.assertEqual(response.json().get('payment_status'), 'paid')
+
+    def test_unified_payment_endpoint_accepts_decision_id_as_fallback(self):
+        response = self.client.post(
+            f'/api/boss/leads/{self.decision.id}/payment-status/',
+            data=json.dumps({'status': 'unpaid'}),
+            content_type='application/json',
+            **self.auth_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.decision.refresh_from_db()
+        self.assertTrue(self.decision.payment_not_done)
+        self.assertEqual(self.decision.payment_not_done_by_id, self.new_manager.id)
+
+    @patch('core.views.visit_decision_to_dict', side_effect=RuntimeError('serializer unavailable'))
+    def test_serializer_failure_does_not_turn_saved_payment_into_500(self, _serializer):
+        response = self.client.post(
+            f'/api/boss/leads/{self.lead.id}/payment-status/',
+            data=json.dumps({'status': 'paid'}),
+            content_type='application/json',
+            **self.auth_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.decision.refresh_from_db()
+        self.assertTrue(self.decision.payment_done)
+        self.assertTrue(response.json().get('saved'))
+
     @patch('core.views.DataAuditLog.objects.create', side_effect=RuntimeError('audit unavailable'))
     def test_audit_failure_does_not_rollback_paid_status(self, _audit_create):
         response = self.client.post(

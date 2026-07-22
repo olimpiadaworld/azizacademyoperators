@@ -408,11 +408,11 @@
                     <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
                   </div>
                   <div class="visit-mini-card__actions">
-                    <button class="btn" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
-                    <button class="btn secondary" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="markPaymentDone(lead.id)">To‘lov qildi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="markPaymentNotDone(lead.id)">To‘lov qilmadi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" @click="markLeftWithoutPayment(lead.id)">Keldi to‘lov qilmasdan ketdi</button>
+                    <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
+                    <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')">To‘lov qildi</button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')">To‘lov qilmadi</button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" @click="setPaymentStatus(lead, 'left_without_payment')">Keldi to‘lov qilmasdan ketdi</button>
                   </div>
                 </article>
               </div>
@@ -448,11 +448,11 @@
               <span v-if="lead.left_without_payment_at"><strong>To‘lov qilmadi vaqti:</strong> {{ formatDateTime(lead.left_without_payment_at) }}</span>
             </div>
             <div class="visit-mini-card__actions">
-              <button class="btn" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
-              <button class="btn secondary" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
-              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="markPaymentDone(lead.id)">To‘lov qildi</button>
-              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="markPaymentNotDone(lead.id)">To‘lov qilmadi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" @click="markLeftWithoutPayment(lead.id)">Keldi to‘lov qilmasdan ketdi</button>
+              <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
+              <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
+              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')">To‘lov qildi</button>
+              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')">To‘lov qilmadi</button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" @click="setPaymentStatus(lead, 'left_without_payment')">Keldi to‘lov qilmasdan ketdi</button>
             </div>
           </article>
         </div>
@@ -746,11 +746,11 @@
             <span v-if="item.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ item.operator_note }}</span>
           </div>
           <div v-if="isFilialRahbari" class="visit-mini-card__actions">
-            <button class="btn" :class="{ 'is-active-choice': item.decision === 'arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'arrived')">Keldi</button>
-            <button class="btn secondary" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id || item.decision === 'arrived'" :title="item.decision === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(item.id, 'not_arrived')">Kelmadi</button>
-            <button v-if="item.decision === 'arrived'" class="btn payment-btn" :class="{ 'is-active-choice': paymentStatusValue(item) === 'paid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'paid'" @click="markPaymentDone(item.id)">To‘lov qildi</button>
-            <button v-if="item.decision === 'arrived'" class="btn payment-left-btn" :class="{ 'is-active-choice': paymentStatusValue(item) === 'unpaid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'unpaid'" @click="markPaymentNotDone(item.id)">To‘lov qilmadi</button>
-            <button v-if="item.decision === 'arrived'" class="btn payment-left-without-btn" :class="{ 'is-active-choice': paymentStatusValue(item) === 'left_without_payment' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'left_without_payment'" @click="markLeftWithoutPayment(item.id)">Keldi to‘lov qilmasdan ketdi</button>
+            <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': item.decision === 'arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'arrived')">Keldi</button>
+            <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id || item.decision === 'arrived'" :title="item.decision === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(item.id, 'not_arrived')">Kelmadi</button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'paid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'paid'" @click="setPaymentStatus(item, 'paid')">To‘lov qildi</button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'unpaid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'unpaid'" @click="setPaymentStatus(item, 'unpaid')">To‘lov qilmadi</button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(item) === 'left_without_payment' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'left_without_payment'" @click="setPaymentStatus(item, 'left_without_payment')">Keldi to‘lov qilmasdan ketdi</button>
           </div>
         </article>
       </div>
@@ -2379,50 +2379,70 @@ async function refreshVisitDecisionsAfterSave() {
   }
 }
 
-async function markPaymentDone(leadId) {
+function resolvePaymentLeadId(target) {
+  if (target && typeof target === 'object') {
+    return Number(target.lead_id || target.lead || target.id || 0)
+  }
+  return Number(target || 0)
+}
+
+function paymentSaveErrorMessage(errorObject, fallback) {
+  const response = errorObject?.response
+  const detail = response?.data?.detail
+  const requestId = response?.data?.request_id || response?.headers?.['x-request-id']
+  if (detail) return requestId ? `${detail} (Kod: ${requestId})` : detail
+  if (!response) return 'Backend bilan aloqa uzildi. Internetni va Railway backend holatini tekshiring.'
+  if (response.status === 404) return 'To‘lov endpointi yoki lead topilmadi. Railway backend yangi kod bilan deploy bo‘lganini tekshiring.'
+  if (response.status >= 500) return requestId
+    ? `Server xatosi yuz berdi. Railway log kodi: ${requestId}`
+    : 'Serverda xatolik yuz berdi. Railway backend loglarini tekshiring.'
+  return fallback
+}
+
+async function setPaymentStatus(target, status) {
+  const leadId = resolvePaymentLeadId(target)
+  if (!leadId) {
+    error.value = 'Lead ID topilmadi. Sahifani yangilab qayta urinib ko‘ring.'
+    return
+  }
+
+  const successLabels = {
+    paid: 'To‘lov qildi deb belgilandi',
+    unpaid: 'To‘lov qilmadi deb belgilandi',
+    left_without_payment: 'Keldi, to‘lov qilmasdan ketdi deb belgilandi',
+  }
+
   paymentLoadingId.value = leadId
   error.value = ''
   try {
-    const { data } = await client.post(`boss/leads/${leadId}/payment-done/`)
+    let response
+    try {
+      response = await client.post(`boss/leads/${leadId}/payment-status/`, { status })
+    } catch (primaryError) {
+      // Netlify Railwaydan tezroq deploy bo‘lib qolsa, eski backend endpointlari
+      // vaqtincha ishlashda davom etadi. Yangi route topilmasa eski routega qaytamiz.
+      const routeMissing = primaryError?.response?.status === 404
+        && !primaryError?.response?.data?.detail
+      if (!routeMissing) throw primaryError
+      const legacyPath = {
+        paid: 'payment-done',
+        unpaid: 'payment-not-done',
+        left_without_payment: 'left-without-payment',
+      }[status]
+      response = await client.post(`boss/leads/${leadId}/${legacyPath}/`)
+    }
+    const { data } = response
     applySavedVisitDecision(data)
-    showSuccess('To‘lov qildi deb belgilandi')
+    showSuccess(successLabels[status] || 'To‘lov holati saqlandi')
     await refreshVisitDecisionsAfterSave()
   } catch (e) {
-    error.value = e.response?.data?.detail || 'To‘lov belgisini saqlashda xatolik yuz berdi.'
+    console.error('To‘lov holatini saqlash xatosi:', e)
+    error.value = paymentSaveErrorMessage(e, 'To‘lov belgisini saqlashda xatolik yuz berdi.')
   } finally {
     paymentLoadingId.value = null
   }
 }
 
-async function markPaymentNotDone(leadId) {
-  paymentLoadingId.value = leadId
-  error.value = ''
-  try {
-    const { data } = await client.post(`boss/leads/${leadId}/payment-not-done/`)
-    applySavedVisitDecision(data)
-    showSuccess('To‘lov qilmadi deb belgilandi')
-    await refreshVisitDecisionsAfterSave()
-  } catch (e) {
-    error.value = e.response?.data?.detail || 'To‘lov qilmadi belgisini saqlashda xatolik yuz berdi.'
-  } finally {
-    paymentLoadingId.value = null
-  }
-}
-
-async function markLeftWithoutPayment(leadId) {
-  paymentLoadingId.value = leadId
-  error.value = ''
-  try {
-    const { data } = await client.post(`boss/leads/${leadId}/left-without-payment/`)
-    applySavedVisitDecision(data)
-    showSuccess('Keldi, to‘lov qilmasdan ketdi deb belgilandi')
-    await refreshVisitDecisionsAfterSave()
-  } catch (e) {
-    error.value = e.response?.data?.detail || 'To‘lovsiz ketdi belgisini saqlashda xatolik yuz berdi.'
-  } finally {
-    paymentLoadingId.value = null
-  }
-}
 
 async function downloadVisitDecisionExcel() {
   visitReportExcelLoading.value = true
@@ -4063,26 +4083,94 @@ onBeforeUnmount(() => {
   border: 1px solid transparent;
 }
 
-.payment-btn {
-  background: linear-gradient(90deg, #16a34a, #22c55e);
+.visit-mini-card__actions {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.visit-action-btn,
+.payment-action-btn {
+  position: relative;
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.visit-action-btn { grid-column: span 3; }
+.payment-action-btn { grid-column: span 2; }
+
+.visit-action-btn::before,
+.payment-action-btn::before {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(255, 255, 255, .2);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.visit-action-btn--arrived {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
   color: #fff;
 }
+.visit-action-btn--arrived::before { content: '✓'; }
 
-.payment-btn:disabled {
-  opacity: .78;
-}
-
-.payment-left-btn {
-  background: linear-gradient(90deg, #ea580c, #f97316);
+.visit-action-btn--absent {
+  background: linear-gradient(135deg, #475569, #64748b);
   color: #fff;
 }
+.visit-action-btn--absent::before { content: '×'; }
 
-.payment-left-btn:disabled {
-  opacity: .78;
+.payment-btn,
+.payment-action-btn--paid {
+  background: linear-gradient(135deg, #15803d, #22c55e);
+  color: #fff;
+}
+.payment-action-btn--paid::before { content: '✓'; }
+
+.payment-left-btn,
+.payment-action-btn--unpaid {
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  color: #fff;
+}
+.payment-action-btn--unpaid::before { content: '×'; }
+
+.payment-left-without-btn,
+.payment-action-btn--left {
+  background: linear-gradient(135deg, #c2410c, #f97316);
+  color: #fff;
+}
+.payment-action-btn--left::before { content: '↗'; }
+
+.visit-action-btn:not(:disabled):hover,
+.payment-action-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  filter: saturate(1.08);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, .14);
 }
 
-.payment-left-btn.is-active-choice {
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3);
+.visit-action-btn.is-active-choice,
+.payment-action-btn.is-active-choice {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .92), 0 0 0 6px rgba(37, 99, 235, .24), 0 12px 24px rgba(15, 23, 42, .14);
+}
+
+.visit-action-btn:disabled,
+.payment-action-btn:disabled {
+  opacity: .72;
+  cursor: not-allowed;
+  transform: none;
+  filter: grayscale(.08);
 }
 
 @media (max-width: 760px) {
@@ -4125,13 +4213,33 @@ onBeforeUnmount(() => {
   border-color: rgba(249, 115, 22, 0.3) !important;
 }
 
-.payment-left-without-btn {
-  background: linear-gradient(90deg, #c2410c, #f97316);
-  color: #fff;
+
+@media (max-width: 900px) {
+  .visit-mini-card__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .visit-action-btn,
+  .payment-action-btn {
+    grid-column: span 1;
+  }
+  .payment-action-btn--left {
+    grid-column: 1 / -1;
+  }
 }
 
-.payment-left-without-btn:disabled { opacity: .78; }
-.payment-left-without-btn.is-active-choice { box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3); }
+@media (max-width: 560px) {
+  .visit-mini-card__actions {
+    grid-template-columns: 1fr;
+  }
+  .visit-action-btn,
+  .payment-action-btn,
+  .payment-action-btn--left {
+    grid-column: 1;
+    width: 100%;
+    min-height: 48px;
+  }
+}
+
 
 .btn.danger { background: linear-gradient(90deg, #dc2626, #ef4444); color: #fff; border-color: transparent; }
 .btn.danger:disabled { opacity: .55; cursor: not-allowed; }

@@ -39,6 +39,7 @@ urlpatterns = [
     path('boss/leads/import/template/', views.import_template),
     path('boss/leads/import/', views.import_leads),
     path('boss/leads/<int:lead_id>/visit-decision/', views.visit_decision),
+    path('boss/leads/<int:lead_id>/payment-status/', views.mark_payment_status),
     path('boss/leads/<int:lead_id>/payment-done/', views.mark_visit_payment),
     path('boss/leads/<int:lead_id>/payment-not-done/', views.mark_payment_not_done),
     path('boss/leads/<int:lead_id>/left-without-payment/', views.mark_left_without_payment),
