@@ -1,0 +1,8 @@
+TO‘LOV QILDI / TO‘LOV QILMADI SAQLASH XATOLIGI TUZATILDI
+
+1. Yangi menenjer eski menenjer Keldi qilgan sotuv leadiga To‘lov qildi yoki To‘lov qilmadi bosishi mumkin.
+2. Asosiy to‘lov belgisi alohida tranzaksiyada saqlanadi.
+3. Audit yoki Telegramdagi vaqtinchalik xato asosiy belgini bekor qilmaydi.
+4. Frontend ro‘yxatni qayta yuklay olmasa ham saqlangan natijani darhol ekranga qo‘yadi.
+5. To‘lov qildi, To‘lov qilmadi va To‘lovsiz ketdi uchalasi bir xil xavfsiz ishlaydi.
+6. Noto‘g‘ri HTTP usuli va Sotuv bo‘lmagan lead uchun tushunarli xabar qaytariladi.

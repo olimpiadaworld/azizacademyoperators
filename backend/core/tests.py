@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import json
 
 from django.test import Client, TestCase
@@ -206,3 +207,78 @@ class ManagerCreatedAfterSaleTests(TestCase):
             decided_by=new_manager,
             decision='arrived',
         ).exists())
+
+
+class ManagerPaymentStatusTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.operator = AppUser.objects.create(
+            username='payment-operator',
+            password_hash='unused',
+            full_name='Payment Operator',
+            role='operator',
+            branch_name='Niyozbosh',
+        )
+        self.old_manager = AppUser.objects.create(
+            username='payment-old-manager',
+            password_hash='unused',
+            full_name='Old Payment Manager',
+            role='filial_rahbari',
+            branch_name='Niyozbosh',
+            is_active=False,
+        )
+        self.new_manager = AppUser.objects.create(
+            username='payment-new-manager',
+            password_hash='unused',
+            full_name='New Payment Manager',
+            role='filial_rahbari',
+            branch_name='Niyozbosh',
+        )
+        self.lead = Lead.objects.create(
+            full_name='Payment Test Lead',
+            assigned_operator=self.operator,
+            current_status='sale',
+            branch_name='Niyozbosh',
+        )
+        self.decision = LeadVisitDecision.objects.create(
+            lead=self.lead,
+            decided_by=self.old_manager,
+            decision='arrived',
+        )
+
+    def auth_headers(self):
+        token = issue_tokens(self.new_manager)['access']
+        return {'HTTP_AUTHORIZATION': f'Bearer {token}'}
+
+    def test_new_manager_can_mark_old_arrived_lead_as_paid(self):
+        response = self.client.post(
+            f'/api/boss/leads/{self.lead.id}/payment-done/',
+            **self.auth_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.decision.refresh_from_db()
+        self.assertTrue(self.decision.payment_done)
+        self.assertFalse(self.decision.payment_not_done)
+        self.assertEqual(self.decision.payment_done_by_id, self.new_manager.id)
+
+    def test_new_manager_can_mark_old_arrived_lead_as_unpaid(self):
+        response = self.client.post(
+            f'/api/boss/leads/{self.lead.id}/payment-not-done/',
+            **self.auth_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.decision.refresh_from_db()
+        self.assertTrue(self.decision.payment_not_done)
+        self.assertFalse(self.decision.payment_done)
+        self.assertEqual(self.decision.payment_not_done_by_id, self.new_manager.id)
+
+    @patch('core.views.DataAuditLog.objects.create', side_effect=RuntimeError('audit unavailable'))
+    def test_audit_failure_does_not_rollback_paid_status(self, _audit_create):
+        response = self.client.post(
+            f'/api/boss/leads/{self.lead.id}/payment-done/',
+            **self.auth_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.decision.refresh_from_db()
+        self.assertTrue(self.decision.payment_done)
+        self.assertEqual(self.decision.payment_done_by_id, self.new_manager.id)

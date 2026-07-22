@@ -1115,19 +1115,7 @@ th { color: var(--muted); font-weight:600; }
 .visit-mini-card__actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.visit-mini-card__actions .btn {
-  min-height: 38px;
-  padding: 8px 12px;
-  font-size: 12.5px;
-  border-radius: 12px;
-  gap: 5px;
-}
-
-.visit-mini-card__actions .payment-left-without-btn {
-  grid-column: 1 / -1;
+  gap: 10px;
 }
 
 
@@ -1821,22 +1809,9 @@ th { color: var(--muted); font-weight:600; }
     font-size: 24px;
   }
 
-  .visit-mini-card__meta {
-    grid-template-columns: 1fr;
-  }
-
+  .visit-mini-card__meta,
   .visit-mini-card__actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .visit-mini-card__actions .btn {
-    min-height: 34px;
-    padding: 6px 8px;
-    font-size: 11.5px;
-    border-radius: 10px;
-    white-space: normal;
-    line-height: 1.15;
+    grid-template-columns: 1fr;
   }
 
   .decision-panel-tools,

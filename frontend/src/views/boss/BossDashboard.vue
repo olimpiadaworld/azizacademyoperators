@@ -2359,13 +2359,34 @@ function isArrivalLocked(item) {
   return String(item?.decision || visitDecisionMap.value[item?.id] || '') === 'arrived'
 }
 
+function applySavedVisitDecision(savedItem) {
+  if (!savedItem?.id) return
+  const index = visitDecisions.value.findIndex(item => item.id === savedItem.id)
+  if (index >= 0) {
+    visitDecisions.value.splice(index, 1, savedItem)
+  } else {
+    visitDecisions.value.unshift(savedItem)
+  }
+}
+
+async function refreshVisitDecisionsAfterSave() {
+  try {
+    await fetchVisitDecisions()
+  } catch (refreshError) {
+    // Asosiy belgi allaqachon saqlandi. Ro‘yxatni qayta yuklashdagi vaqtinchalik
+    // xato foydalanuvchiga saqlash xatosi sifatida ko‘rsatilmasin.
+    console.error('Nazorat ro‘yxatini yangilashda xatolik:', refreshError)
+  }
+}
+
 async function markPaymentDone(leadId) {
   paymentLoadingId.value = leadId
   error.value = ''
   try {
-    await client.post(`boss/leads/${leadId}/payment-done/`)
+    const { data } = await client.post(`boss/leads/${leadId}/payment-done/`)
+    applySavedVisitDecision(data)
     showSuccess('To‘lov qildi deb belgilandi')
-    await fetchVisitDecisions()
+    await refreshVisitDecisionsAfterSave()
   } catch (e) {
     error.value = e.response?.data?.detail || 'To‘lov belgisini saqlashda xatolik yuz berdi.'
   } finally {
@@ -2377,9 +2398,10 @@ async function markPaymentNotDone(leadId) {
   paymentLoadingId.value = leadId
   error.value = ''
   try {
-    await client.post(`boss/leads/${leadId}/payment-not-done/`)
+    const { data } = await client.post(`boss/leads/${leadId}/payment-not-done/`)
+    applySavedVisitDecision(data)
     showSuccess('To‘lov qilmadi deb belgilandi')
-    await fetchVisitDecisions()
+    await refreshVisitDecisionsAfterSave()
   } catch (e) {
     error.value = e.response?.data?.detail || 'To‘lov qilmadi belgisini saqlashda xatolik yuz berdi.'
   } finally {
@@ -2391,9 +2413,10 @@ async function markLeftWithoutPayment(leadId) {
   paymentLoadingId.value = leadId
   error.value = ''
   try {
-    await client.post(`boss/leads/${leadId}/left-without-payment/`)
+    const { data } = await client.post(`boss/leads/${leadId}/left-without-payment/`)
+    applySavedVisitDecision(data)
     showSuccess('Keldi, to‘lov qilmasdan ketdi deb belgilandi')
-    await fetchVisitDecisions()
+    await refreshVisitDecisionsAfterSave()
   } catch (e) {
     error.value = e.response?.data?.detail || 'To‘lovsiz ketdi belgisini saqlashda xatolik yuz berdi.'
   } finally {

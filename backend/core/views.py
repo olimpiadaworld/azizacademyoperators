@@ -28,7 +28,7 @@ from .telegram import send_telegram_message, line as tg_line, lead_info as tg_le
 def notify_telegram_after_commit(text):
     if not text:
         return
-    transaction.on_commit(lambda: send_telegram_message(text))
+    transaction.on_commit(lambda: send_telegram_message(text), robust=True)
 
 
 
@@ -1670,11 +1670,17 @@ def visit_decision(request, lead_id):
 @require_auth('filial_rahbari')
 def mark_visit_payment(request, lead_id):
     """Keldi deb belgilangan lead uchun “To‘lov qildi” holatini saqlaydi."""
+    if request.method not in ('POST', 'PATCH', 'PUT'):
+        return ok({'detail': 'Method not allowed'}, status=405)
+
     lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
     if not lead:
-        return ok({'detail': 'Lead topilmadi.'}, status=404)
+        return ok({'detail': 'Lead topilmadi yoki u Sotuv holatida emas.'}, status=404)
     if not filial_can_see_lead(request.app_user, lead):
         return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
+
+    changed = False
+    old_status = 'pending'
     with transaction.atomic():
         item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
         if not item:
@@ -1701,6 +1707,12 @@ def mark_visit_payment(request, lead_id):
                 'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
                 'updated_at',
             ])
+            changed = True
+
+    # Asosiy to‘lov belgisi saqlandi. Audit yoki Telegramdagi vaqtinchalik
+    # muammo asosiy amalni 500 xato bilan bekor qilmasligi kerak.
+    if changed:
+        try:
             DataAuditLog.objects.create(
                 actor=request.app_user,
                 entity_type='lead_visit_payment',
@@ -1709,15 +1721,21 @@ def mark_visit_payment(request, lead_id):
                 old_data={'payment_status': old_status},
                 new_data={'payment_status': 'paid'},
             )
-            msg = (
-                '💳 <b>To‘lov qildi</b>\n'
-                + tg_line('Vaqt', tg_now_text())
-                + tg_line('Menenjer', tg_user_name(request.app_user))
-                + tg_line('Filial', request.app_user.branch_name)
-                + tg_line('Operator', tg_user_name(lead.assigned_operator))
-                + '\n' + tg_lead_info(lead)
-            )
+        except Exception:
+            pass
+        msg = (
+            '💳 <b>To‘lov qildi</b>\n'
+            + tg_line('Vaqt', tg_now_text())
+            + tg_line('Menenjer', tg_user_name(request.app_user))
+            + tg_line('Filial', request.app_user.branch_name)
+            + tg_line('Operator', tg_user_name(lead.assigned_operator))
+            + '\n' + tg_lead_info(lead)
+        )
+        try:
             notify_telegram_after_commit(msg)
+        except Exception:
+            pass
+
     return ok(visit_decision_to_dict(item))
 
 
@@ -1725,11 +1743,17 @@ def mark_visit_payment(request, lead_id):
 @require_auth('filial_rahbari')
 def mark_payment_not_done(request, lead_id):
     """Keldi deb belgilangan lead uchun “To‘lov qilmadi” holatini saqlaydi."""
+    if request.method not in ('POST', 'PATCH', 'PUT'):
+        return ok({'detail': 'Method not allowed'}, status=405)
+
     lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
     if not lead:
-        return ok({'detail': 'Lead topilmadi.'}, status=404)
+        return ok({'detail': 'Lead topilmadi yoki u Sotuv holatida emas.'}, status=404)
     if not filial_can_see_lead(request.app_user, lead):
         return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
+
+    changed = False
+    old_status = 'pending'
     with transaction.atomic():
         item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
         if not item:
@@ -1756,6 +1780,10 @@ def mark_payment_not_done(request, lead_id):
                 'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
                 'updated_at',
             ])
+            changed = True
+
+    if changed:
+        try:
             DataAuditLog.objects.create(
                 actor=request.app_user,
                 entity_type='lead_visit_payment',
@@ -1764,15 +1792,21 @@ def mark_payment_not_done(request, lead_id):
                 old_data={'payment_status': old_status},
                 new_data={'payment_status': 'unpaid'},
             )
-            msg = (
-                '❌ <b>To‘lov qilmadi</b>\n'
-                + tg_line('Vaqt', tg_now_text())
-                + tg_line('Menenjer', tg_user_name(request.app_user))
-                + tg_line('Filial', request.app_user.branch_name)
-                + tg_line('Operator', tg_user_name(lead.assigned_operator))
-                + '\n' + tg_lead_info(lead)
-            )
+        except Exception:
+            pass
+        msg = (
+            '❌ <b>To‘lov qilmadi</b>\n'
+            + tg_line('Vaqt', tg_now_text())
+            + tg_line('Menenjer', tg_user_name(request.app_user))
+            + tg_line('Filial', request.app_user.branch_name)
+            + tg_line('Operator', tg_user_name(lead.assigned_operator))
+            + '\n' + tg_lead_info(lead)
+        )
+        try:
             notify_telegram_after_commit(msg)
+        except Exception:
+            pass
+
     return ok(visit_decision_to_dict(item))
 
 
@@ -1780,11 +1814,17 @@ def mark_payment_not_done(request, lead_id):
 @require_auth('filial_rahbari')
 def mark_left_without_payment(request, lead_id):
     """Keldi, lekin to‘lov qilmasdan ketgan lead holatini saqlaydi."""
+    if request.method not in ('POST', 'PATCH', 'PUT'):
+        return ok({'detail': 'Method not allowed'}, status=405)
+
     lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
     if not lead:
-        return ok({'detail': 'Lead topilmadi.'}, status=404)
+        return ok({'detail': 'Lead topilmadi yoki u Sotuv holatida emas.'}, status=404)
     if not filial_can_see_lead(request.app_user, lead):
         return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
+
+    changed = False
+    old_status = 'pending'
     with transaction.atomic():
         item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
         if not item:
@@ -1799,11 +1839,11 @@ def mark_left_without_payment(request, lead_id):
             item.left_without_payment_at = now
             item.left_without_payment_by = request.app_user
             item.payment_done = False
+            item.payment_done_at = None
+            item.payment_done_by = None
             item.payment_not_done = False
             item.payment_not_done_at = None
             item.payment_not_done_by = None
-            item.payment_done_at = None
-            item.payment_done_by = None
             item.updated_at = now
             item.save(update_fields=[
                 'left_without_payment', 'left_without_payment_at', 'left_without_payment_by',
@@ -1811,6 +1851,10 @@ def mark_left_without_payment(request, lead_id):
                 'payment_not_done', 'payment_not_done_at', 'payment_not_done_by',
                 'updated_at',
             ])
+            changed = True
+
+    if changed:
+        try:
             DataAuditLog.objects.create(
                 actor=request.app_user,
                 entity_type='lead_visit_payment',
@@ -1819,15 +1863,21 @@ def mark_left_without_payment(request, lead_id):
                 old_data={'payment_status': old_status},
                 new_data={'payment_status': 'left_without_payment'},
             )
-            msg = (
-                '🚶 <b>Keldi, to‘lov qilmasdan ketdi</b>\n'
-                + tg_line('Vaqt', tg_now_text())
-                + tg_line('Menenjer', tg_user_name(request.app_user))
-                + tg_line('Filial', request.app_user.branch_name)
-                + tg_line('Operator', tg_user_name(lead.assigned_operator))
-                + '\n' + tg_lead_info(lead)
-            )
+        except Exception:
+            pass
+        msg = (
+            '🚶 <b>Keldi, to‘lov qilmasdan ketdi</b>\n'
+            + tg_line('Vaqt', tg_now_text())
+            + tg_line('Menenjer', tg_user_name(request.app_user))
+            + tg_line('Filial', request.app_user.branch_name)
+            + tg_line('Operator', tg_user_name(lead.assigned_operator))
+            + '\n' + tg_lead_info(lead)
+        )
+        try:
             notify_telegram_after_commit(msg)
+        except Exception:
+            pass
+
     return ok(visit_decision_to_dict(item))
 
 
