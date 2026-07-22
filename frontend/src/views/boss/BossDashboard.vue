@@ -2292,22 +2292,35 @@ async function submitVisitDecision(leadId, decision) {
   decisionLoadingId.value = leadId
   pendingDecision.value = decision
   error.value = ''
+
+  let savedData = null
   try {
-    const { data } = await client.post(`boss/leads/${leadId}/visit-decision/`, { decision })
+    const response = await client.post(`boss/leads/${leadId}/visit-decision/`, { decision })
+    savedData = response.data
     visitDecisionMap.value = {
       ...visitDecisionMap.value,
-      [leadId]: data.decision,
+      [leadId]: savedData.decision,
     }
-    showSuccess(data.decision === 'arrived' ? 'Keldi' : 'Kelmadi')
-    if (isFilialRahbari.value) {
-      await Promise.all([fetchVisitDecisions(), fetchLeads('Sotuvlar yangilanmoqda...')])
-    }
+    showSuccess(savedData.decision === 'arrived' ? 'Keldi saqlandi' : 'Kelmadi saqlandi')
   } catch (e) {
     error.value = e.response?.data?.detail || 'Belgini saqlashda xatolik yuz berdi.'
-  } finally {
     decisionLoadingId.value = null
     pendingDecision.value = ''
+    return
   }
+
+  // Belgi saqlangandan keyingi ro‘yxat yangilanishi alohida jarayon.
+  // Refresh xatosi foydalanuvchiga “belgi saqlanmadi” deb noto‘g‘ri ko‘rsatilmaydi.
+  if (isFilialRahbari.value && savedData) {
+    try {
+      await Promise.all([fetchVisitDecisions(), fetchLeads('Sotuvlar yangilanmoqda...')])
+    } catch (e) {
+      error.value = 'Belgi saqlandi, lekin ro‘yxatni yangilashda xatolik bo‘ldi. Sahifani bir marta yangilang.'
+    }
+  }
+
+  decisionLoadingId.value = null
+  pendingDecision.value = ''
 }
 
 function paymentStatusValue(item) {

@@ -1563,61 +1563,82 @@ def bulk_assign_online_leads(request):
 @csrf_exempt
 @require_auth('filial_rahbari')
 def visit_decision(request, lead_id):
+    if request.method not in ('POST', 'PATCH', 'PUT'):
+        return ok({'detail': 'Method not allowed'}, status=405)
+
     body = json_body(request)
     decision = clean_string(body.get('decision'))
     if decision not in ('arrived', 'not_arrived'):
-        return ok({'decision': ['Qaror noto‘g‘ri.']}, status=400)
-    lead = Lead.objects.select_related('assigned_operator', 'boss').filter(id=lead_id, current_status='sale').first()
+        return ok({'decision': ['Qaror noto‘g‘ri.'], 'detail': 'Qaror noto‘g‘ri.'}, status=400)
+
+    lead = Lead.objects.select_related('assigned_operator', 'boss').filter(
+        id=lead_id,
+        current_status='sale',
+    ).first()
     if not lead:
-        return ok({'detail': 'Lead topilmadi.'}, status=404)
+        return ok({'detail': 'Lead topilmadi yoki u Sotuv holatida emas.'}, status=404)
     if not filial_can_see_lead(request.app_user, lead):
         return ok({'detail': 'Bu lead sizga biriktirilgan filialga tegishli emas.'}, status=403)
 
+    changed = False
+    old_decision = ''
     with transaction.atomic():
-        # Qaror akkaunt ID bo‘yicha emas, filialga tegishli lead bo‘yicha olinadi.
-        # Shu sabab eski menenjer o‘chirilgach, ayni filialga yaratilgan yangi
-        # menenjer oldingi Keldi/Kelmadi yozuvini davom ettirib boshqara oladi.
-        item = manager_existing_visit_decision(request.app_user, lead, for_update=True)
-        created = item is None
-        ownership_changed = False
-        if created:
-            item = LeadVisitDecision.objects.create(
-                lead=lead,
-                decided_by=request.app_user,
-                decision=decision,
-            )
-            old_decision = ''
-        else:
-            old_decision = item.decision
-
-            # “Keldi” yakuniy nazorat hisoblanadi. Menenjer almashgan bo‘lsa ham
-            # Keldi bosilgan leadni Kelmadi holatiga qaytarib bo‘lmaydi.
-            if item.decision == 'arrived' and decision == 'not_arrived':
+        # Bir leadga bir nechta menenjer ilgari Kelmadi bosgan bo‘lishi mumkin.
+        # Keldi yakuniy holat bo‘lgani uchun u barcha menenjerlar uchun ustun turadi.
+        locked_items = list(
+            LeadVisitDecision.objects.select_for_update()
+            .filter(lead=lead)
+            .order_by('-updated_at', '-id')
+        )
+        arrived_item = next((row for row in locked_items if row.decision == 'arrived'), None)
+        if arrived_item is not None:
+            if decision == 'not_arrived':
                 return ok({'detail': 'Keldi bosilgandan keyin Kelmadi qilib o‘zgartirib bo‘lmaydi.'}, status=409)
-
-            ownership_changed = item.decided_by_id != request.app_user.id and item.decision != 'arrived'
-            update_fields = []
+            item = arrived_item
+        else:
+            # Eski menenjerning yozuvini yangi menenjerga ko‘chirmaymiz.
+            # Har bir menenjer o‘z qarorini saqlaydi. Bu unique constraint bilan
+            # to‘qnashuvni bartaraf qiladi va keyin yaratilgan menenjerga ham
+            # Kelmadi/Keldi bosish imkonini beradi.
+            item = next((row for row in locked_items if row.decided_by_id == request.app_user.id), None)
+            if item is None:
+                try:
+                    # Ichki atomic savepoint IntegrityError bo‘lsa tashqi
+                    # tranzaksiyani "broken" holatga tushirmaydi.
+                    with transaction.atomic():
+                        item = LeadVisitDecision.objects.create(
+                            lead=lead,
+                            decided_by=request.app_user,
+                            decision=decision,
+                        )
+                    changed = True
+                except IntegrityError:
+                    # Ikki marta tez bosilganda yoki parallel so‘rov kelganda
+                    # mavjud yozuvni qayta olib xavfsiz yangilaymiz.
+                    item = LeadVisitDecision.objects.select_for_update().get(
+                        lead=lead,
+                        decided_by=request.app_user,
+                    )
+            old_decision = item.decision if not changed else ''
             if item.decision != decision:
                 item.decision = decision
-                update_fields.append('decision')
-            # Eski menenjerning Kelmadi yozuvini yangi menenjer davom ettirsa,
-            # yozuv yangi akkauntga o‘tadi. Bu keyingi filter va hisobotlarda ham
-            # aynan hozirgi menenjer nomi ko‘rinishini ta'minlaydi.
-            if ownership_changed:
-                item.decided_by = request.app_user
-                update_fields.append('decided_by')
-            if update_fields:
                 item.updated_at = timezone.now()
-                update_fields.append('updated_at')
-                item.save(update_fields=update_fields)
+                item.save(update_fields=['decision', 'updated_at'])
+                changed = True
 
-        if created or old_decision != decision or ownership_changed:
+    # Asosiy belgi allaqachon saqlandi. Tarix/audit jadvalidagi vaqtinchalik
+    # muammo asosiy Keldi/Kelmadi amalini bekor qilmasligi kerak.
+    if changed:
+        try:
             LeadVisitDecisionHistory.objects.create(
                 lead=lead,
                 decided_by=request.app_user,
                 old_decision=old_decision,
                 new_decision=decision,
             )
+        except Exception:
+            pass
+        try:
             DataAuditLog.objects.create(
                 actor=request.app_user,
                 entity_type='lead_visit_decision',
@@ -1626,18 +1647,22 @@ def visit_decision(request, lead_id):
                 old_data={'decision': old_decision},
                 new_data={'decision': decision},
             )
-            decision_label = 'Keldi' if decision == 'arrived' else 'Kelmadi'
-            emoji = '✅' if decision == 'arrived' else '❌'
-            msg = (
-                f'{emoji} <b>Menenjer {decision_label} bosdi</b>\n'
-                + tg_line('Vaqt', tg_now_text())
-                + tg_line('Menenjer', tg_user_name(request.app_user))
-                + tg_line('Filial', request.app_user.branch_name)
-                + tg_line('Qaror', decision_label)
-                + tg_line('Operator', tg_user_name(lead.assigned_operator))
-                + '\n' + tg_lead_info(lead)
-            )
-            notify_telegram_after_commit(msg)
+        except Exception:
+            pass
+
+        decision_label = 'Keldi' if decision == 'arrived' else 'Kelmadi'
+        emoji = '✅' if decision == 'arrived' else '❌'
+        msg = (
+            f'{emoji} <b>Menenjer {decision_label} bosdi</b>\n'
+            + tg_line('Vaqt', tg_now_text())
+            + tg_line('Menenjer', tg_user_name(request.app_user))
+            + tg_line('Filial', request.app_user.branch_name)
+            + tg_line('Qaror', decision_label)
+            + tg_line('Operator', tg_user_name(lead.assigned_operator))
+            + '\n' + tg_lead_info(lead)
+        )
+        notify_telegram_after_commit(msg)
+
     return ok(visit_decision_to_dict(item))
 
 

@@ -1,0 +1,11 @@
+KELMADI SAQLASH XATOLIGI TUZATILDI
+
+1. Keyin yaratilgan menenjer oldingi sotuv leadiga Kelmadi/Keldi bosishi mumkin.
+2. Eski menenjerning Kelmadi yozuvi yangi menenjer akkauntiga ko‘chirilmaydi;
+   yangi menenjerning o‘z qarori alohida xavfsiz saqlanadi.
+3. Parallel yoki ikki marta tez bosishda unique constraint xatosi ushlanadi.
+4. Tarix/audit yordamchi jadvallaridagi muammo asosiy belgini bekor qilmaydi.
+5. Frontendda belgi saqlanib bo‘lgach ro‘yxat refresh xato bersa,
+   endi "Belgini saqlashda xatolik" deb noto‘g‘ri ko‘rsatilmaydi.
+6. Railway deployda init_db xatosi yashirilmaydi; kerakli jadval va ustunlar
+   yaratilmasdan server ishga tushib ketmaydi.

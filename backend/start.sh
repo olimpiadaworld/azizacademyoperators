@@ -14,7 +14,7 @@ echo "=== Migrations ==="
 python manage.py migrate --noinput
 
 echo "=== Init DB / Admin ==="
-python manage.py init_db || true
+python manage.py init_db
 
 echo "=== Starting Gunicorn ==="
 exec gunicorn config.wsgi:application \
