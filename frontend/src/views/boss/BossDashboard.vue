@@ -305,70 +305,39 @@
           <div class="eyebrow">Keldi / Kelmadi qismi</div>
           <h3>Belgilangan sotuvlar</h3>
         </div>
-        <div class="decision-filter-stack">
-          <div class="decision-filter-group">
-            <button class="decision-filter-btn" :class="{ active: filialDecisionFilter === 'all' }" @click="filialDecisionFilter = 'all'">Umumiy</button>
-            <button class="decision-filter-btn" :class="{ active: filialDecisionFilter === 'arrived' }" @click="filialDecisionFilter = 'arrived'">Keldi</button>
-            <button class="decision-filter-btn" :class="{ active: filialDecisionFilter === 'not_arrived' }" @click="filialDecisionFilter = 'not_arrived'">Kelmadi</button>
-          </div>
-          <div class="decision-filter-group payment-filter-group">
-            <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'all' }" @click="filialPaymentFilter = 'all'">To‘lov</button>
-            <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'paid' }" @click="filialPaymentFilter = 'paid'">To‘lov qildi</button>
-            <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'unpaid' }" @click="filialPaymentFilter = 'unpaid'">To‘lov qilmadi</button>
-            <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'left_without_payment' }" @click="filialPaymentFilter = 'left_without_payment'">To‘lovsiz ketdi</button>
-            <button class="decision-filter-btn" :class="{ active: filialPaymentFilter === 'pending' }" @click="filialPaymentFilter = 'pending'">Belgilanmagan</button>
-          </div>
-        </div>
       </div>
+
+      <div class="manager-section-tabs">
+        <button class="manager-section-tab manager-section-tab--arrived" :class="{ active: filialSection === 'arrived' }" @click="filialSection = 'arrived'">
+          Kelganlar <span class="manager-section-tab__count">{{ filialArrivedCount }}</span>
+        </button>
+        <button class="manager-section-tab manager-section-tab--not-arrived" :class="{ active: filialSection === 'not_arrived' }" @click="filialSection = 'not_arrived'">
+          Kelmadi <span class="manager-section-tab__count">{{ ownNotArrivedLeads.length }}</span>
+        </button>
+        <button class="manager-section-tab manager-section-tab--paid" :class="{ active: filialSection === 'paid' }" @click="filialSection = 'paid'">
+          To‘lov qildi <span class="manager-section-tab__count">{{ filialPaymentDoneCount }}</span>
+        </button>
+        <button class="manager-section-tab manager-section-tab--unpaid" :class="{ active: filialSection === 'unpaid' }" @click="filialSection = 'unpaid'">
+          To‘lov qilmadi <span class="manager-section-tab__count">{{ filialPaymentNotDoneCount }}</span>
+        </button>
+        <button class="manager-section-tab manager-section-tab--left" :class="{ active: filialSection === 'left_without_payment' }" @click="filialSection = 'left_without_payment'">
+          To‘lovsiz ketdi <span class="manager-section-tab__count">{{ filialLeftWithoutPaymentCount }}</span>
+        </button>
+        <button class="manager-section-tab manager-section-tab--pending" :class="{ active: filialSection === 'pending' }" @click="filialSection = 'pending'">
+          Belgilanmagan <span class="manager-section-tab__count">{{ filialPaymentPendingCount }}</span>
+        </button>
+      </div>
+
       <div class="lead-toolbar-info">
         <span class="badge">Jami: {{ decidedLeads.length }} ta</span>
-        <span class="badge not-arrived-badge">Kelmaganlar: {{ ownNotArrivedLeads.length }} ta</span>
-        <span class="badge payment-paid-badge">To‘lov qildi: {{ filialPaymentDoneCount }}</span>
-        <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ filialPaymentNotDoneCount }}</span>
-        <span class="badge payment-left-without-badge">To‘lovsiz ketdi: {{ filialLeftWithoutPaymentCount }}</span>
-        <span class="badge muted">Belgilanmagan: {{ filialPaymentPendingCount }}</span>
         <span class="badge muted">Ko'rinayotgan: {{ filteredDecidedLeads.length }} ta</span>
       </div>
 
-      <div v-if="ownNotArrivedLeads.length" class="table-wrap decision-stats-table">
-        <table>
-          <thead>
-            <tr>
-              <th colspan="10">Kelmaganlar qatori — filialingizdagi Kelmadi leadlar</th>
-            </tr>
-            <tr>
-              <th>F.I.O</th>
-              <th>tel1</th>
-              <th>tel2</th>
-              <th>tel3</th>
-              <th>T/SH</th>
-              <th>Maktab</th>
-              <th>Sinf</th>
-              <th>Fan</th>
-              <th>Ball</th>
-              <th>Vaqt</th>
-              <th>To‘lov</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="lead in ownNotArrivedLeads" :key="`own-not-arrived-${lead.id}`">
-              <td>{{ lead.full_name || '-' }}</td>
-              <td>{{ lead.phone1 || '-' }}</td>
-              <td>{{ lead.phone2 || '-' }}</td>
-              <td>{{ lead.phone3 || '-' }}</td>
-              <td>{{ lead.tsh || '-' }}</td>
-              <td>{{ lead.display_school || lead.school || '-' }}</td>
-              <td>{{ lead.grade || '-' }}</td>
-              <td>{{ lead.subject || '-' }}</td>
-              <td>{{ lead.ball || '-' }}</td>
-              <td>{{ formatDateTime(lead.updated_at) }}</td>
-              <td><span :class="['payment-pill', paymentDotClass(lead)]">{{ leadPaymentStatusLabel(lead) }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <div v-if="filialSection === 'none'" class="empty-state">Yuqoridagi bo'limlardan birini tanlang: Kelganlar, Kelmadi, To‘lov qildi, To‘lov qilmadi yoki To‘lovsiz ketdi.</div>
 
-      <div v-if="!filteredDecidedLeads.length" class="empty-state">Bu filter bo'yicha belgilangan lead yo'q.</div>
+      <template v-if="filialSection !== 'none'">
+
+      <div v-if="!filteredDecidedLeads.length" class="empty-state">Bu bo'limda hozircha lead yo'q.</div>
       <template v-else>
         <div v-if="isCompactSwiperViewport" class="operator-swiper glass-soft lead-mobile-swiper filial-decision-swiper">
           <div class="operator-swiper__head">
@@ -456,6 +425,7 @@
             </div>
           </article>
         </div>
+      </template>
       </template>
     </div>
 
@@ -1447,8 +1417,7 @@ const currentBossLeadSlide = ref(0)
 const currentBossDecisionSlide = ref(0)
 const currentTopStatsSlide = ref(0)
 const currentOperatorStatsSlide = ref(0)
-const filialDecisionFilter = ref('all')
-const filialPaymentFilter = ref('all')
+const filialSection = ref('none')
 const bossDecisionFilter = ref('all')
 const bossPaymentFilter = ref('all')
 const paymentSectionDecisionFilter = ref('all')
@@ -1720,11 +1689,13 @@ const decidedLeads = computed(() => {
   return leads.value.filter(lead => !!visitDecisionMap.value[lead.id])
 })
 const filteredDecidedLeads = computed(() => decidedLeads.value.filter((lead) => {
-  const decisionOk = filialDecisionFilter.value === 'all' || (lead.decision || visitDecisionMap.value[lead.id]) === filialDecisionFilter.value
-  const paymentOk = filialPaymentFilter.value === 'all'
-    || paymentStatusValue(lead) === filialPaymentFilter.value
-  return decisionOk && paymentOk
+  if (filialSection.value === 'none') return false
+  if (filialSection.value === 'arrived') return (lead.decision || visitDecisionMap.value[lead.id]) === 'arrived'
+  if (filialSection.value === 'not_arrived') return (lead.decision || visitDecisionMap.value[lead.id]) === 'not_arrived'
+  // paid / unpaid / left_without_payment / pending — to'lov holati bo'yicha bo'lim
+  return paymentStatusValue(lead) === filialSection.value
 }))
+const filialArrivedCount = computed(() => decidedLeads.value.filter(lead => (lead.decision || visitDecisionMap.value[lead.id]) === 'arrived').length)
 const filialPaymentDoneCount = computed(() => decidedLeads.value.filter(lead => paymentStatusValue(lead) === 'paid').length)
 const filialPaymentNotDoneCount = computed(() => decidedLeads.value.filter(lead => paymentStatusValue(lead) === 'unpaid').length)
 const filialLeftWithoutPaymentCount = computed(() => decidedLeads.value.filter(lead => paymentStatusValue(lead) === 'left_without_payment').length)
@@ -1759,17 +1730,19 @@ const bossPaymentDoneCount = computed(() => scopedBossVisitDecisions.value.filte
 const bossPaymentNotDoneCount = computed(() => scopedBossVisitDecisions.value.filter(item => paymentStatusValue(item) === 'unpaid').length)
 const bossLeftWithoutPaymentCount = computed(() => scopedBossVisitDecisions.value.filter(item => paymentStatusValue(item) === 'left_without_payment').length)
 const bossPaymentPendingCount = computed(() => scopedBossVisitDecisions.value.filter(item => paymentStatusValue(item) === 'pending').length)
+const filialPaymentTabDecisionFilter = ref('all')
+const filialPaymentTabPaymentFilter = ref('all')
 const activeDecisionFilter = computed({
-  get: () => isFilialRahbari.value ? filialDecisionFilter.value : paymentSectionDecisionFilter.value,
+  get: () => isFilialRahbari.value ? filialPaymentTabDecisionFilter.value : paymentSectionDecisionFilter.value,
   set: (value) => {
-    if (isFilialRahbari.value) filialDecisionFilter.value = value
+    if (isFilialRahbari.value) filialPaymentTabDecisionFilter.value = value
     else paymentSectionDecisionFilter.value = value
   },
 })
 const activePaymentFilter = computed({
-  get: () => isFilialRahbari.value ? filialPaymentFilter.value : paymentSectionPaymentFilter.value,
+  get: () => isFilialRahbari.value ? filialPaymentTabPaymentFilter.value : paymentSectionPaymentFilter.value,
   set: (value) => {
-    if (isFilialRahbari.value) filialPaymentFilter.value = value
+    if (isFilialRahbari.value) filialPaymentTabPaymentFilter.value = value
     else paymentSectionPaymentFilter.value = value
   },
 })
@@ -2302,6 +2275,9 @@ async function submitVisitDecision(leadId, decision) {
       [leadId]: savedData.decision,
     }
     showSuccess(savedData.decision === 'arrived' ? 'Keldi saqlandi' : 'Kelmadi saqlandi')
+    if (isFilialRahbari.value && currentView.value === 'manager') {
+      filialSection.value = savedData.decision === 'arrived' ? 'arrived' : 'not_arrived'
+    }
   } catch (e) {
     error.value = e.response?.data?.detail || 'Belgini saqlashda xatolik yuz berdi.'
     decisionLoadingId.value = null
@@ -2434,6 +2410,9 @@ async function setPaymentStatus(target, status) {
     const { data } = response
     applySavedVisitDecision(data)
     showSuccess(successLabels[status] || 'To‘lov holati saqlandi')
+    if (isFilialRahbari.value && currentView.value === 'manager') {
+      filialSection.value = status
+    }
     await refreshVisitDecisionsAfterSave()
   } catch (e) {
     console.error('To‘lov holatini saqlash xatosi:', e)
