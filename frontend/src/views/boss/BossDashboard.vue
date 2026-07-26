@@ -208,8 +208,8 @@
               placeholder="Lead qidirish"
               @keyup.enter="applyLeadSearch"
             />
-            <button class="btn ghost manager-icon-btn" type="button" :disabled="loadingLeads" @click="applyLeadSearch"><NavIcon name="search" /> <span>Qidirish</span></button>
-            <button v-if="searchText" class="btn ghost manager-icon-btn" type="button" :disabled="loadingLeads" @click="clearLeadSearch"><NavIcon name="x" /> <span>Tozalash</span></button>
+            <button class="btn ghost manager-icon-btn manager-search-btn" type="button" :disabled="loadingLeads" aria-label="Lead qidirish" @click="applyLeadSearch"><NavIcon name="search" /> <span>Qidirish</span></button>
+            <button v-if="searchText" class="btn ghost manager-icon-btn manager-clear-btn" type="button" :disabled="loadingLeads" aria-label="Qidiruvni tozalash" @click="clearLeadSearch"><NavIcon name="x" /> <span>Tozalash</span></button>
           </div>
           <template v-if="!isFilialRahbari">
             <input class="input" type="date" v-model="selectedLeadDate" :disabled="loadingLeads" />
@@ -711,21 +711,68 @@
             <p>{{ isFilialRahbari ? 'Belgilangan leadlarni tashrif va to‘lov holati bo‘yicha tez filtrlang.' : 'Bu bo‘limda barcha menenjerlar bosgan Keldi/Kelmadi va To‘lov holatlari alohida filter bilan ko‘rinadi.' }}</p>
           </div>
         </div>
-        <div class="decision-filter-stack">
+        <div v-if="isFilialRahbari" class="manager-payment-menu-wrap">
+          <button
+            type="button"
+            class="manager-payment-menu-button"
+            :class="{ 'is-open': showPaymentFilterMenu }"
+            :aria-expanded="showPaymentFilterMenu"
+            @click="showPaymentFilterMenu = !showPaymentFilterMenu"
+          >
+            <span class="manager-payment-menu-button__icon"><NavIcon name="sliders" /></span>
+            <span class="manager-payment-menu-button__text">
+              <strong>Holatlar menyusi</strong>
+              <small>{{ activePaymentMenuLabel }}</small>
+            </span>
+            <NavIcon class="manager-payment-menu-button__chevron" name="chevronDown" />
+          </button>
+        </div>
+
+        <div v-else class="decision-filter-stack">
           <div class="decision-filter-group">
-            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'all' }" @click="activeDecisionFilter = 'all'"><NavIcon name="grid" /><span>Umumiy</span></button>
-            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'arrived' }" @click="activeDecisionFilter = 'arrived'"><NavIcon name="checkCircle" /><span>Keldi</span></button>
-            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'not_arrived' }" @click="activeDecisionFilter = 'not_arrived'"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'all' }" @click="selectDecisionFilter('all')"><NavIcon name="grid" /><span>Umumiy</span></button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'arrived' }" @click="selectDecisionFilter('arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'not_arrived' }" @click="selectDecisionFilter('not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
           </div>
           <div class="decision-filter-group payment-filter-group">
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="activePaymentFilter = 'all'"><NavIcon name="wallet" /><span>To‘lov</span></button>
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'paid' }" @click="activePaymentFilter = 'paid'"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'unpaid' }" @click="activePaymentFilter = 'unpaid'"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'left_without_payment' }" @click="activePaymentFilter = 'left_without_payment'"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'pending' }" @click="activePaymentFilter = 'pending'"><NavIcon name="clock" /><span>Belgilanmagan</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="selectPaymentFilter('all')"><NavIcon name="wallet" /><span>To‘lov</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'paid' }" @click="selectPaymentFilter('paid')"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'unpaid' }" @click="selectPaymentFilter('unpaid')"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'left_without_payment' }" @click="selectPaymentFilter('left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'pending' }" @click="selectPaymentFilter('pending')"><NavIcon name="clock" /><span>Belgilanmagan</span></button>
           </div>
         </div>
       </div>
+
+      <Transition name="manager-filter-drop">
+        <div v-if="isFilialRahbari && showPaymentFilterMenu" class="manager-payment-filter-dropdown">
+          <div class="manager-payment-filter-section">
+            <div class="manager-payment-filter-section__title">
+              <NavIcon name="userCheck" />
+              <span>Tashrif holati</span>
+            </div>
+            <div class="manager-payment-filter-grid manager-payment-filter-grid--visit">
+              <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'all' }" @click="selectDecisionFilter('all')"><NavIcon name="grid" /><span>Umumiy</span></button>
+              <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'arrived' }" @click="selectDecisionFilter('arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+              <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'not_arrived' }" @click="selectDecisionFilter('not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
+            </div>
+          </div>
+
+          <div class="manager-payment-filter-section">
+            <div class="manager-payment-filter-section__title">
+              <NavIcon name="wallet" />
+              <span>To‘lov holati</span>
+            </div>
+            <div class="manager-payment-filter-grid manager-payment-filter-grid--payment">
+              <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="selectPaymentFilter('all')"><NavIcon name="wallet" /><span>Barchasi</span></button>
+              <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'paid' }" @click="selectPaymentFilter('paid')"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
+              <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'unpaid' }" @click="selectPaymentFilter('unpaid')"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
+              <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'left_without_payment' }" @click="selectPaymentFilter('left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
+              <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'pending' }" @click="selectPaymentFilter('pending')"><NavIcon name="clock" /><span>Belgilanmagan</span></button>
+            </div>
+          </div>
+        </div>
+      </Transition>
 
       <div class="lead-toolbar-info lead-toolbar-info--wrap">
         <span class="badge">Jami: {{ paymentSectionItems.length }} ta</span>
@@ -739,7 +786,21 @@
       </div>
 
       <div v-if="!filteredPaymentSectionItems.length" class="empty-state">Tanlangan filter bo‘yicha ma’lumot yo‘q.</div>
-      <div v-else class="payment-control-grid">
+      <template v-else>
+        <div v-if="isFilialRahbari" class="manager-payment-carousel-toolbar">
+          <div class="manager-payment-carousel-toolbar__info">
+            <span class="manager-payment-carousel-toolbar__icon"><NavIcon name="layers" /></span>
+            <span>
+              <strong>{{ activePaymentMenuLabel }}</strong>
+              <small>Kartalarni yon tomonga suring</small>
+            </span>
+          </div>
+          <div class="manager-payment-carousel-toolbar__actions">
+            <button type="button" class="manager-payment-carousel-arrow" aria-label="Oldingi karta" @click="scrollPaymentCarousel(-1)"><NavIcon name="arrowLeft" /></button>
+            <button type="button" class="manager-payment-carousel-arrow" aria-label="Keyingi karta" @click="scrollPaymentCarousel(1)"><NavIcon name="arrowRight" /></button>
+          </div>
+        </div>
+        <div ref="paymentCarouselRef" class="payment-control-grid" :class="{ 'manager-payment-carousel': isFilialRahbari }">
         <article v-for="item in filteredPaymentSectionItems" :key="`payment-section-${item.key}`" class="visit-mini-card glass payment-control-card" :class="{ 'manager-lead-card': isFilialRahbari }">
           <div class="visit-mini-card__head visit-mini-card__head--payment" :class="{ 'manager-lead-card__head': isFilialRahbari }">
             <span v-if="isFilialRahbari" class="manager-lead-card__avatar"><NavIcon name="user" /></span>
@@ -776,7 +837,8 @@
             <button v-if="item.decision === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(item) === 'left_without_payment' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(item, 'left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
           </div>
         </article>
-      </div>
+        </div>
+      </template>
     </div>
 
     <div v-if="!isFilialRahbari && currentView === 'operators'" class="panel glass operators-panel">
@@ -1428,7 +1490,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import client from '../../api/client'
@@ -1787,6 +1849,8 @@ const bossLeftWithoutPaymentCount = computed(() => scopedBossVisitDecisions.valu
 const bossPaymentPendingCount = computed(() => scopedBossVisitDecisions.value.filter(item => paymentStatusValue(item) === 'pending').length)
 const filialPaymentTabDecisionFilter = ref('all')
 const filialPaymentTabPaymentFilter = ref('all')
+const showPaymentFilterMenu = ref(false)
+const paymentCarouselRef = ref(null)
 const activeDecisionFilter = computed({
   get: () => isFilialRahbari.value ? filialPaymentTabDecisionFilter.value : paymentSectionDecisionFilter.value,
   set: (value) => {
@@ -1801,6 +1865,61 @@ const activePaymentFilter = computed({
     else paymentSectionPaymentFilter.value = value
   },
 })
+
+const decisionFilterLabels = {
+  all: 'Umumiy',
+  arrived: 'Keldi',
+  not_arrived: 'Kelmadi',
+}
+
+const paymentFilterLabels = {
+  all: 'Barcha to‘lov holati',
+  paid: 'To‘lov qildi',
+  unpaid: 'To‘lov qilmadi',
+  left_without_payment: 'To‘lovsiz ketdi',
+  pending: 'Belgilanmagan',
+}
+
+const activePaymentMenuLabel = computed(() => {
+  const decisionLabel = decisionFilterLabels[activeDecisionFilter.value] || 'Umumiy'
+  const paymentLabel = paymentFilterLabels[activePaymentFilter.value] || 'Barcha to‘lov holati'
+  if (activeDecisionFilter.value === 'all' && activePaymentFilter.value === 'all') return 'Barcha holatlar'
+  if (activePaymentFilter.value === 'all') return decisionLabel
+  if (activeDecisionFilter.value === 'all') return paymentLabel
+  return `${decisionLabel} • ${paymentLabel}`
+})
+
+async function resetPaymentCarousel() {
+  await nextTick()
+  paymentCarouselRef.value?.scrollTo({ left: 0, behavior: 'smooth' })
+}
+
+function selectDecisionFilter(value) {
+  activeDecisionFilter.value = value
+  if (isFilialRahbari.value) {
+    activePaymentFilter.value = 'all'
+    showPaymentFilterMenu.value = false
+  }
+  resetPaymentCarousel()
+}
+
+function selectPaymentFilter(value) {
+  activePaymentFilter.value = value
+  if (isFilialRahbari.value) {
+    activeDecisionFilter.value = 'all'
+    showPaymentFilterMenu.value = false
+  }
+  resetPaymentCarousel()
+}
+
+function scrollPaymentCarousel(direction) {
+  const carousel = paymentCarouselRef.value
+  if (!carousel) return
+  const firstCard = carousel.querySelector('.payment-control-card')
+  const cardWidth = firstCard?.getBoundingClientRect().width || carousel.clientWidth
+  carousel.scrollBy({ left: direction * (cardWidth + 12), behavior: 'smooth' })
+}
+
 const paymentSectionItems = computed(() => {
   if (isFilialRahbari.value) {
     return decidedLeads.value.map(item => ({ ...item, key: item.id }))
@@ -2843,6 +2962,10 @@ watch(undecidedLeads, () => {
 
 watch([filteredDecidedLeads, isCompactSwiperViewport], () => {
   clampFilialDecisionSlide()
+})
+
+watch(currentView, (view) => {
+  if (view !== 'payment') showPaymentFilterMenu.value = false
 })
 
 watch(() => route.query, async (query) => {
@@ -5183,22 +5306,53 @@ onBeforeUnmount(() => {
 
   .manager-search-toolbar .search-inline {
     width: 100%;
-    grid-template-columns: minmax(0, 1fr) 43px auto;
-    gap: 5px;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow: visible;
   }
 
   .manager-search-toolbar .input {
-    min-height: 40px;
-    padding: 8px 10px;
-    border-radius: 11px;
+    width: auto;
+    min-width: 0;
+    flex: 1 1 auto;
+    min-height: 42px;
+    padding: 9px 12px;
+    border-radius: 12px;
     font-size: 12px;
   }
 
   .manager-icon-btn {
-    min-width: 43px;
-    min-height: 40px;
-    padding: 7px 9px;
-    border-radius: 11px;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    min-height: 42px;
+    flex: 0 0 44px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  .manager-search-btn {
+    color: #fff !important;
+    border-color: transparent !important;
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+    box-shadow: 0 9px 18px rgba(37, 99, 235, .22) !important;
+  }
+
+  .manager-clear-btn {
+    color: #dc2626 !important;
+    border-color: rgba(239, 68, 68, .2) !important;
+    background: rgba(254, 242, 242, .96) !important;
+  }
+
+  .manager-icon-btn :deep(.nav-icon) {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 19px;
   }
 
   .manager-icon-btn span {
@@ -5385,6 +5539,27 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 400px) {
+  .manager-search-toolbar .search-inline {
+    gap: 5px;
+  }
+
+  .manager-search-toolbar .input {
+    min-height: 40px;
+    padding-inline: 10px;
+    font-size: 11.5px;
+  }
+
+  .manager-icon-btn {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    min-height: 40px;
+    flex-basis: 40px;
+    border-radius: 11px;
+  }
+}
+
 @media (max-width: 360px) {
   .manager-summary-grid {
     grid-template-columns: 1fr 1fr;
@@ -5426,6 +5601,405 @@ onBeforeUnmount(() => {
 
   .boss-page--manager-role .manager-lead-card .operator-note-line {
     grid-column: 1;
+  }
+}
+
+
+/* Menejer: to'lov/tashrif filter menyusi va gorizontal swiper */
+.manager-payment-menu-wrap {
+  width: min(100%, 330px);
+  margin-left: auto;
+}
+
+.manager-payment-menu-button {
+  width: 100%;
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: 16px;
+  color: #0f172a;
+  background: linear-gradient(135deg, rgba(255,255,255,.98), rgba(239,246,255,.96));
+  box-shadow: 0 8px 22px rgba(37, 99, 235, .08);
+  cursor: pointer;
+  text-align: left;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.manager-payment-menu-button:hover,
+.manager-payment-menu-button.is-open {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, .34);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, .13);
+}
+
+.manager-payment-menu-button__icon,
+.manager-payment-carousel-toolbar__icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(145deg, #2563eb, #1d4ed8);
+  box-shadow: 0 7px 16px rgba(37, 99, 235, .24);
+}
+
+.manager-payment-menu-button__icon :deep(.nav-icon),
+.manager-payment-carousel-toolbar__icon :deep(.nav-icon) {
+  width: 19px;
+  height: 19px;
+}
+
+.manager-payment-menu-button__text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.manager-payment-menu-button__text strong {
+  font-size: 12.5px;
+  line-height: 1.2;
+}
+
+.manager-payment-menu-button__text small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 10.5px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-payment-menu-button__chevron {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+  transition: transform .25s ease;
+}
+
+.manager-payment-menu-button.is-open .manager-payment-menu-button__chevron {
+  transform: rotate(180deg);
+}
+
+.manager-payment-filter-dropdown {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr);
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 11px;
+  overflow: hidden;
+  border: 1px solid rgba(37, 99, 235, .15);
+  border-radius: 17px;
+  background: linear-gradient(180deg, rgba(255,255,255,.99), rgba(246,249,255,.98));
+  box-shadow: 0 14px 30px rgba(15, 23, 42, .09);
+  transform-origin: top center;
+}
+
+.manager-payment-filter-section {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(226, 232, 240, .9);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .76);
+}
+
+.manager-payment-filter-section__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.manager-payment-filter-section__title :deep(.nav-icon) {
+  width: 14px;
+  height: 14px;
+  color: #2563eb;
+}
+
+.manager-payment-filter-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.manager-payment-filter-grid--visit {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.manager-payment-filter-grid--payment {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.manager-payment-filter-dropdown .decision-filter-btn {
+  min-width: 0;
+  min-height: 39px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px;
+  border-radius: 11px;
+  font-size: 9.8px;
+  line-height: 1.12;
+  white-space: normal;
+}
+
+.manager-filter-drop-enter-active,
+.manager-filter-drop-leave-active {
+  transition: opacity .22s ease, transform .22s ease, max-height .28s ease, margin .22s ease, padding .22s ease;
+}
+
+.manager-filter-drop-enter-from,
+.manager-filter-drop-leave-to {
+  max-height: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  transform: translateY(-12px) scaleY(.94);
+}
+
+.manager-filter-drop-enter-to,
+.manager-filter-drop-leave-from {
+  max-height: 360px;
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+}
+
+.manager-payment-carousel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 0 9px;
+  padding: 8px 9px;
+  border: 1px solid rgba(37, 99, 235, .12);
+  border-radius: 14px;
+  background: rgba(248, 250, 255, .88);
+}
+
+.manager-payment-carousel-toolbar__info {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.manager-payment-carousel-toolbar__icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+}
+
+.manager-payment-carousel-toolbar__info > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.manager-payment-carousel-toolbar__info strong {
+  overflow: hidden;
+  color: #172554;
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-payment-carousel-toolbar__info small {
+  color: #64748b;
+  font-size: 9.7px;
+}
+
+.manager-payment-carousel-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manager-payment-carousel-arrow {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: 11px;
+  color: #1d4ed8;
+  background: #fff;
+  box-shadow: 0 5px 13px rgba(37, 99, 235, .08);
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease;
+}
+
+.manager-payment-carousel-arrow:hover {
+  transform: translateY(-1px);
+  color: #fff;
+  background: #2563eb;
+}
+
+.manager-payment-carousel-arrow :deep(.nav-icon) {
+  width: 17px;
+  height: 17px;
+}
+
+.manager-payment-panel .payment-control-grid.manager-payment-carousel {
+  display: flex;
+  grid-template-columns: none;
+  gap: 11px;
+  margin-top: 0;
+  padding: 2px 2px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scroll-snap-type: inline mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 235, .35) rgba(226, 232, 240, .5);
+  -webkit-overflow-scrolling: touch;
+}
+
+.manager-payment-panel .payment-control-grid.manager-payment-carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.manager-payment-panel .payment-control-grid.manager-payment-carousel::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(226, 232, 240, .6);
+}
+
+.manager-payment-panel .payment-control-grid.manager-payment-carousel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+}
+
+.manager-payment-carousel .payment-control-card {
+  width: auto;
+  min-width: 0;
+  flex: 0 0 clamp(320px, 43vw, 420px);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+@media (max-width: 1100px) {
+  .manager-payment-menu-wrap {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .manager-payment-filter-dropdown {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-payment-filter-grid--payment {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .manager-payment-carousel .payment-control-card {
+    flex-basis: min(390px, calc(72vw - 28px));
+  }
+}
+
+@media (max-width: 640px) {
+  .manager-payment-panel .section-head {
+    gap: 9px;
+  }
+
+  .manager-payment-menu-button {
+    min-height: 50px;
+    grid-template-columns: 35px minmax(0, 1fr) 18px;
+    gap: 8px;
+    padding: 7px 9px;
+    border-radius: 14px;
+  }
+
+  .manager-payment-menu-button__icon {
+    width: 35px;
+    height: 35px;
+    border-radius: 10px;
+  }
+
+  .manager-payment-filter-dropdown {
+    gap: 7px;
+    padding: 8px;
+    border-radius: 14px;
+  }
+
+  .manager-payment-filter-section {
+    gap: 6px;
+    padding: 7px;
+    border-radius: 11px;
+  }
+
+  .manager-payment-filter-grid--visit {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .manager-payment-filter-grid--payment {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manager-payment-filter-grid--payment .decision-filter-btn:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .manager-payment-filter-dropdown .decision-filter-btn {
+    min-height: 36px;
+    padding: 5px 4px;
+    border-radius: 9px;
+    font-size: 9.2px;
+  }
+
+  .manager-payment-carousel-toolbar {
+    padding: 7px;
+    border-radius: 12px;
+  }
+
+  .manager-payment-carousel-toolbar__actions {
+    gap: 4px;
+  }
+
+  .manager-payment-carousel-arrow {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .manager-payment-carousel .payment-control-card {
+    flex-basis: calc(100% - 8px);
+  }
+}
+
+@media (max-width: 380px) {
+  .manager-payment-menu-button__text strong {
+    font-size: 11.5px;
+  }
+
+  .manager-payment-menu-button__text small {
+    font-size: 9.7px;
+  }
+
+  .manager-payment-filter-dropdown .decision-filter-btn {
+    font-size: 8.7px;
+  }
+
+  .manager-payment-carousel-toolbar__info small {
+    display: none;
+  }
+
+  .manager-payment-carousel .payment-control-card {
+    flex-basis: 100%;
   }
 }
 

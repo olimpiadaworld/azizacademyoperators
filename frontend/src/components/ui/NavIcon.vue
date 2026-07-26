@@ -45,6 +45,9 @@ const paths = {
   arrowRight: 'M5 12h14 M12 5l7 7-7 7',
   doorOpen: 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4 M10 17l5-5-5-5 M15 12H3',
   eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12 M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
+  sliders: 'M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6',
+  chevronDown: 'M6 9l6 6 6-6',
+  layers: 'M12 2 2 7l10 5 10-5-10-5 M2 12l10 5 10-5 M2 17l10 5 10-5',
   grid: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
 }
 </script>

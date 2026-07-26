@@ -1,0 +1,9 @@
+MENENJER TO'LOV/TASHRIF BO'LIMI YANGILANDI
+
+- Status tugmalari alohida Holatlar menyusiga yig'ildi.
+- Menyu bosilganda tugmalar tepadan animatsiya bilan ochiladi.
+- Filter tanlanganda menyu avtomatik yopiladi.
+- Natija kartalari gorizontal swipe/scroll ko'rinishiga o'tkazildi.
+- Oldingi/keyingi karta uchun SVG strelkalar qo'shildi.
+- 320px telefon, planshet va desktopga responsive qilindi.
+- Service worker cache v9 ga yangilandi.

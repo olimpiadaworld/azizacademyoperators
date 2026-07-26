@@ -1,0 +1,7 @@
+Menejer panelidagi Lead qidirish input va tugmalari telefon ekraniga moslashtirildi.
+
+- 320–400 px ekranlarda input siqilib yoki tashqariga chiqmaydi.
+- Qidirish tugmasi 40–44 px kvadrat ikonli tugma bo‘ldi.
+- Tozalash tugmasi qidiruv yozilganda yonida ixcham chiqadi.
+- Desktop ko‘rinishi saqlandi.
+- Service worker keshi v8 ga yangilandi.
