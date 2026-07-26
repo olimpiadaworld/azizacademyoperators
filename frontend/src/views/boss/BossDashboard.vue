@@ -6003,4 +6003,52 @@ onBeforeUnmount(() => {
   }
 }
 
+
+/* Menejer mobil kartasidagi Keldi/Kelmadi tugmalari ixcham */
+@media (max-width: 760px) {
+  .boss-page--manager-role .manager-lead-card .visit-mini-card__actions {
+    align-self: end;
+    align-items: center;
+    grid-auto-rows: 34px;
+    gap: 6px;
+    padding-top: 2px;
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-action-btn {
+    width: 100%;
+    height: 34px;
+    min-height: 34px;
+    max-height: 34px;
+    padding: 4px 8px;
+    border-radius: 10px;
+    gap: 4px;
+    font-size: 10.5px;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, .09);
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-action-btn :deep(.nav-icon) {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+  }
+}
+
+@media (max-width: 380px) {
+  .boss-page--manager-role .manager-lead-card .visit-mini-card__actions {
+    grid-auto-rows: 32px;
+    gap: 5px;
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-action-btn {
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    padding-inline: 6px;
+    border-radius: 9px;
+    font-size: 10px;
+  }
+}
+
 </style>

@@ -1,0 +1,7 @@
+Menejer panelidagi Keldi va Kelmadi tugmalari mobil ekranlarda ixchamlashtirildi.
+
+- 760 px gacha: 34 px balandlik
+- 380 px gacha: 32 px balandlik
+- Ikon, yozuv, padding va soyalar kichraytirildi
+- Tugmalar yonma-yon holatda saqlandi
+- Service worker keshi v10 ga yangilandi
