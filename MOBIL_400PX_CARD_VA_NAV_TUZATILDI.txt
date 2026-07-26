@@ -1,0 +1,9 @@
+MOBIL 400PX CARD VA NAV TUZATILDI
+
+1. Menejer/Sotuvlar sahifasida 760px gacha faqat bitta lead card ko'rinadi.
+2. 400-640px ekranlarda lead card ichidagi ma'lumotlar ixcham 2 ustunda joylashadi.
+3. Telefon raqamlari, T/SH, maktab, sinf, fan va ball ekran tashqarisiga chiqmaydi.
+4. Operator status lead cardlari ham 400px da bitta ustunda ko'rinadi.
+5. Pastki 3 bo'lim + Chiqish tugmasi 4 ta teng ustunda markazga joylashtirildi.
+6. Navbar ikonlari yagona SVG uslubida, fonli va aktiv holatda gradient ko'rinishda qilindi.
+7. Service worker cache v5 ga yangilandi.

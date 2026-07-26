@@ -888,4 +888,174 @@ function handleDragEnd() {
   }
 }
 
+
+
+/* 400 px telefon uchun ixcham lead karta */
+@media (max-width: 480px) {
+  .operator-compact-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 11px;
+    border-radius: 16px;
+    box-shadow: 0 9px 20px rgba(15, 23, 42, 0.055);
+  }
+
+  .operator-compact-card__head {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 7px;
+    margin-bottom: 9px;
+  }
+
+  .operator-compact-card__head > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .operator-compact-card__head h4 {
+    margin-bottom: 5px;
+    font-size: 16px;
+    line-height: 1.14;
+    overflow-wrap: anywhere;
+  }
+
+  .operator-compact-card__time {
+    display: none;
+  }
+
+  .operator-compact-card__chips {
+    gap: 5px;
+  }
+
+  .operator-chip {
+    min-height: 24px;
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  .operator-compact-card__body {
+    gap: 8px;
+    margin-bottom: 7px;
+  }
+
+  .operator-compact-card__info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .operator-phone-copy-row {
+    grid-column: 1 / -1;
+    min-height: 34px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    align-items: center;
+    flex-direction: row;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .operator-phone-copy-row__text {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .operator-phone-copy-row__hint {
+    width: 23px;
+    height: 23px;
+    flex: 0 0 23px;
+    padding: 0;
+    border-radius: 7px;
+    font-size: 11px;
+  }
+
+  .operator-compact-card__info-grid p {
+    min-width: 0;
+    padding: 6px 7px;
+    border: 1px solid rgba(226, 232, 240, 0.86);
+    border-radius: 10px;
+    background: rgba(248, 250, 252, 0.72);
+    font-size: 11.5px;
+    line-height: 1.28;
+    overflow-wrap: anywhere;
+  }
+
+  .operator-compact-card__note-preview {
+    grid-column: 1 / -1;
+  }
+
+  .operator-compact-card__reminder-card {
+    gap: 7px;
+    margin-top: 8px;
+    padding: 9px;
+    border-radius: 13px;
+  }
+
+  .operator-compact-card__reminder-head {
+    gap: 5px;
+  }
+
+  .operator-compact-card__reminder-head strong {
+    font-size: 12px;
+  }
+
+  .operator-compact-card__reminder-head span {
+    font-size: 10px;
+  }
+
+  .operator-compact-card__reminder-grid,
+  .operator-compact-card__reminder-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .operator-field {
+    gap: 3px;
+  }
+
+  .operator-field span {
+    font-size: 8.5px;
+    letter-spacing: .04em;
+  }
+
+  .input--compact {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    height: 34px;
+    padding: 6px 7px;
+    border-radius: 9px;
+    font-size: 11px;
+  }
+
+  .operator-compact-card__reminder-actions .mini-action {
+    min-height: 34px;
+    padding: 0 7px;
+    border-radius: 9px;
+    font-size: 11px;
+  }
+
+  .operator-compact-card__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .status-mini {
+    min-height: 33px;
+    padding: 0 7px;
+    border-radius: 9px;
+    gap: 5px;
+    font-size: 10.5px;
+  }
+
+  .status-mini__dot {
+    width: 6px;
+    height: 6px;
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1);
+  }
+}
+
 </style>

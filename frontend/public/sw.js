@@ -1,9 +1,10 @@
-const CACHE_VERSION = 'aziz-academy-crm-v4'
+const CACHE_VERSION = 'aziz-academy-crm-v7'
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/favicon.svg',
+  '/aziz-academy-blue-a-logo.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',

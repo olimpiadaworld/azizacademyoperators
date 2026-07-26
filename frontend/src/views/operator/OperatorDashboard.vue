@@ -2406,4 +2406,119 @@ onBeforeUnmount(() => {
   }
 }
 
+
+
+/* 400 px telefon: leadlar faqat bitta ustunda, ekran ichiga to‘liq sig‘adi */
+@media (max-width: 480px) {
+  .operator-status-board-wrap {
+    width: 100%;
+    min-width: 0;
+    padding: 9px;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .operator-status-picker-head {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .operator-status-picker-head h3 {
+    font-size: 18px;
+    line-height: 1.22;
+  }
+
+  .operator-status-picker-head p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .operator-status-category-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .operator-status-category-card {
+    min-height: 74px;
+    gap: 7px;
+    padding: 9px 7px;
+    border-radius: 14px;
+  }
+
+  .operator-status-category-card__icon {
+    flex-basis: 31px;
+    width: 31px;
+    height: 31px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .operator-status-category-card__body {
+    gap: 2px;
+  }
+
+  .operator-status-category-card__body strong {
+    font-size: 11.5px;
+    line-height: 1.12;
+    white-space: normal;
+  }
+
+  .operator-status-category-card__body small {
+    font-size: 9.5px;
+  }
+
+  .operator-selected-status-panel {
+    width: 100%;
+    min-width: 0;
+    margin-top: 12px;
+    padding: 8px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .operator-selected-status-panel__head {
+    gap: 9px;
+    padding: 5px 3px 10px;
+  }
+
+  .operator-selected-status-panel__title {
+    gap: 8px;
+  }
+
+  .operator-selected-status-panel__icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 12px;
+    font-size: 19px;
+  }
+
+  .operator-selected-status-panel__title h3 {
+    font-size: 18px;
+  }
+
+  .operator-selected-status-panel__title p,
+  .operator-selected-status-panel__title .eyebrow {
+    font-size: 10px;
+  }
+
+  .operator-selected-status-panel__actions {
+    width: 100%;
+  }
+
+  .operator-selected-status-cards {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .operator-selected-status-cards > * {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 </style>

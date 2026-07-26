@@ -1,5 +1,5 @@
 <template>
-  <div class="grid boss-page">
+  <div class="grid boss-page" :class="{ 'boss-page--manager-role': isFilialRahbari }">
     <div v-if="successMessage" class="success-banner">{{ successMessage }}</div>
     <div v-if="error" class="error-banner">{{ error }}</div>
 
@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <div v-if="currentView === 'leads' && isCompactSwiperViewport" class="operator-swiper glass-soft stats-mobile-swiper">
+    <div v-if="currentView === 'leads' && isCompactSwiperViewport && !isFilialRahbari" class="operator-swiper glass-soft stats-mobile-swiper">
       <div class="operator-swiper__head">
         <div>
           <div class="eyebrow">Asosiy ko'rsatkichlar</div>
@@ -48,11 +48,39 @@
         </div>
       </div>
     </div>
-    <div v-else-if="currentView === 'leads' && isFilialRahbari" class="grid cards">
-      <StatCard title="Sotuvlar" :value="leads.length" subtitle="Ko'rish mumkin bo'lgan sotuvlar" />
-      <StatCard title="Keldi" :value="arrivedCount" subtitle="Belgilangan kelganlar" />
-      <StatCard title="Kelmadi" :value="notArrivedCount" subtitle="Belgilangan kelmaganlar" />
-      <StatCard title="Huquq" :value="0" subtitle="Telegram lead va operator yaratish yopiq" />
+    <div v-else-if="currentView === 'leads' && isFilialRahbari" class="manager-summary-grid">
+      <article class="manager-summary-card manager-summary-card--sales">
+        <span class="manager-summary-card__icon"><NavIcon name="users" /></span>
+        <div class="manager-summary-card__content">
+          <span>Sotuv leadlari</span>
+          <strong>{{ leads.length }}</strong>
+          <small>Ko‘rish mumkin bo‘lganlar</small>
+        </div>
+      </article>
+      <article class="manager-summary-card manager-summary-card--arrived">
+        <span class="manager-summary-card__icon"><NavIcon name="checkCircle" /></span>
+        <div class="manager-summary-card__content">
+          <span>Kelganlar</span>
+          <strong>{{ arrivedCount }}</strong>
+          <small>Belgilangan leadlar</small>
+        </div>
+      </article>
+      <article class="manager-summary-card manager-summary-card--absent">
+        <span class="manager-summary-card__icon"><NavIcon name="xCircle" /></span>
+        <div class="manager-summary-card__content">
+          <span>Kelmaganlar</span>
+          <strong>{{ notArrivedCount }}</strong>
+          <small>Belgilangan leadlar</small>
+        </div>
+      </article>
+      <article class="manager-summary-card manager-summary-card--security">
+        <span class="manager-summary-card__icon"><NavIcon name="shield" /></span>
+        <div class="manager-summary-card__content">
+          <span>Menejer huquqi</span>
+          <strong>Himoyalangan</strong>
+          <small>Faqat biriktirilgan ma’lumotlar</small>
+        </div>
+      </article>
     </div>
     <div v-else-if="currentView === 'leads'" class="boss-summary-grid">
       <article
@@ -146,18 +174,26 @@
       </div>
     </div>
 
-    <div v-if="currentView === 'leads'" class="panel glass panel--relative panel--lead-section boss-status-panel">
+    <div
+      v-if="currentView === 'leads'"
+      class="panel glass panel--relative panel--lead-section boss-status-panel"
+      :class="{ 'manager-role-panel manager-role-leads-panel': isFilialRahbari }"
+    >
       <div v-if="loadingLeads" class="panel-loader-overlay">
         <div class="loader-ring"></div>
         <p>{{ loadingMessage }}</p>
       </div>
 
       <div class="section-head section-head--wrap" :class="{ 'content-dim': loadingLeads }">
-        <div>
-          <div class="eyebrow">Leadlar</div>
-          <h3>{{ isFilialRahbari ? "Sotuvlar bo'limi" : "Statuslar bo'yicha leadlar" }}</h3>
+        <div :class="{ 'manager-section-title': isFilialRahbari }">
+          <span v-if="isFilialRahbari" class="manager-section-title__icon"><NavIcon name="users" /></span>
+          <div>
+            <div class="eyebrow">Leadlar</div>
+            <h3>{{ isFilialRahbari ? "Yangi sotuv leadlari" : "Statuslar bo'yicha leadlar" }}</h3>
+            <p v-if="isFilialRahbari" class="manager-section-subtitle">Leadni tekshirib, kelgan yoki kelmagan holatini belgilang.</p>
+          </div>
         </div>
-        <div class="toolbar toolbar--compact" :class="{ 'toolbar--boss-filters': !isFilialRahbari }">
+        <div class="toolbar toolbar--compact" :class="{ 'toolbar--boss-filters': !isFilialRahbari, 'manager-search-toolbar': isFilialRahbari }">
           <select v-if="!isFilialRahbari" class="select" v-model="selectedOperatorFilter" :disabled="loadingLeads" @change="refreshLeadSections('Operator bo‘yicha filtrlanmoqda...')">
             <option value="all">Barcha operatorlar</option>
             <option v-for="operator in operators" :key="operator.id" :value="String(operator.id)">
@@ -172,8 +208,8 @@
               placeholder="Lead qidirish"
               @keyup.enter="applyLeadSearch"
             />
-            <button class="btn ghost" type="button" :disabled="loadingLeads" @click="applyLeadSearch">Qidirish</button>
-            <button v-if="searchText" class="btn ghost" type="button" :disabled="loadingLeads" @click="clearLeadSearch">Tozalash</button>
+            <button class="btn ghost manager-icon-btn" type="button" :disabled="loadingLeads" @click="applyLeadSearch"><NavIcon name="search" /> <span>Qidirish</span></button>
+            <button v-if="searchText" class="btn ghost manager-icon-btn" type="button" :disabled="loadingLeads" @click="clearLeadSearch"><NavIcon name="x" /> <span>Tozalash</span></button>
           </div>
           <template v-if="!isFilialRahbari">
             <input class="input" type="date" v-model="selectedLeadDate" :disabled="loadingLeads" />
@@ -182,7 +218,7 @@
         </div>
       </div>
 
-      <div class="lead-toolbar-info lead-toolbar-info--wrap" :class="{ 'content-dim': loadingLeads }">
+      <div class="lead-toolbar-info lead-toolbar-info--wrap" :class="{ 'content-dim': loadingLeads, 'manager-summary-chips': isFilialRahbari }">
         <span class="badge">{{ filteredSummaryText }}</span>
         <template v-if="!isFilialRahbari">
           <span class="badge">{{ leadDateFilterLabel }}</span>
@@ -198,23 +234,23 @@
         <div v-if="undecidedLeads.length" class="operator-swiper glass-soft filial-swiper" :class="{ 'content-dim': loadingLeads }">
           <div class="operator-swiper__head">
             <div>
-              <div class="eyebrow">Sotuv cardlari</div>
+              <div class="eyebrow">Navbatdagi leadlar</div>
               <strong>{{ filialCurrentPositionLabel }}</strong>
-              <div class="operator-swiper__meta">Qolgan cardlar: {{ undecidedLeads.length }} ta</div>
+              <div class="operator-swiper__meta">Qolgan leadlar: {{ undecidedLeads.length }} ta</div>
             </div>
             <div class="operator-swiper__controls">
-              <button class="swiper-arrow" type="button" @click="prevFilialSlide" :disabled="!filialCanSlide || loadingLeads" aria-label="Oldingi cardlar">←</button>
-              <button class="swiper-arrow" type="button" @click="nextFilialSlide" :disabled="!filialCanSlide || loadingLeads" aria-label="Keyingi cardlar">→</button>
+              <button class="swiper-arrow" type="button" @click="prevFilialSlide" :disabled="!filialCanSlide || loadingLeads" aria-label="Oldingi lead"><NavIcon name="arrowLeft" /></button>
+              <button class="swiper-arrow" type="button" @click="nextFilialSlide" :disabled="!filialCanSlide || loadingLeads" aria-label="Keyingi lead"><NavIcon name="arrowRight" /></button>
             </div>
           </div>
 
           <div class="operator-swiper__viewport">
             <div class="operator-swiper__track" :style="filialTrackStyle">
               <div v-for="lead in undecidedLeads" :key="lead.id" class="operator-swiper__slide">
-                <article class="visit-mini-card glass">
-                  <div class="visit-mini-card__head visit-mini-card__head--payment">
-                    <span :class="['payment-dot', paymentDotClass(lead)]" :title="leadPaymentStatusLabel(lead)"></span>
-                    <div>
+                <article class="visit-mini-card glass manager-lead-card">
+                  <div class="visit-mini-card__head visit-mini-card__head--payment manager-lead-card__head">
+                    <span class="manager-lead-card__avatar"><NavIcon name="user" /></span>
+                    <div class="manager-lead-card__identity">
                       <h4>{{ lead.full_name || "Ism yo'q" }}</h4>
                       <div class="boss-lead-item__chips">
                         <span class="badge">{{ currentStatusTitle }}</span>
@@ -238,11 +274,13 @@
                     <span v-if="lead.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(lead.payment_done_at) }}</span>
                   </div>
                   <div class="visit-mini-card__actions">
-                    <button class="btn" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">
-                      {{ decisionLoadingId === lead.id && pendingDecision === 'arrived' ? 'Saqlanmoqda...' : 'Keldi' }}
+                    <button class="btn visit-action-btn visit-action-btn--arrived" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">
+                      <NavIcon name="checkCircle" />
+                      <span>{{ decisionLoadingId === lead.id && pendingDecision === 'arrived' ? 'Saqlanmoqda...' : 'Keldi' }}</span>
                     </button>
-                    <button class="btn secondary" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'not_arrived')">
-                      {{ decisionLoadingId === lead.id && pendingDecision === 'not_arrived' ? 'Saqlanmoqda...' : 'Kelmadi' }}
+                    <button class="btn secondary visit-action-btn visit-action-btn--absent" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'not_arrived')">
+                      <NavIcon name="xCircle" />
+                      <span>{{ decisionLoadingId === lead.id && pendingDecision === 'not_arrived' ? 'Saqlanmoqda...' : 'Kelmadi' }}</span>
                     </button>
                   </div>
                 </article>
@@ -301,38 +339,42 @@
       </template>
     </div>
 
-    <div v-if="isFilialRahbari && currentView === 'manager'" class="panel glass">
+    <div v-if="isFilialRahbari && currentView === 'manager'" class="panel glass manager-role-panel manager-control-panel">
       <div class="section-head section-head--wrap">
-        <div>
-          <div class="eyebrow">Keldi / Kelmadi qismi</div>
-          <h3>Belgilangan sotuvlar</h3>
+        <div class="manager-section-title">
+          <span class="manager-section-title__icon"><NavIcon name="briefcase" /></span>
+          <div>
+            <div class="eyebrow">Menejer nazorati</div>
+            <h3>Belgilangan sotuvlar</h3>
+            <p class="manager-section-subtitle">Kelganlar, to‘lovlar va yakuniy holatlarni bir joydan boshqaring.</p>
+          </div>
         </div>
       </div>
 
       <div class="manager-section-tabs">
         <button class="manager-section-tab manager-section-tab--arrived" :class="{ active: filialSection === 'arrived' }" @click="filialSection = 'arrived'">
-          Kelganlar <span class="manager-section-tab__count">{{ filialArrivedCount }}</span>
+          <span class="manager-section-tab__icon"><NavIcon name="checkCircle" /></span><span class="manager-section-tab__label">Kelganlar</span><span class="manager-section-tab__count">{{ filialArrivedCount }}</span>
         </button>
         <button class="manager-section-tab manager-section-tab--not-arrived" :class="{ active: filialSection === 'not_arrived' }" @click="filialSection = 'not_arrived'">
-          Kelmadi <span class="manager-section-tab__count">{{ ownNotArrivedLeads.length }}</span>
+          <span class="manager-section-tab__icon"><NavIcon name="xCircle" /></span><span class="manager-section-tab__label">Kelmadi</span><span class="manager-section-tab__count">{{ ownNotArrivedLeads.length }}</span>
         </button>
         <button class="manager-section-tab manager-section-tab--paid" :class="{ active: filialSection === 'paid' }" @click="filialSection = 'paid'">
-          To‘lov qildi <span class="manager-section-tab__count">{{ filialPaymentDoneCount }}</span>
+          <span class="manager-section-tab__icon"><NavIcon name="creditCard" /></span><span class="manager-section-tab__label">To‘lov qildi</span><span class="manager-section-tab__count">{{ filialPaymentDoneCount }}</span>
         </button>
         <button class="manager-section-tab manager-section-tab--unpaid" :class="{ active: filialSection === 'unpaid' }" @click="filialSection = 'unpaid'">
-          To‘lov qilmadi <span class="manager-section-tab__count">{{ filialPaymentNotDoneCount }}</span>
+          <span class="manager-section-tab__icon"><NavIcon name="wallet" /></span><span class="manager-section-tab__label">To‘lov qilmadi</span><span class="manager-section-tab__count">{{ filialPaymentNotDoneCount }}</span>
         </button>
         <button class="manager-section-tab manager-section-tab--left" :class="{ active: filialSection === 'left_without_payment' }" @click="filialSection = 'left_without_payment'">
-          To‘lovsiz ketdi <span class="manager-section-tab__count">{{ filialLeftWithoutPaymentCount }}</span>
+          <span class="manager-section-tab__icon"><NavIcon name="doorOpen" /></span><span class="manager-section-tab__label">To‘lovsiz ketdi</span><span class="manager-section-tab__count">{{ filialLeftWithoutPaymentCount }}</span>
         </button>
         <button class="manager-section-tab manager-section-tab--pending" :class="{ active: filialSection === 'pending' }" @click="filialSection = 'pending'">
-          Belgilanmagan <span class="manager-section-tab__count">{{ filialPaymentPendingCount }}</span>
+          <span class="manager-section-tab__icon"><NavIcon name="clock" /></span><span class="manager-section-tab__label">Belgilanmagan</span><span class="manager-section-tab__count">{{ filialPaymentPendingCount }}</span>
         </button>
       </div>
 
-      <div class="lead-toolbar-info">
-        <span class="badge">Jami: {{ decidedLeads.length }} ta</span>
-        <span class="badge muted">Ko'rinayotgan: {{ filteredDecidedLeads.length }} ta</span>
+      <div class="lead-toolbar-info manager-summary-chips">
+        <span class="badge"><NavIcon name="database" /> Jami: {{ decidedLeads.length }} ta</span>
+        <span class="badge muted"><NavIcon name="eye" /> Ko‘rinayotgan: {{ filteredDecidedLeads.length }} ta</span>
       </div>
 
       <div v-if="filialSection === 'none'" class="empty-state">Yuqoridagi bo'limlardan birini tanlang: Kelganlar, Kelmadi, To‘lov qildi, To‘lov qilmadi yoki To‘lovsiz ketdi.</div>
@@ -344,21 +386,22 @@
         <div v-if="isCompactSwiperViewport" class="operator-swiper glass-soft lead-mobile-swiper filial-decision-swiper">
           <div class="operator-swiper__head">
             <div>
-              <div class="eyebrow">Keldi / Kelmadi swiper</div>
+              <div class="eyebrow">Tanlangan bo‘lim</div>
               <strong>{{ filialDecisionCurrentPositionLabel }}</strong>
-              <div class="operator-swiper__meta">Jami cardlar: {{ filteredDecidedLeads.length }} ta</div>
+              <div class="operator-swiper__meta">Jami leadlar: {{ filteredDecidedLeads.length }} ta</div>
             </div>
             <div class="operator-swiper__controls">
-              <button class="swiper-arrow" type="button" @click="prevFilialDecisionSlide" :disabled="!filialDecisionCanSlide" aria-label="Oldingi belgilangan card">←</button>
-              <button class="swiper-arrow" type="button" @click="nextFilialDecisionSlide" :disabled="!filialDecisionCanSlide" aria-label="Keyingi belgilangan card">→</button>
+              <button class="swiper-arrow" type="button" @click="prevFilialDecisionSlide" :disabled="!filialDecisionCanSlide" aria-label="Oldingi lead"><NavIcon name="arrowLeft" /></button>
+              <button class="swiper-arrow" type="button" @click="nextFilialDecisionSlide" :disabled="!filialDecisionCanSlide" aria-label="Keyingi lead"><NavIcon name="arrowRight" /></button>
             </div>
           </div>
           <div class="operator-swiper__viewport">
             <div class="operator-swiper__track" :style="filialDecisionTrackStyle">
               <div v-for="lead in filteredDecidedLeads" :key="`decided-${lead.id}`" class="operator-swiper__slide">
-                <article class="visit-mini-card glass">
-                  <div class="visit-mini-card__head">
-                    <div>
+                <article class="visit-mini-card glass manager-lead-card">
+                  <div class="visit-mini-card__head manager-lead-card__head">
+                    <span class="manager-lead-card__avatar"><NavIcon name="user" /></span>
+                    <div class="manager-lead-card__identity">
                       <h4>{{ lead.full_name || "Ism yo'q" }}</h4>
                       <div class="boss-lead-item__chips">
                         <span class="badge">{{ (lead.decision || visitDecisionMap[lead.id]) === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
@@ -379,11 +422,11 @@
                     <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
                   </div>
                   <div class="visit-mini-card__actions">
-                    <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
-                    <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')">To‘lov qildi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')">To‘lov qilmadi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(lead, 'left_without_payment')">To‘lovsiz ketdi</button>
+                    <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+                    <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(lead, 'left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
                   </div>
                 </article>
               </div>
@@ -391,10 +434,10 @@
           </div>
         </div>
         <div v-else class="boss-lead-list boss-lead-list--compact">
-          <article v-for="lead in filteredDecidedLeads" :key="`decided-${lead.id}`" class="visit-mini-card glass">
-            <div class="visit-mini-card__head visit-mini-card__head--payment">
-              <span :class="['payment-dot', paymentDotClass(lead)]" :title="leadPaymentStatusLabel(lead)"></span>
-              <div>
+          <article v-for="lead in filteredDecidedLeads" :key="`decided-${lead.id}`" class="visit-mini-card glass manager-lead-card">
+            <div class="visit-mini-card__head visit-mini-card__head--payment manager-lead-card__head">
+              <span class="manager-lead-card__avatar"><NavIcon name="user" /></span>
+              <div class="manager-lead-card__identity">
                 <h4>{{ lead.full_name || "Ism yo'q" }}</h4>
                 <div class="boss-lead-item__chips">
                   <span class="badge">{{ (lead.decision || visitDecisionMap[lead.id]) === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
@@ -419,11 +462,11 @@
               <span v-if="lead.left_without_payment_at"><strong>To‘lov qilmadi vaqti:</strong> {{ formatDateTime(lead.left_without_payment_at) }}</span>
             </div>
             <div class="visit-mini-card__actions">
-              <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">Keldi</button>
-              <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')">Kelmadi</button>
-              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')">To‘lov qildi</button>
-              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')">To‘lov qilmadi</button>
-                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(lead, 'left_without_payment')">To‘lovsiz ketdi</button>
+              <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+              <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
+              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
+              <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
+                    <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(lead, 'left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
             </div>
           </article>
         </div>
@@ -448,16 +491,16 @@
           </button>
           <div class="decision-filter-stack">
             <div class="decision-filter-group">
-              <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'all' }" @click="bossDecisionFilter = 'all'">Umumiy</button>
-              <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'arrived' }" @click="bossDecisionFilter = 'arrived'">Keldi</button>
-              <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'not_arrived' }" @click="bossDecisionFilter = 'not_arrived'">Kelmadi</button>
+              <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'all' }" @click="bossDecisionFilter = 'all'"><NavIcon name="grid" /><span>Umumiy</span></button>
+              <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'arrived' }" @click="bossDecisionFilter = 'arrived'"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+              <button class="decision-filter-btn" :class="{ active: bossDecisionFilter === 'not_arrived' }" @click="bossDecisionFilter = 'not_arrived'"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
             </div>
             <div class="decision-filter-group payment-filter-group">
-              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'all' }" @click="bossPaymentFilter = 'all'">To‘lov</button>
-              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'paid' }" @click="bossPaymentFilter = 'paid'">To‘lov qildi</button>
-              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'unpaid' }" @click="bossPaymentFilter = 'unpaid'">To‘lov qilmadi</button>
-              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'left_without_payment' }" @click="bossPaymentFilter = 'left_without_payment'">To‘lovsiz ketdi</button>
-              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'pending' }" @click="bossPaymentFilter = 'pending'">Belgilanmagan</button>
+              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'all' }" @click="bossPaymentFilter = 'all'"><NavIcon name="wallet" /><span>To‘lov</span></button>
+              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'paid' }" @click="bossPaymentFilter = 'paid'"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
+              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'unpaid' }" @click="bossPaymentFilter = 'unpaid'"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
+              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'left_without_payment' }" @click="bossPaymentFilter = 'left_without_payment'"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
+              <button class="decision-filter-btn" :class="{ active: bossPaymentFilter === 'pending' }" @click="bossPaymentFilter = 'pending'"><NavIcon name="clock" /><span>Belgilanmagan</span></button>
             </div>
           </div>
           <div class="decision-date-filter decision-date-filter--stacked">
@@ -654,25 +697,32 @@
       </section>
     </div>
 
-    <div v-if="currentView === 'payment'" class="panel glass panel--payment-section">
+    <div
+      v-if="currentView === 'payment'"
+      class="panel glass panel--payment-section"
+      :class="{ 'manager-role-panel manager-payment-panel': isFilialRahbari }"
+    >
       <div class="section-head section-head--wrap">
-        <div>
-          <div class="eyebrow">Keldi / Kelmadi va to‘lov</div>
-          <h3>{{ isFilialRahbari ? 'Menenjer nazorati bo‘yicha alohida bo‘lim' : 'Menenjerlar bo‘yicha keldi va to‘lov nazorati' }}</h3>
-          <p>{{ isFilialRahbari ? 'Bu bo‘limda siz belgilagan Keldi/Kelmadi va To‘lov qildi/qilmadi leadlarini alohida filterlab ko‘rasiz.' : 'Bu bo‘limda barcha menenjerlar bosgan Keldi/Kelmadi va To‘lov holatlari alohida filter bilan ko‘rinadi.' }}</p>
+        <div :class="{ 'manager-section-title': isFilialRahbari }">
+          <span v-if="isFilialRahbari" class="manager-section-title__icon"><NavIcon name="wallet" /></span>
+          <div>
+            <div class="eyebrow">Keldi / Kelmadi va to‘lov</div>
+            <h3>{{ isFilialRahbari ? 'To‘lov va tashrif nazorati' : 'Menenjerlar bo‘yicha keldi va to‘lov nazorati' }}</h3>
+            <p>{{ isFilialRahbari ? 'Belgilangan leadlarni tashrif va to‘lov holati bo‘yicha tez filtrlang.' : 'Bu bo‘limda barcha menenjerlar bosgan Keldi/Kelmadi va To‘lov holatlari alohida filter bilan ko‘rinadi.' }}</p>
+          </div>
         </div>
         <div class="decision-filter-stack">
           <div class="decision-filter-group">
-            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'all' }" @click="activeDecisionFilter = 'all'">Umumiy</button>
-            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'arrived' }" @click="activeDecisionFilter = 'arrived'">Keldi</button>
-            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'not_arrived' }" @click="activeDecisionFilter = 'not_arrived'">Kelmadi</button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'all' }" @click="activeDecisionFilter = 'all'"><NavIcon name="grid" /><span>Umumiy</span></button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'arrived' }" @click="activeDecisionFilter = 'arrived'"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activeDecisionFilter === 'not_arrived' }" @click="activeDecisionFilter = 'not_arrived'"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
           </div>
           <div class="decision-filter-group payment-filter-group">
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="activePaymentFilter = 'all'">To‘lov</button>
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'paid' }" @click="activePaymentFilter = 'paid'">To‘lov qildi</button>
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'unpaid' }" @click="activePaymentFilter = 'unpaid'">To‘lov qilmadi</button>
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'left_without_payment' }" @click="activePaymentFilter = 'left_without_payment'">To‘lovsiz ketdi</button>
-            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'pending' }" @click="activePaymentFilter = 'pending'">Belgilanmagan</button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'all' }" @click="activePaymentFilter = 'all'"><NavIcon name="wallet" /><span>To‘lov</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'paid' }" @click="activePaymentFilter = 'paid'"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'unpaid' }" @click="activePaymentFilter = 'unpaid'"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'left_without_payment' }" @click="activePaymentFilter = 'left_without_payment'"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
+            <button class="decision-filter-btn" :class="{ active: activePaymentFilter === 'pending' }" @click="activePaymentFilter = 'pending'"><NavIcon name="clock" /><span>Belgilanmagan</span></button>
           </div>
         </div>
       </div>
@@ -690,10 +740,11 @@
 
       <div v-if="!filteredPaymentSectionItems.length" class="empty-state">Tanlangan filter bo‘yicha ma’lumot yo‘q.</div>
       <div v-else class="payment-control-grid">
-        <article v-for="item in filteredPaymentSectionItems" :key="`payment-section-${item.key}`" class="visit-mini-card glass payment-control-card">
-          <div class="visit-mini-card__head visit-mini-card__head--payment">
-            <span :class="['payment-dot', paymentDotClass(item)]" :title="leadPaymentStatusLabel(item)"></span>
-            <div>
+        <article v-for="item in filteredPaymentSectionItems" :key="`payment-section-${item.key}`" class="visit-mini-card glass payment-control-card" :class="{ 'manager-lead-card': isFilialRahbari }">
+          <div class="visit-mini-card__head visit-mini-card__head--payment" :class="{ 'manager-lead-card__head': isFilialRahbari }">
+            <span v-if="isFilialRahbari" class="manager-lead-card__avatar"><NavIcon name="user" /></span>
+            <span v-else :class="['payment-dot', paymentDotClass(item)]" :title="leadPaymentStatusLabel(item)"></span>
+            <div :class="{ 'manager-lead-card__identity': isFilialRahbari }">
               <h4>{{ item.full_name || item.lead_name || 'Ism yo‘q' }}</h4>
               <div class="boss-lead-item__chips">
                 <span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
@@ -718,11 +769,11 @@
             <span v-if="item.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ item.operator_note }}</span>
           </div>
           <div v-if="isFilialRahbari" class="visit-mini-card__actions">
-            <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': item.decision === 'arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'arrived')">Keldi</button>
-            <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id || item.decision === 'arrived'" :title="item.decision === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(item.id, 'not_arrived')">Kelmadi</button>
-            <button v-if="item.decision === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'paid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'paid'" @click="setPaymentStatus(item, 'paid')">To‘lov qildi</button>
-            <button v-if="item.decision === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'unpaid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'unpaid'" @click="setPaymentStatus(item, 'unpaid')">To‘lov qilmadi</button>
-            <button v-if="item.decision === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(item) === 'left_without_payment' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(item, 'left_without_payment')">To‘lovsiz ketdi</button>
+            <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': item.decision === 'arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+            <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id || item.decision === 'arrived'" :title="item.decision === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(item.id, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'paid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'paid'" @click="setPaymentStatus(item, 'paid')"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'unpaid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'unpaid'" @click="setPaymentStatus(item, 'unpaid')"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
+            <button v-if="item.decision === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(item) === 'left_without_payment' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(item, 'left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
           </div>
         </article>
       </div>
@@ -1383,6 +1434,7 @@ import { useAuthStore } from '../../stores/auth'
 import client from '../../api/client'
 import StatCard from '../../components/ui/StatCard.vue'
 import InstallAppCard from '../../components/ui/InstallAppCard.vue'
+import NavIcon from '../../components/ui/NavIcon.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -1860,7 +1912,7 @@ const operatorStatsCurrentPositionLabel = computed(() => {
   const end = Math.min(currentOperatorStatsSlide.value + operatorStatsVisibleSlides.value, sortedStatistics.value.length)
   return start === end ? `Hozir: ${start}-card` : `Hozir: ${start}-${end}-cardlar`
 })
-const bossLeadVisibleSlides = computed(() => (viewportWidth.value <= 560 ? 1 : 2))
+const bossLeadVisibleSlides = computed(() => (viewportWidth.value <= 760 ? 1 : 2))
 const bossLeadMaxSlide = computed(() => Math.max(0, visibleLeads.value.length - bossLeadVisibleSlides.value))
 const bossLeadCanSlide = computed(() => visibleLeads.value.length > bossLeadVisibleSlides.value)
 const bossLeadTrackStyle = computed(() => ({ transform: `translateX(-${currentBossLeadSlide.value * (100 / bossLeadVisibleSlides.value)}%)` }))
@@ -1870,7 +1922,7 @@ const bossLeadCurrentPositionLabel = computed(() => {
   const end = Math.min(currentBossLeadSlide.value + bossLeadVisibleSlides.value, visibleLeads.value.length)
   return start === end ? `Hozir: ${start}-card` : `Hozir: ${start}-${end}-cardlar`
 })
-const bossDecisionVisibleSlides = computed(() => (viewportWidth.value <= 560 ? 1 : 2))
+const bossDecisionVisibleSlides = computed(() => (viewportWidth.value <= 760 ? 1 : 2))
 const bossDecisionMaxSlide = computed(() => Math.max(0, filteredBossVisitDecisions.value.length - bossDecisionVisibleSlides.value))
 const bossDecisionCanSlide = computed(() => filteredBossVisitDecisions.value.length > bossDecisionVisibleSlides.value)
 const bossDecisionTrackStyle = computed(() => ({ transform: `translateX(-${currentBossDecisionSlide.value * (100 / bossDecisionVisibleSlides.value)}%)` }))
@@ -1880,7 +1932,7 @@ const bossDecisionCurrentPositionLabel = computed(() => {
   const end = Math.min(currentBossDecisionSlide.value + bossDecisionVisibleSlides.value, filteredBossVisitDecisions.value.length)
   return start === end ? `Hozir: ${start}-card` : `Hozir: ${start}-${end}-cardlar`
 })
-const filialDecisionVisibleSlides = computed(() => (viewportWidth.value <= 560 ? 1 : 2))
+const filialDecisionVisibleSlides = computed(() => (viewportWidth.value <= 760 ? 1 : 2))
 const filialDecisionMaxSlide = computed(() => Math.max(0, filteredDecidedLeads.value.length - filialDecisionVisibleSlides.value))
 const filialDecisionCanSlide = computed(() => filteredDecidedLeads.value.length > filialDecisionVisibleSlides.value)
 const filialDecisionTrackStyle = computed(() => ({ transform: `translateX(-${currentFilialDecisionSlide.value * (100 / filialDecisionVisibleSlides.value)}%)` }))
@@ -1890,7 +1942,7 @@ const filialDecisionCurrentPositionLabel = computed(() => {
   const end = Math.min(currentFilialDecisionSlide.value + filialDecisionVisibleSlides.value, filteredDecidedLeads.value.length)
   return start === end ? `Hozir: ${start}-card` : `Hozir: ${start}-${end}-cardlar`
 })
-const filialVisibleSlides = computed(() => (viewportWidth.value <= 560 ? 1 : 2))
+const filialVisibleSlides = computed(() => (viewportWidth.value <= 760 ? 1 : 2))
 const filialMaxSlide = computed(() => Math.max(0, undecidedLeads.value.length - filialVisibleSlides.value))
 const filialCanSlide = computed(() => undecidedLeads.value.length > filialVisibleSlides.value)
 const filialTrackStyle = computed(() => ({ transform: `translateX(-${currentFilialSlide.value * (100 / filialVisibleSlides.value)}%)` }))
@@ -4235,5 +4287,1146 @@ onBeforeUnmount(() => {
 .btn.danger { background: linear-gradient(90deg, #dc2626, #ef4444); color: #fff; border-color: transparent; }
 .btn.danger:disabled { opacity: .55; cursor: not-allowed; }
 
+
+
+
+/* 400–640 px: menejer sotuv cardlari ixcham, bitta ustunda va to‘liq ekran ichida */
+@media (max-width: 760px) {
+  .filial-swiper .operator-swiper__slide,
+  .filial-decision-swiper .operator-swiper__slide,
+  .manager-mobile-swiper .operator-swiper__slide {
+    flex: 0 0 100%;
+    min-width: 100%;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel--lead-section {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .filial-swiper {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 17px;
+    overflow: hidden;
+  }
+
+  .filial-swiper .operator-swiper__head {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .filial-swiper .operator-swiper__controls {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filial-swiper .swiper-arrow {
+    width: 38px;
+    height: 38px;
+  }
+
+  .filial-swiper .visit-mini-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    gap: 9px;
+    padding: 11px;
+    border-radius: 16px;
+    box-shadow: 0 9px 20px rgba(15, 23, 42, 0.055);
+  }
+
+  .filial-swiper .visit-mini-card__head,
+  .filial-swiper .visit-mini-card__head--payment {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .filial-swiper .visit-mini-card__head > div {
+    min-width: 0;
+  }
+
+  .filial-swiper .visit-mini-card__head h4 {
+    margin-bottom: 6px;
+    font-size: 18px;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .filial-swiper .boss-lead-item__chips {
+    gap: 5px;
+  }
+
+  .filial-swiper .badge {
+    min-height: 24px;
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .filial-swiper .payment-dot {
+    width: 11px;
+    height: 11px;
+    margin-top: 5px;
+    box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.12);
+  }
+
+  .filial-swiper .visit-mini-card__meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .filial-swiper .visit-mini-card__meta span {
+    min-width: 0;
+    padding: 7px 8px;
+    border-radius: 10px;
+    font-size: 11.5px;
+    line-height: 1.28;
+    overflow-wrap: anywhere;
+  }
+
+  .filial-swiper .visit-mini-card__meta .operator-note-line {
+    grid-column: 1 / -1;
+  }
+
+  .filial-swiper .visit-mini-card__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .filial-swiper .visit-mini-card__actions .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px 9px;
+    border-radius: 11px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 400px) {
+  .filial-swiper .visit-mini-card {
+    padding: 9px;
+  }
+
+  .filial-swiper .visit-mini-card__head h4 {
+    font-size: 16px;
+  }
+
+  .filial-swiper .visit-mini-card__meta span {
+    padding: 6px 7px;
+    font-size: 10.5px;
+  }
+}
+
+
+
+/* =========================================================
+   MENENJER PANELI — YANGI IXCHAM VA RESPONSIVE DIZAYN
+   Faqat filial_rahbari (Menenjer) roliga ta'sir qiladi.
+   ========================================================= */
+.boss-page--manager-role {
+  --manager-blue: #2563eb;
+  --manager-blue-dark: #1d4ed8;
+  --manager-ink: #0f172a;
+  --manager-muted: #64748b;
+  --manager-line: rgba(148, 163, 184, 0.2);
+  --manager-surface: rgba(255, 255, 255, 0.96);
+  gap: 14px;
+  min-width: 0;
+}
+
+.boss-page--manager-role > * {
+  min-width: 0;
+}
+
+.boss-page--manager-role :deep(.nav-icon) {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
+/* Yuqoridagi tezkor statistika kartalari */
+.manager-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.manager-summary-card {
+  position: relative;
+  min-width: 0;
+  min-height: 116px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 16px;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: linear-gradient(145deg, rgba(255,255,255,.99), rgba(248,250,252,.96));
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.manager-summary-card::after {
+  content: '';
+  position: absolute;
+  width: 88px;
+  height: 88px;
+  right: -32px;
+  bottom: -38px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .055;
+  pointer-events: none;
+}
+
+.manager-summary-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.085);
+}
+
+.manager-summary-card__icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 46px;
+  border-radius: 15px;
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, .14), inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+.manager-summary-card__icon :deep(.nav-icon) {
+  width: 23px;
+  height: 23px;
+}
+
+.manager-summary-card__content {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.manager-summary-card__content > span {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .055em;
+}
+
+.manager-summary-card__content strong {
+  min-width: 0;
+  color: #0f172a;
+  font-size: clamp(22px, 2.2vw, 31px);
+  line-height: 1.05;
+  letter-spacing: -.035em;
+  overflow-wrap: anywhere;
+}
+
+.manager-summary-card--security .manager-summary-card__content strong {
+  font-size: clamp(15px, 1.5vw, 20px);
+}
+
+.manager-summary-card__content small {
+  color: #94a3b8;
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.manager-summary-card--sales { color: #2563eb; }
+.manager-summary-card--arrived { color: #059669; }
+.manager-summary-card--absent { color: #dc2626; }
+.manager-summary-card--security { color: #7c3aed; }
+.manager-summary-card--sales .manager-summary-card__icon { background: linear-gradient(135deg, #2563eb, #38bdf8); }
+.manager-summary-card--arrived .manager-summary-card__icon { background: linear-gradient(135deg, #047857, #10b981); }
+.manager-summary-card--absent .manager-summary-card__icon { background: linear-gradient(135deg, #b91c1c, #f43f5e); }
+.manager-summary-card--security .manager-summary-card__icon { background: linear-gradient(135deg, #6d28d9, #a78bfa); }
+
+/* Menenjer panelining umumiy konteynerlari */
+.manager-role-panel {
+  min-width: 0;
+  padding: clamp(14px, 2vw, 22px);
+  border-radius: 26px;
+  border: 1px solid rgba(226, 232, 240, .92);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(37,99,235,.07), transparent 26%),
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96));
+  box-shadow: 0 16px 42px rgba(15,23,42,.07);
+  overflow: hidden;
+}
+
+.manager-role-panel .section-head {
+  margin-bottom: 14px;
+  gap: 14px;
+}
+
+.manager-section-title {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.manager-section-title__icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  border-radius: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, .22), inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+.manager-section-title__icon :deep(.nav-icon) {
+  width: 22px;
+  height: 22px;
+}
+
+.manager-section-title > div {
+  min-width: 0;
+}
+
+.manager-role-panel .eyebrow {
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.manager-role-panel .section-head h3,
+.manager-section-title h3 {
+  margin: 3px 0 0;
+  color: #0f172a;
+  font-size: clamp(21px, 2.4vw, 30px);
+  line-height: 1.12;
+  letter-spacing: -.025em;
+}
+
+.manager-section-subtitle,
+.manager-role-panel .section-head p {
+  max-width: 690px;
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Qidiruv */
+.manager-search-toolbar {
+  flex: 0 1 520px;
+  justify-content: flex-end;
+}
+
+.manager-search-toolbar .search-inline {
+  width: min(100%, 520px);
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto auto;
+  gap: 7px;
+  align-items: center;
+}
+
+.manager-search-toolbar .input {
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+.manager-icon-btn {
+  min-height: 44px;
+  padding: 9px 13px;
+  border-radius: 14px;
+  font-size: 12.5px;
+}
+
+.manager-icon-btn :deep(.nav-icon) {
+  width: 17px;
+  height: 17px;
+}
+
+/* Kichik jami/status chiplar */
+.manager-summary-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 4px 0 12px;
+}
+
+.manager-summary-chips .badge {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 800;
+  background: rgba(239,246,255,.9);
+  border-color: rgba(37,99,235,.14);
+}
+
+.manager-summary-chips .badge :deep(.nav-icon) {
+  width: 15px;
+  height: 15px;
+}
+
+/* Lead swiper / navigator */
+.boss-page--manager-role .filial-swiper,
+.boss-page--manager-role .filial-decision-swiper {
+  margin-top: 4px;
+  padding: 13px;
+  border-radius: 20px;
+  border: 1px solid rgba(37,99,235,.12);
+  background: rgba(248,250,252,.78);
+  box-shadow: none;
+}
+
+.boss-page--manager-role .operator-swiper__head {
+  min-width: 0;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+
+.boss-page--manager-role .operator-swiper__head strong {
+  margin-top: 2px;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.boss-page--manager-role .operator-swiper__meta {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 11.5px;
+}
+
+.boss-page--manager-role .swiper-arrow {
+  width: 39px;
+  min-width: 39px;
+  height: 39px;
+  padding: 0;
+  border-radius: 13px;
+  color: #1d4ed8;
+  background: #fff;
+  border: 1px solid rgba(37,99,235,.16);
+  box-shadow: 0 5px 14px rgba(15,23,42,.055);
+}
+
+.boss-page--manager-role .swiper-arrow :deep(.nav-icon) {
+  width: 18px;
+  height: 18px;
+}
+
+/* Menenjer status tanlovlari */
+.manager-control-panel .manager-section-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 9px;
+  margin: 2px 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.manager-control-panel .manager-section-tab {
+  position: relative;
+  min-width: 0;
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  overflow: hidden;
+  border-radius: 17px;
+  border: 1px solid rgba(226,232,240,.95);
+  background: rgba(255,255,255,.9);
+  color: #475569;
+  box-shadow: 0 7px 18px rgba(15,23,42,.045);
+  text-align: left;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.manager-control-panel .manager-section-tab:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37,99,235,.2);
+  box-shadow: 0 12px 23px rgba(15,23,42,.075);
+}
+
+.manager-section-tab__icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.manager-section-tab__icon :deep(.nav-icon) {
+  width: 19px;
+  height: 19px;
+}
+
+.manager-section-tab__label {
+  min-width: 0;
+  font-size: 11.5px;
+  line-height: 1.22;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.manager-control-panel .manager-section-tab__count {
+  min-width: 25px;
+  height: 25px;
+  padding: 0 7px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+}
+
+.manager-control-panel .manager-section-tab.active {
+  transform: translateY(-2px);
+  background: #fff;
+  box-shadow: 0 12px 26px rgba(15,23,42,.095);
+}
+
+.manager-control-panel .manager-section-tab--arrived.active { border-color: rgba(5,150,105,.38); color: #047857; }
+.manager-control-panel .manager-section-tab--not-arrived.active { border-color: rgba(220,38,38,.36); color: #b91c1c; }
+.manager-control-panel .manager-section-tab--paid.active { border-color: rgba(5,150,105,.38); color: #047857; }
+.manager-control-panel .manager-section-tab--unpaid.active { border-color: rgba(220,38,38,.36); color: #b91c1c; }
+.manager-control-panel .manager-section-tab--left.active { border-color: rgba(234,88,12,.36); color: #c2410c; }
+.manager-control-panel .manager-section-tab--pending.active { border-color: rgba(100,116,139,.35); color: #475569; }
+.manager-control-panel .manager-section-tab--arrived.active .manager-section-tab__icon,
+.manager-control-panel .manager-section-tab--paid.active .manager-section-tab__icon { background: rgba(16,185,129,.12); color: #047857; }
+.manager-control-panel .manager-section-tab--not-arrived.active .manager-section-tab__icon,
+.manager-control-panel .manager-section-tab--unpaid.active .manager-section-tab__icon { background: rgba(239,68,68,.11); color: #b91c1c; }
+.manager-control-panel .manager-section-tab--left.active .manager-section-tab__icon { background: rgba(249,115,22,.12); color: #c2410c; }
+.manager-control-panel .manager-section-tab--pending.active .manager-section-tab__icon { background: rgba(100,116,139,.12); color: #475569; }
+.manager-control-panel .manager-section-tab.active .manager-section-tab__count { background: currentColor; color: #fff; }
+
+/* Lead kartalar */
+.boss-page--manager-role .manager-lead-card,
+.boss-page--manager-role .filial-swiper .manager-lead-card,
+.boss-page--manager-role .filial-decision-swiper .manager-lead-card {
+  min-width: 0;
+  min-height: 0;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(226,232,240,.96);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(37,99,235,.055), transparent 32%),
+    #fff;
+  box-shadow: 0 9px 24px rgba(15,23,42,.06);
+}
+
+.manager-lead-card__head {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(226,232,240,.75);
+}
+
+.manager-lead-card__avatar {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  border-radius: 13px;
+  color: #1d4ed8;
+  background: linear-gradient(145deg, #eff6ff, #dbeafe);
+  border: 1px solid rgba(37,99,235,.12);
+}
+
+.manager-lead-card__avatar :deep(.nav-icon) {
+  width: 20px;
+  height: 20px;
+}
+
+.manager-lead-card__identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.boss-page--manager-role .manager-lead-card h4 {
+  max-width: 100%;
+  margin: 0 0 6px;
+  color: #0f172a;
+  font-size: clamp(17px, 2vw, 21px);
+  line-height: 1.12;
+  letter-spacing: -.02em;
+  overflow-wrap: anywhere;
+}
+
+.boss-page--manager-role .manager-lead-card .boss-lead-item__chips {
+  gap: 5px;
+}
+
+.boss-page--manager-role .manager-lead-card .badge {
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__meta {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__meta > span {
+  min-width: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(226,232,240,.9);
+  background: #f8fafc;
+  color: #334155;
+  font-size: 11.2px;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__meta > span strong {
+  color: #0f172a;
+  font-size: 10.7px;
+  white-space: nowrap;
+}
+
+.boss-page--manager-role .manager-lead-card .operator-note-line {
+  grid-column: 1 / -1;
+  min-height: auto;
+  align-items: flex-start;
+  background: rgba(239,246,255,.78);
+  border-color: rgba(37,99,235,.12);
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding-top: 0;
+}
+
+.boss-page--manager-role .visit-action-btn,
+.boss-page--manager-role .payment-action-btn {
+  grid-column: span 1;
+  min-width: 0;
+  min-height: 41px;
+  padding: 8px 9px;
+  border-radius: 12px;
+  gap: 6px;
+  font-size: 11.5px;
+  white-space: normal;
+  box-shadow: 0 6px 15px rgba(15,23,42,.1);
+}
+
+.boss-page--manager-role .payment-action-btn--left {
+  grid-column: 1 / -1;
+}
+
+.boss-page--manager-role .visit-action-btn::before,
+.boss-page--manager-role .payment-action-btn::before {
+  display: none;
+}
+
+.boss-page--manager-role .visit-action-btn :deep(.nav-icon),
+.boss-page--manager-role .payment-action-btn :deep(.nav-icon) {
+  width: 17px;
+  height: 17px;
+}
+
+/* To'lov bo'limi filterlari */
+.manager-payment-panel .section-head {
+  align-items: flex-start;
+}
+
+.manager-payment-panel .decision-filter-stack {
+  width: min(100%, 660px);
+  align-items: stretch;
+  gap: 7px;
+}
+
+.manager-payment-panel .decision-filter-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.manager-payment-panel .payment-filter-group {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.manager-payment-panel .decision-filter-btn {
+  min-width: 0;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 12px;
+  color: #475569;
+  background: #fff;
+  border: 1px solid rgba(226,232,240,.95);
+  font-size: 10.8px;
+  line-height: 1.15;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(15,23,42,.035);
+}
+
+.manager-payment-panel .decision-filter-btn :deep(.nav-icon) {
+  width: 16px;
+  height: 16px;
+}
+
+.manager-payment-panel .decision-filter-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37,99,235,.2);
+}
+
+.manager-payment-panel .decision-filter-btn.active {
+  color: #1d4ed8;
+  border-color: rgba(37,99,235,.32);
+  background: rgba(239,246,255,.95);
+  box-shadow: 0 7px 17px rgba(37,99,235,.1);
+}
+
+.manager-payment-panel .payment-filter-group .decision-filter-btn.active {
+  color: #047857;
+  border-color: rgba(5,150,105,.28);
+  background: rgba(236,253,245,.96);
+}
+
+.manager-payment-panel .lead-toolbar-info {
+  gap: 6px;
+  margin: 2px 0 10px;
+}
+
+.manager-payment-panel .lead-toolbar-info .badge {
+  min-height: 27px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  font-size: 10.5px;
+}
+
+.manager-payment-panel .payment-control-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Chiroyli bo'sh holat */
+.boss-page--manager-role .empty-state {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px dashed rgba(148,163,184,.35);
+  color: #64748b;
+  background: rgba(248,250,252,.72);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Planshet */
+@media (max-width: 1100px) {
+  .manager-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manager-control-panel .manager-section-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .manager-payment-panel .section-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .manager-payment-panel .decision-filter-stack {
+    width: 100%;
+  }
+}
+
+@media (max-width: 820px) {
+  .boss-page--manager-role {
+    gap: 11px;
+  }
+
+  .manager-role-panel {
+    border-radius: 22px;
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-mini-card__meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manager-payment-panel .payment-control-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Telefon 320–640 px */
+@media (max-width: 640px) {
+  .boss-page--manager-role {
+    gap: 9px;
+  }
+
+  .manager-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .manager-summary-card {
+    min-height: 88px;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .manager-summary-card__icon {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    border-radius: 11px;
+  }
+
+  .manager-summary-card__icon :deep(.nav-icon) {
+    width: 18px;
+    height: 18px;
+  }
+
+  .manager-summary-card__content > span {
+    font-size: 8.5px;
+    letter-spacing: .035em;
+  }
+
+  .manager-summary-card__content strong {
+    font-size: 20px;
+  }
+
+  .manager-summary-card--security .manager-summary-card__content strong {
+    font-size: 12.5px;
+  }
+
+  .manager-summary-card__content small {
+    display: none;
+  }
+
+  .manager-role-panel {
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .manager-role-panel .section-head {
+    margin-bottom: 9px;
+  }
+
+  .manager-section-title {
+    gap: 9px;
+  }
+
+  .manager-section-title__icon {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border-radius: 12px;
+  }
+
+  .manager-section-title__icon :deep(.nav-icon) {
+    width: 19px;
+    height: 19px;
+  }
+
+  .manager-role-panel .section-head h3,
+  .manager-section-title h3 {
+    font-size: 19px;
+  }
+
+  .manager-section-subtitle,
+  .manager-role-panel .section-head p {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .manager-search-toolbar {
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .manager-search-toolbar .search-inline {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) 43px auto;
+    gap: 5px;
+  }
+
+  .manager-search-toolbar .input {
+    min-height: 40px;
+    padding: 8px 10px;
+    border-radius: 11px;
+    font-size: 12px;
+  }
+
+  .manager-icon-btn {
+    min-width: 43px;
+    min-height: 40px;
+    padding: 7px 9px;
+    border-radius: 11px;
+  }
+
+  .manager-icon-btn span {
+    display: none;
+  }
+
+  .manager-summary-chips {
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .manager-summary-chips .badge {
+    min-height: 26px;
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
+  .boss-page--manager-role .filial-swiper,
+  .boss-page--manager-role .filial-decision-swiper {
+    padding: 8px;
+    border-radius: 15px;
+  }
+
+  .boss-page--manager-role .operator-swiper__head {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .boss-page--manager-role .operator-swiper__controls {
+    width: auto;
+    justify-content: flex-end;
+  }
+
+  .boss-page--manager-role .swiper-arrow {
+    width: 35px;
+    min-width: 35px;
+    height: 35px;
+    border-radius: 11px;
+  }
+
+  .manager-control-panel .manager-section-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .manager-control-panel .manager-section-tab {
+    min-height: 57px;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 7px;
+    border-radius: 13px;
+  }
+
+  .manager-section-tab__icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .manager-section-tab__icon :deep(.nav-icon) {
+    width: 16px;
+    height: 16px;
+  }
+
+  .manager-section-tab__label {
+    font-size: 10.5px;
+  }
+
+  .manager-control-panel .manager-section-tab__count {
+    min-width: 21px;
+    height: 21px;
+    padding: 0 5px;
+    font-size: 9.5px;
+  }
+
+  .boss-page--manager-role .manager-lead-card,
+  .boss-page--manager-role .filial-swiper .manager-lead-card,
+  .boss-page--manager-role .filial-decision-swiper .manager-lead-card {
+    gap: 7px;
+    padding: 9px;
+    border-radius: 15px;
+  }
+
+  .manager-lead-card__head {
+    gap: 8px;
+    padding-bottom: 7px;
+  }
+
+  .manager-lead-card__avatar {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 10px;
+  }
+
+  .manager-lead-card__avatar :deep(.nav-icon) {
+    width: 17px;
+    height: 17px;
+  }
+
+  .boss-page--manager-role .manager-lead-card h4 {
+    margin-bottom: 4px;
+    font-size: 16px;
+  }
+
+  .boss-page--manager-role .manager-lead-card .badge {
+    min-height: 21px;
+    padding: 3px 6px;
+    font-size: 8.8px;
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-mini-card__meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-mini-card__meta > span {
+    min-height: 31px;
+    padding: 5px 6px;
+    border-radius: 8px;
+    font-size: 9.7px;
+    line-height: 1.2;
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-mini-card__meta > span strong {
+    font-size: 9.3px;
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-mini-card__actions {
+    gap: 5px;
+  }
+
+  .boss-page--manager-role .visit-action-btn,
+  .boss-page--manager-role .payment-action-btn {
+    min-height: 36px;
+    padding: 6px 7px;
+    border-radius: 10px;
+    font-size: 9.8px;
+  }
+
+  .boss-page--manager-role .visit-action-btn :deep(.nav-icon),
+  .boss-page--manager-role .payment-action-btn :deep(.nav-icon) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .manager-payment-panel .decision-filter-stack {
+    gap: 5px;
+  }
+
+  .manager-payment-panel .decision-filter-group,
+  .manager-payment-panel .payment-filter-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .manager-payment-panel .payment-filter-group .decision-filter-btn:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .manager-payment-panel .decision-filter-btn {
+    min-height: 37px;
+    padding: 6px;
+    border-radius: 10px;
+    font-size: 9.7px;
+  }
+
+  .manager-payment-panel .lead-toolbar-info {
+    gap: 4px;
+  }
+
+  .manager-payment-panel .lead-toolbar-info .badge {
+    min-height: 24px;
+    padding: 4px 6px;
+    font-size: 9px;
+  }
+
+  .boss-page--manager-role .empty-state {
+    min-height: 74px;
+    padding: 12px;
+    border-radius: 13px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .manager-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .manager-summary-card {
+    min-height: 80px;
+    padding: 8px;
+  }
+
+  .manager-summary-card__icon {
+    width: 31px;
+    height: 31px;
+    flex-basis: 31px;
+  }
+
+  .manager-summary-card__content strong {
+    font-size: 17px;
+  }
+
+  .manager-control-panel .manager-section-tab {
+    grid-template-columns: 27px minmax(0, 1fr) auto;
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .manager-section-tab__icon {
+    width: 27px;
+    height: 27px;
+  }
+
+  .manager-section-tab__label {
+    font-size: 9.5px;
+  }
+
+  .boss-page--manager-role .manager-lead-card .visit-mini-card__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .boss-page--manager-role .manager-lead-card .operator-note-line {
+    grid-column: 1;
+  }
+}
 
 </style>

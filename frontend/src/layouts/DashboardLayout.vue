@@ -29,7 +29,10 @@
         </button>
       </div>
 
-      <nav class="dashboard-nav__content" :class="{ 'is-open': mobileMenuOpen }">
+      <nav
+        class="dashboard-nav__content"
+        :class="{ 'is-open': mobileMenuOpen, 'is-four-action-nav': links.length === 3 }"
+      >
         <div class="dashboard-nav__links">
           <RouterLink
             v-for="item in links"

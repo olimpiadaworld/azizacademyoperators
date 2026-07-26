@@ -1,0 +1,8 @@
+AZIZ ACADEMY yuqori navbar logotipi yangilandi.
+
+O'zgargan joylar:
+- frontend/public/aziz-academy-blue-a-logo.png
+- frontend/src/styles/main.scss
+- frontend/public/sw.js (cache v7)
+
+Yangi ko'k A logotipi barcha dashboard navbarlarida desktop va mobil ekranlarda ko'rinadi.

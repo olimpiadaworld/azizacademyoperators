@@ -1,0 +1,10 @@
+MENENJER PANEL DIZAYNI TO‘LIQ YANGILANDI
+
+- Leadlar, Menejer nazorati va Keldi/To‘lov bo‘limlari yagona zamonaviy dizaynga keltirildi.
+- Yuqori statistika kartalari ixcham, ikonli va responsive qilindi.
+- Status tanlash tugmalari ikonli kartalar ko‘rinishiga o‘tkazildi.
+- Lead kartalari, yozuvlar, badge va amaliy tugmalar ixchamlashtirildi.
+- 320px telefon, 400px telefon, planshet, noutbuk va katta desktop ekranlarga moslashtirildi.
+- Pastki mobil navbar oldingi 4 ta markaziy tugma dizaynida saqlandi.
+- Service worker cache v6 ga yangilandi.
+- Backend va biznes logikaga tegilmadi.
