@@ -17,6 +17,8 @@
       </div>
     </div>
 
+    <InstallAppCard />
+
     <div class="panel glass filter-panel">
       <div class="section-head section-head--wrap">
         <div>
@@ -244,6 +246,7 @@
 import { computed, onMounted, ref } from 'vue'
 import client from '../../api/client'
 import StatCard from '../../components/ui/StatCard.vue'
+import InstallAppCard from '../../components/ui/InstallAppCard.vue'
 
 const loading = ref(false)
 const error = ref('')

@@ -45,15 +45,6 @@
             <span>{{ item.label }}</span>
           </RouterLink>
 
-          <button
-            class="dashboard-nav__link dashboard-nav__install"
-            type="button"
-            title="Dasturni telefonga o‘rnatish"
-            @click="requestInstall"
-          >
-            <span class="dashboard-nav__link-icon"><NavIcon name="download" /></span>
-            <span>Ilovani yuklash</span>
-          </button>
         </div>
 
         <button class="dashboard-nav__logout" type="button" @click="logout">
@@ -180,11 +171,6 @@ function closeMobileMenu() {
 function goHome() {
   closeMobileMenu()
   router.push(homePath.value)
-}
-
-function requestInstall() {
-  closeMobileMenu()
-  window.dispatchEvent(new CustomEvent('aziz:install-app'))
 }
 
 function logout() {

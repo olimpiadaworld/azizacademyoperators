@@ -1,0 +1,9 @@
+OPERATOR LEAD BO'LIMLARI YANGILANDI
+
+- Sahifa ochilganda status lead kartalari avtomatik ko'rinmaydi.
+- Sotuvlar, Atkaz, Xato nomer, O'chiq Nomer, Maslahat, O'qiydi va Ko'tarmadi bo'limlari alohida tugma-card sifatida turadi.
+- Qaysi bo'lim bosilsa, faqat o'sha bo'limdagi leadlar ochiladi.
+- Shu bo'lim qayta bosilsa yoki "Leadlarni yopish" bosilsa leadlar yopiladi.
+- Bo'limlar ustiga lead tashlab statusni drag/drop orqali o'zgartirish imkoniyati saqlandi.
+- Mobil ekranda bo'limlar 2 ustun, leadlar 1 ustun ko'rinishida chiqadi.
+- Service worker keshi v4 ga yangilandi.

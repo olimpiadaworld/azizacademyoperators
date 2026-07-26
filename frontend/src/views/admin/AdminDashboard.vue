@@ -16,6 +16,8 @@
       </div>
     </div>
 
+    <InstallAppCard />
+
     <div v-if="error" class="error-banner">{{ error }}</div>
     <div v-if="success" class="success-banner">{{ success }}</div>
 
@@ -793,6 +795,7 @@ import { useRoute } from 'vue-router'
 import client from '../../api/client'
 import StatCard from '../../components/ui/StatCard.vue'
 import ResponsiveSwiper from '../../components/ui/ResponsiveSwiper.vue'
+import InstallAppCard from '../../components/ui/InstallAppCard.vue'
 import { useViewport } from '../../composables/useViewport'
 
 const route = useRoute()

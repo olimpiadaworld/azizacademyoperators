@@ -3,6 +3,8 @@
     <div v-if="successMessage" class="success-banner">{{ successMessage }}</div>
     <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
 
+    <InstallAppCard />
+
     <div v-if="reminderAlerts.length || actionToast" class="reminder-fixed-stack">
       <div v-if="actionToast" class="reminder-fixed-card reminder-fixed-card--success">
         <button class="reminder-fixed-card__close" type="button" @click="hideActionToast">×</button>
@@ -504,113 +506,100 @@
         <p>{{ loadingMessage }}</p>
       </div>
 
-      <div class="operator-status-page-tabs">
+      <div class="operator-status-picker-head">
+        <div>
+          <div class="eyebrow">LEAD BO‘LIMLARI</div>
+          <h3>Ko‘rmoqchi bo‘lgan bo‘limni tanlang</h3>
+          <p>Leadlar avtomatik ochilmaydi. Qaysi bo‘limni bossangiz, faqat o‘sha bo‘limdagi leadlar ko‘rinadi.</p>
+        </div>
         <button
+          v-if="selectedStatusSection"
+          class="btn ghost operator-status-hide-btn"
           type="button"
-          class="operator-status-page-tab"
-          :class="{ active: statusPage === 'main' }"
-          @click="statusPage = 'main'"
+          @click="selectedStatusKey = ''"
         >
-          1-sahifa
-        </button>
-        <button
-          type="button"
-          class="operator-status-page-tab"
-          :class="{ active: statusPage === 'extra' }"
-          @click="statusPage = 'extra'"
-        >
-          2-sahifa
+          Leadlarni yopish
         </button>
       </div>
 
-      <ResponsiveSwiper
-        v-if="isCompact"
-        :items="activeStatusPageSections"
-        eyebrow="Statuslar swiper"
-        title="Har bo'lim alohida card bo'lib yuradi"
-        wrapper-class="glass-soft operator-status-mobile-swiper swipe-elevated"
-        :desktop-slides="2"
-        :tablet-slides="1"
-        :mobile-slides="1"
-        :tablet-breakpoint="1100"
-      >
-        <template #default="{ item: section }">
-          <section
-            class="operator-status-column"
-            :class="[`status-${section.key}`, { 'drop-active': dropTargetStatus === section.key }]"
-            @dragover.prevent="handleColumnDragOver(section.key)"
-            @dragleave="handleColumnDragLeave(section.key)"
-            @drop.prevent="handleStatusDrop(section.key)"
-          >
-            <div class="operator-status-column__top">
-              <div class="operator-status-arc" :class="`status-${section.key}`"></div>
-              <h3>{{ section.title }}</h3>
-              <span class="operator-status-count">{{ section.leads.length }} ta lead</span>
-            </div>
-
-            <div class="operator-status-column__cards">
-              <OperatorLeadCompactCard
-                v-for="lead in section.leads"
-                :key="lead.id"
-                :lead="lead"
-                :busy="processingLeadId === lead.id"
-                :reminder-busy="reminderSavingId === lead.id"
-                @request-status-change="openStatusChangeModal"
-                @drag-start="handleCardDragStart"
-                @drag-end="handleCardDragEnd"
-                @save-reminder="saveReminder"
-                @clear-reminder="clearReminder"
-          @save-name="saveLeadName"
-              />
-              <div v-if="!section.leads.length" class="operator-status-column__empty">
-                Bu bo‘limda lead yo‘q.
-              </div>
-            </div>
-          </section>
-        </template>
-      </ResponsiveSwiper>
-
-      <div
-        v-else
-        class="operator-status-board"
-        :class="{ 'content-dim': loading, 'operator-status-board--extra': statusPage === 'extra' }"
-      >
-        <section
-          v-for="section in activeStatusPageSections"
-          :key="section.key"
-          class="operator-status-column"
-          :class="[`status-${section.key}`, { 'drop-active': dropTargetStatus === section.key }]"
+      <div class="operator-status-category-grid" :class="{ 'content-dim': loading }">
+        <button
+          v-for="section in displaySections"
+          :key="`status-selector-${section.key}`"
+          type="button"
+          class="operator-status-category-card"
+          :class="[
+            `status-${section.key}`,
+            {
+              active: selectedStatusKey === section.key,
+              'drop-active': dropTargetStatus === section.key,
+            },
+          ]"
+          @click="toggleStatusSection(section.key)"
           @dragover.prevent="handleColumnDragOver(section.key)"
           @dragleave="handleColumnDragLeave(section.key)"
           @drop.prevent="handleStatusDrop(section.key)"
         >
-          <div class="operator-status-column__top">
-            <div class="operator-status-column__title">
-              <div class="operator-status-column__icon">{{ getStatusIcon(section.key) }}</div>
-              <h3>{{ section.title }}</h3>
-            </div>
-            <span class="operator-status-count">{{ section.leads.length }} ta lead</span>
-          </div>
+          <span class="operator-status-category-card__icon">{{ getStatusIcon(section.key) }}</span>
+          <span class="operator-status-category-card__body">
+            <strong>{{ section.title }}</strong>
+            <small>{{ section.leads.length }} ta lead</small>
+          </span>
+          <span class="operator-status-category-card__arrow" aria-hidden="true">
+            {{ selectedStatusKey === section.key ? '−' : '›' }}
+          </span>
+        </button>
+      </div>
 
-          <div class="operator-status-column__cards">
-            <OperatorLeadCompactCard
-              v-for="lead in section.leads"
-              :key="lead.id"
-              :lead="lead"
-              :busy="processingLeadId === lead.id"
-              :reminder-busy="reminderSavingId === lead.id"
-              @request-status-change="openStatusChangeModal"
-              @drag-start="handleCardDragStart"
-              @drag-end="handleCardDragEnd"
-              @save-reminder="saveReminder"
-              @clear-reminder="clearReminder"
-          @save-name="saveLeadName"
-            />
-            <div v-if="!section.leads.length" class="operator-status-column__empty">
-              Bu bo‘limda lead yo‘q.
+      <section
+        v-if="selectedStatusSection"
+        class="operator-selected-status-panel"
+        :class="`status-${selectedStatusSection.key}`"
+      >
+        <div class="operator-selected-status-panel__head">
+          <div class="operator-selected-status-panel__title">
+            <span class="operator-selected-status-panel__icon">{{ getStatusIcon(selectedStatusSection.key) }}</span>
+            <div>
+              <div class="eyebrow">TANLANGAN BO‘LIM</div>
+              <h3>{{ selectedStatusSection.title }}</h3>
+              <p>Faqat shu bo‘limdagi leadlar ko‘rsatilmoqda.</p>
             </div>
           </div>
-        </section>
+          <div class="operator-selected-status-panel__actions">
+            <span class="operator-status-count">{{ selectedStatusSection.leads.length }} ta lead</span>
+            <button class="operator-selected-status-panel__close" type="button" aria-label="Leadlarni yopish" @click="selectedStatusKey = ''">×</button>
+          </div>
+        </div>
+
+        <div v-if="selectedStatusSection.leads.length" class="operator-selected-status-cards">
+          <OperatorLeadCompactCard
+            v-for="lead in selectedStatusSection.leads"
+            :key="lead.id"
+            :lead="lead"
+            :busy="processingLeadId === lead.id"
+            :reminder-busy="reminderSavingId === lead.id"
+            @request-status-change="openStatusChangeModal"
+            @drag-start="handleCardDragStart"
+            @drag-end="handleCardDragEnd"
+            @save-reminder="saveReminder"
+            @clear-reminder="clearReminder"
+            @save-name="saveLeadName"
+          />
+        </div>
+
+        <div v-else class="operator-selected-status-empty">
+          <span>{{ getStatusIcon(selectedStatusSection.key) }}</span>
+          <strong>Bu bo‘limda lead yo‘q</strong>
+          <p>Yangi lead shu statusga o‘tganda shu yerda ko‘rinadi.</p>
+        </div>
+      </section>
+
+      <div v-else class="operator-status-pick-hint">
+        <span class="operator-status-pick-hint__icon">☝</span>
+        <div>
+          <strong>Hozircha leadlar yopiq</strong>
+          <p>Yuqoridagi Sotuvlar, Atkaz yoki boshqa bo‘limlardan birini bosing.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -622,15 +611,12 @@ import { useRoute, useRouter } from 'vue-router'
 import client from '../../api/client'
 import OperatorLeadCompactCard from '../../components/ui/OperatorLeadCompactCard.vue'
 import ResponsiveSwiper from '../../components/ui/ResponsiveSwiper.vue'
+import InstallAppCard from '../../components/ui/InstallAppCard.vue'
 import { useViewport } from '../../composables/useViewport'
 import { useAuthStore } from '../../stores/auth'
 
 const fetchStatusOrder = ['new', 'sale', 'otkaz', 'wrong_number', 'open_number', 'advice', 'other', 'not_answered']
 const sectionOrder = ['sale', 'otkaz', 'wrong_number', 'open_number', 'advice', 'other', 'not_answered']
-const statusPageMap = {
-  main: ['sale', 'open_number', 'advice'],
-  extra: ['otkaz', 'wrong_number', 'other', 'not_answered'],
-}
 const sectionMeta = {
   sale: { title: 'Sotuvlar' },
   otkaz: { title: 'Atkaz' },
@@ -666,7 +652,7 @@ const monthlyHistory = ref([])
 const operatorVisitDecisions = ref([])
 const operatorDecisionFilter = ref('all')
 const operatorPaymentFilter = ref('all')
-const statusPage = ref('main')
+const selectedStatusKey = ref('')
 const draggedLead = ref(null)
 const dropTargetStatus = ref('')
 const statusModal = reactive({ open: false, lead: null, status: '', existingNote: '', newNote: '' })
@@ -875,16 +861,16 @@ const displaySections = computed(() => sectionOrder.map((key) => ({
   title: sectionMeta[key].title,
   leads: (leadsByStatus[key] || []).filter(leadMatchesFilters),
 })))
-const activeStatusPageSections = computed(() => {
-  const keys = statusPageMap[statusPage.value] || statusPageMap.main
-  return displaySections.value.filter(section => keys.includes(section.key))
+const selectedStatusSection = computed(() => {
+  if (!selectedStatusKey.value) return null
+  return displaySections.value.find(section => section.key === selectedStatusKey.value) || null
 })
 const visibleLeadCount = computed(() => {
   if (currentTab.value === 'assigned') return filteredAssignedLeads.value.length
   if (currentTab.value === 'incoming') return filteredIncomingLeads.value.length
   if (currentTab.value === 'timed') return filteredTimedLeads.value.length
   if (currentTab.value === 'report') return dailyHistory.value.length
-  return activeStatusPageSections.value.reduce((sum, item) => sum + item.leads.length, 0)
+  return selectedStatusSection.value?.leads.length || 0
 })
 const statusSummaryItems = computed(() => {
   if (currentTab.value === 'assigned') {
@@ -904,7 +890,7 @@ const statusSummaryItems = computed(() => {
       { key: 'not_answered', title: "Ko'tarmadi", count: latest.not_answered || 0 },
     ]
   }
-  return activeStatusPageSections.value.map(section => ({ key: section.key, title: section.title, count: section.leads.length }))
+  return []
 })
 
 function operatorPaymentStatus(item) {
@@ -931,6 +917,10 @@ const operatorNotArrivedCount = computed(() => operatorVisitDecisions.value.filt
 const operatorPaymentDoneCount = computed(() => operatorVisitDecisions.value.filter(item => operatorPaymentStatus(item) === 'paid').length)
 const operatorPaymentNotDoneCount = computed(() => operatorVisitDecisions.value.filter(item => operatorPaymentStatus(item) === 'unpaid').length)
 
+function toggleStatusSection(statusKey) {
+  selectedStatusKey.value = selectedStatusKey.value === statusKey ? '' : statusKey
+}
+
 function formatDateTime(value) {
   if (!value) return '-'
   const date = new Date(value)
@@ -946,6 +936,9 @@ function formatDateTime(value) {
 watch(() => route.query.tab, (tab) => {
   if (!['assigned', 'general', 'incoming', 'timed', 'report'].includes(tab)) {
     router.replace({ path: '/operator', query: { ...route.query, tab: 'general' } })
+  }
+  if (tab !== 'general') {
+    selectedStatusKey.value = ''
   }
   if (tab === 'incoming') {
     fetchIncomingLeads()
@@ -2101,4 +2094,316 @@ onBeforeUnmount(() => {
 .add-lead-modal .grid {
   gap: 12px;
 }
+
+
+/* Status leadlari: dastlab yopiq, bo‘lim bosilganda faqat tanlangani ochiladi */
+.operator-status-picker-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.operator-status-picker-head h3 {
+  margin: 4px 0 6px;
+  font-size: clamp(20px, 2vw, 28px);
+}
+
+.operator-status-picker-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.operator-status-hide-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.operator-status-category-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(128px, 1fr));
+  gap: 12px;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.operator-status-category-card {
+  --status-accent: #64748b;
+  --status-soft: rgba(100, 116, 139, 0.1);
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 104px;
+  gap: 11px;
+  padding: 16px 13px;
+  border: 1px solid color-mix(in srgb, var(--status-accent) 32%, transparent);
+  border-radius: 20px;
+  background: linear-gradient(145deg, var(--status-soft), rgba(255, 255, 255, 0.95));
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.operator-status-category-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--status-accent);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--status-accent) 16%, transparent);
+}
+
+.operator-status-category-card.active {
+  border-color: var(--status-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-accent) 15%, transparent),
+    0 18px 38px color-mix(in srgb, var(--status-accent) 18%, transparent);
+}
+
+.operator-status-category-card.drop-active {
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--status-accent);
+}
+
+.operator-status-category-card.status-sale { --status-accent: #2563eb; --status-soft: rgba(37, 99, 235, 0.1); }
+.operator-status-category-card.status-otkaz { --status-accent: #dc2626; --status-soft: rgba(220, 38, 38, 0.09); }
+.operator-status-category-card.status-wrong_number { --status-accent: #d97706; --status-soft: rgba(217, 119, 6, 0.1); }
+.operator-status-category-card.status-open_number { --status-accent: #16a34a; --status-soft: rgba(22, 163, 74, 0.1); }
+.operator-status-category-card.status-advice { --status-accent: #64748b; --status-soft: rgba(100, 116, 139, 0.1); }
+.operator-status-category-card.status-other { --status-accent: #111827; --status-soft: rgba(17, 24, 39, 0.07); }
+.operator-status-category-card.status-not_answered { --status-accent: #475569; --status-soft: rgba(71, 85, 105, 0.09); }
+
+.operator-status-category-card__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--status-accent);
+  font-size: 22px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.operator-status-category-card__body {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.operator-status-category-card__body strong {
+  overflow: hidden;
+  color: var(--status-accent);
+  font-size: 15px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+}
+
+.operator-status-category-card__body small {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.operator-status-category-card__arrow {
+  margin-left: auto;
+  color: var(--status-accent);
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.operator-selected-status-panel {
+  --status-accent: #64748b;
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--status-accent) 28%, transparent);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+}
+
+.operator-selected-status-panel.status-sale { --status-accent: #2563eb; }
+.operator-selected-status-panel.status-otkaz { --status-accent: #dc2626; }
+.operator-selected-status-panel.status-wrong_number { --status-accent: #d97706; }
+.operator-selected-status-panel.status-open_number { --status-accent: #16a34a; }
+.operator-selected-status-panel.status-advice { --status-accent: #64748b; }
+.operator-selected-status-panel.status-other { --status-accent: #111827; }
+.operator-selected-status-panel.status-not_answered { --status-accent: #475569; }
+
+.operator-selected-status-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.operator-selected-status-panel__title,
+.operator-selected-status-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.operator-selected-status-panel__title h3 {
+  margin: 3px 0 4px;
+  color: var(--status-accent);
+  font-size: 24px;
+}
+
+.operator-selected-status-panel__title p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.operator-selected-status-panel__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--status-accent) 12%, white);
+  color: var(--status-accent);
+  font-size: 26px;
+}
+
+.operator-selected-status-panel__close {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.07);
+  color: var(--text);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.operator-selected-status-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  align-items: start;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.operator-selected-status-empty,
+.operator-status-pick-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 150px;
+  margin-top: 20px;
+  padding: 24px;
+  border: 1px dashed rgba(100, 116, 139, 0.34);
+  border-radius: 22px;
+  background: rgba(248, 250, 252, 0.7);
+  color: var(--muted);
+  text-align: left;
+}
+
+.operator-selected-status-empty > span,
+.operator-status-pick-hint__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 50px;
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--status-accent, #2563eb);
+  font-size: 25px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.operator-selected-status-empty strong,
+.operator-status-pick-hint strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.operator-selected-status-empty p,
+.operator-status-pick-hint p {
+  margin: 0;
+}
+
+@media (max-width: 1500px) {
+  .operator-status-category-grid {
+    grid-template-columns: repeat(4, minmax(155px, 1fr));
+  }
+
+  .operator-selected-status-cards {
+    grid-template-columns: repeat(3, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .operator-status-category-grid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+
+  .operator-selected-status-cards {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .operator-status-picker-head,
+  .operator-selected-status-panel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .operator-status-category-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .operator-status-category-card {
+    min-height: 92px;
+    padding: 13px 10px;
+    border-radius: 17px;
+  }
+
+  .operator-status-category-card__icon {
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .operator-status-category-card__body strong {
+    font-size: 13px;
+  }
+
+  .operator-status-category-card__arrow {
+    display: none;
+  }
+
+  .operator-selected-status-panel {
+    padding: 14px;
+    border-radius: 19px;
+  }
+
+  .operator-selected-status-panel__actions {
+    justify-content: space-between;
+  }
+
+  .operator-selected-status-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .operator-status-pick-hint,
+  .operator-selected-status-empty {
+    align-items: flex-start;
+    min-height: 0;
+  }
+}
+
 </style>

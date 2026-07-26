@@ -1,0 +1,12 @@
+PWA o‘rnatish tugmasi pastki va yuqori navbar ichidan butunlay olib tashlandi.
+
+Yangi ko‘rinish:
+- Admin panelida hero qismidan keyin alohida karta.
+- Boss/Menenjer panelida sahifa boshida alohida karta.
+- Operator panelida sahifa boshida alohida karta.
+- Direktor va direktor o‘rinbosari panelida hero qismidan keyin alohida karta.
+- Karta boshqa tugma yoki navbar orasiga tiqilmagan.
+- O‘rnatilganda “Ilova o‘rnatilgan” holati chiqadi.
+- O‘rnatilmagan bo‘lsa “Ilovani o‘rnatish” tugmasi ishlaydi.
+- Eski fixed/floating o‘rnatish tugmasi o‘chirildi.
+- Service worker kesh versiyasi v3 ga yangilandi.

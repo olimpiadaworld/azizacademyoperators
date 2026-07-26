@@ -3,6 +3,8 @@
     <div v-if="successMessage" class="success-banner">{{ successMessage }}</div>
     <div v-if="error" class="error-banner">{{ error }}</div>
 
+    <InstallAppCard />
+
     <div v-if="!isFilialRahbari" class="panel glass boss-daily-report-panel">
       <div class="section-head section-head--wrap">
         <div>
@@ -1380,6 +1382,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import client from '../../api/client'
 import StatCard from '../../components/ui/StatCard.vue'
+import InstallAppCard from '../../components/ui/InstallAppCard.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
