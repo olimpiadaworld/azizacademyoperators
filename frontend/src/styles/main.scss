@@ -5331,3 +5331,80 @@ tr:hover td {
     font-size: 21px;
   }
 }
+
+/* =========================================================
+   PWA INSTALL BUTTON — KO‘RINISHI KAFOLATLANGAN YANGILANISH
+   ========================================================= */
+.dashboard-nav__install {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dashboard-nav__install:hover {
+  color: #1d4ed8;
+  background: rgba(239, 246, 255, 0.96);
+  border-color: rgba(191, 219, 254, 0.95);
+}
+
+@media (max-width: 900px) {
+  .dashboard-nav__install {
+    color: #047857 !important;
+    background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%) !important;
+    border-color: rgba(52, 211, 153, 0.38) !important;
+  }
+
+  .dashboard-nav__install:hover,
+  .dashboard-nav__install:active {
+    color: #065f46 !important;
+    background: #d1fae5 !important;
+  }
+
+  /* Login va public sahifalarda tugma ekranning pastida aniq ko‘rinadi. */
+  .pwa-install-button {
+    top: auto !important;
+    right: 14px !important;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 2200 !important;
+    min-height: 50px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 13px;
+    animation: pwa-install-pulse 2.2s ease-in-out infinite;
+  }
+}
+
+@media (max-width: 420px) {
+  .pwa-install-button {
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 48px !important;
+    padding: 11px 14px !important;
+  }
+
+  .pwa-install-button span {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: nowrap !important;
+  }
+}
+
+@keyframes pwa-install-pulse {
+  0%, 100% { transform: translateY(0); box-shadow: 0 12px 28px rgba(37, 99, 235, 0.30); }
+  50% { transform: translateY(-3px); box-shadow: 0 18px 34px rgba(37, 99, 235, 0.40); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-install-button { animation: none !important; }
+}
+
+@media (display-mode: standalone) {
+  .dashboard-nav__install,
+  .pwa-install-button {
+    display: none !important;
+  }
+}

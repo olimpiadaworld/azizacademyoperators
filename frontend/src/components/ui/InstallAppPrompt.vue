@@ -12,7 +12,7 @@
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 16v2.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V16" />
       </svg>
-      <span>{{ installBusy ? 'Kutilmoqda...' : 'O‘rnatish' }}</span>
+      <span>{{ installBusy ? 'Kutilmoqda...' : 'Ilovani yuklash' }}</span>
     </button>
 
     <div
@@ -54,24 +54,23 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
+const props = defineProps({
+  showFloating: { type: Boolean, default: true },
+})
+
 const deferredPrompt = ref(null)
 const guideOpen = ref(false)
 const installBusy = ref(false)
 const installed = ref(false)
-const mobileDevice = ref(false)
 const isIOS = ref(false)
 
-const showInstallButton = computed(() => mobileDevice.value && !installed.value)
+// Floating tugma login/public sahifalarda ko‘rinadi.
+// Dashboardlarda esa pastki navbar ichidagi alohida tugma ishlatiladi.
+const showInstallButton = computed(() => props.showFloating && !installed.value)
 
 function detectInstalled() {
   return window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true
-}
-
-function detectMobile() {
-  const agent = window.navigator.userAgent || ''
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(agent)
-    || window.matchMedia('(max-width: 900px)').matches
 }
 
 function handleBeforeInstallPrompt(event) {
@@ -86,16 +85,17 @@ function handleInstalled() {
 }
 
 async function installApp() {
-  if (installBusy.value) return
+  if (installBusy.value || installed.value) return
 
-  if (!deferredPrompt.value) {
+  // iPhone/iPad native beforeinstallprompt bermaydi.
+  if (isIOS.value || !deferredPrompt.value) {
     guideOpen.value = true
     return
   }
 
   installBusy.value = true
   try {
-    deferredPrompt.value.prompt()
+    await deferredPrompt.value.prompt()
     const choice = await deferredPrompt.value.userChoice
     if (choice?.outcome === 'accepted') {
       installed.value = true
@@ -109,6 +109,10 @@ async function installApp() {
   }
 }
 
+function handleExternalInstallRequest() {
+  installApp()
+}
+
 function closeGuide() {
   guideOpen.value = false
 }
@@ -117,15 +121,16 @@ onMounted(() => {
   const agent = window.navigator.userAgent || ''
   isIOS.value = /iPhone|iPad|iPod/i.test(agent)
     || (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1)
-  mobileDevice.value = detectMobile()
   installed.value = detectInstalled()
 
   window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
   window.addEventListener('appinstalled', handleInstalled)
+  window.addEventListener('aziz:install-app', handleExternalInstallRequest)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
   window.removeEventListener('appinstalled', handleInstalled)
+  window.removeEventListener('aziz:install-app', handleExternalInstallRequest)
 })
 </script>

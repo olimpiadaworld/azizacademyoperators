@@ -1,0 +1,10 @@
+PWA YUKLASH TUGMASI KO‘RINISHI TUZATILDI
+
+- Dashboardlarning pastki navbariga "Ilovani yuklash" iconli tugmasi qo‘shildi.
+- Admin, Boss, Menejer, Operator va Direktor panellarida chiqadi.
+- Login va public forma sahifalarida pastki o‘ng tomonda katta tugma chiqadi.
+- Tugma endi user-agent orqali mobil aniqlash shartiga bog‘liq emas.
+- Android native install oynasi mavjud bo‘lsa ochiladi.
+- iPhone yoki native oynasi mavjud bo‘lmagan brauzerda o‘rnatish yo‘riqnomasi chiqadi.
+- Service worker cache versiyasi v2 ga yangilandi.
+- Netlify’da sw.js va manifest keshlanib qolmasligi uchun headerlar qo‘shildi.
