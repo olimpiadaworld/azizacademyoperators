@@ -1,0 +1,16 @@
+PWA / TELEFON EKRANIGA O‘RNATISH QO‘SHILDI
+
+Qo‘shilganlar:
+- Android uchun brauzerning native "Install app" oynasi
+- iPhone uchun Safari "Add to Home Screen" yo‘riqnomasi
+- Barcha sahifalarda global "O‘rnatish" tugmasi
+- manifest.webmanifest
+- service worker (sw.js)
+- 192x192, 512x512 va maskable ikonlar
+- Apple Touch Icon
+- Standalone ilova rejimi
+- Asosiy sahifa va statik fayllar uchun offline cache
+
+Muhim:
+- PWA o‘rnatish productionda HTTPS orqali ishlaydi (Netlify HTTPS beradi).
+- Backend API internet bo‘lmasa ishlamaydi; offline cache faqat sayt qobig‘ini saqlaydi.

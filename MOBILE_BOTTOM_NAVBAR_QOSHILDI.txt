@@ -1,0 +1,15 @@
+MOBIL PASTKI NAVBAR YANGILANISHI
+
+- Telefon va planshet ekranlarida (900px gacha) barcha dashboard navbar tugmalari ekran pastida fixed ko'rinadi.
+- Operator, Admin, Boss, Menenjer/Filial rahbari va Direktor panellariga tatbiq qilindi.
+- Tugmalar ichki SVG ikonlar bilan ishlaydi, tashqi icon kutubxonasi kerak emas.
+- Aktiv bo'lim ko'k rang bilan ajralib turadi.
+- Boss panelidagi ko'p menyular gorizontal surish orqali ochiladi.
+- Chiqish tugmasi pastki panelning o'ng tomonida doim ko'rinadi.
+- Telefonning safe-area qismi hisobga olindi va kontent navbar ostida qolib ketmaydi.
+- Desktop navbar ko'rinishi saqlab qolindi.
+
+O'ZGARGAN FAYLLAR:
+1. frontend/src/layouts/DashboardLayout.vue
+2. frontend/src/styles/main.scss
+3. frontend/src/components/ui/NavIcon.vue (yangi)
