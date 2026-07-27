@@ -800,12 +800,33 @@
             <button type="button" class="manager-payment-carousel-arrow" aria-label="Keyingi karta" @click="scrollPaymentCarousel(1)"><NavIcon name="arrowRight" /></button>
           </div>
         </div>
-        <div ref="paymentCarouselRef" class="payment-control-grid" :class="{ 'manager-payment-carousel': isFilialRahbari }">
-        <article v-for="item in filteredPaymentSectionItems" :key="`payment-section-${item.key}`" class="visit-mini-card glass payment-control-card" :class="{ 'manager-lead-card': isFilialRahbari }">
-          <div class="visit-mini-card__head visit-mini-card__head--payment" :class="{ 'manager-lead-card__head': isFilialRahbari }">
+        <div v-else class="boss-payment-carousel-toolbar">
+          <div class="boss-payment-carousel-toolbar__info">
+            <span class="boss-payment-carousel-toolbar__icon"><NavIcon name="layers" /></span>
+            <span>
+              <strong>Lead kartalari</strong>
+              <small>Desktopda 4 ta karta ko‘rinadi — yon tomonga suring</small>
+            </span>
+          </div>
+          <div class="boss-payment-carousel-toolbar__actions">
+            <button type="button" class="boss-payment-carousel-arrow" aria-label="Oldingi kartalar" @click="scrollPaymentCarousel(-1)"><NavIcon name="arrowLeft" /></button>
+            <button type="button" class="boss-payment-carousel-arrow" aria-label="Keyingi kartalar" @click="scrollPaymentCarousel(1)"><NavIcon name="arrowRight" /></button>
+          </div>
+        </div>
+        <div ref="paymentCarouselRef" class="payment-control-grid" :class="{ 'manager-payment-carousel': isFilialRahbari, 'boss-payment-carousel': !isFilialRahbari }">
+        <article
+          v-for="item in filteredPaymentSectionItems"
+          :key="`payment-section-${item.key}`"
+          class="visit-mini-card glass payment-control-card"
+          :class="{ 'manager-lead-card': isFilialRahbari, 'boss-payment-card': !isFilialRahbari }"
+        >
+          <div
+            class="visit-mini-card__head visit-mini-card__head--payment"
+            :class="{ 'manager-lead-card__head': isFilialRahbari, 'boss-payment-card__head': !isFilialRahbari }"
+          >
             <span v-if="isFilialRahbari" class="manager-lead-card__avatar"><NavIcon name="user" /></span>
             <span v-else :class="['payment-dot', paymentDotClass(item)]" :title="leadPaymentStatusLabel(item)"></span>
-            <div :class="{ 'manager-lead-card__identity': isFilialRahbari }">
+            <div :class="{ 'manager-lead-card__identity': isFilialRahbari, 'boss-payment-card__identity': !isFilialRahbari }">
               <h4>{{ item.full_name || item.lead_name || 'Ism yo‘q' }}</h4>
               <div class="boss-lead-item__chips">
                 <span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
@@ -1917,7 +1938,12 @@ function scrollPaymentCarousel(direction) {
   if (!carousel) return
   const firstCard = carousel.querySelector('.payment-control-card')
   const cardWidth = firstCard?.getBoundingClientRect().width || carousel.clientWidth
-  carousel.scrollBy({ left: direction * (cardWidth + 12), behavior: 'smooth' })
+  const carouselStyle = window.getComputedStyle(carousel)
+  const gap = Number.parseFloat(carouselStyle.columnGap || carouselStyle.gap) || 12
+  const visibleCards = carousel.classList.contains('boss-payment-carousel')
+    ? Math.max(1, Math.floor((carousel.clientWidth + gap) / (cardWidth + gap)))
+    : 1
+  carousel.scrollBy({ left: direction * visibleCards * (cardWidth + gap), behavior: 'smooth' })
 }
 
 const paymentSectionItems = computed(() => {
@@ -6048,6 +6074,401 @@ onBeforeUnmount(() => {
     padding-inline: 6px;
     border-radius: 9px;
     font-size: 10px;
+  }
+}
+
+
+/* =========================================================
+   BOSS PANEL — KELDI/TO'LOV FILTR TUGMALARI IXCHAM
+   Faqat Boss panelidagi payment bo'limiga ta'sir qiladi.
+   ========================================================= */
+.panel--payment-section:not(.manager-payment-panel) .decision-filter-stack {
+  width: min(100%, 760px);
+  margin-left: auto;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .decision-filter-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .decision-filter-btn {
+  width: auto;
+  min-width: 0;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 11px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .045);
+}
+
+.panel--payment-section:not(.manager-payment-panel) .decision-filter-btn :deep(.nav-icon) {
+  width: 15px !important;
+  height: 15px !important;
+  flex: 0 0 15px;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .decision-filter-btn:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 1050px) {
+  .panel--payment-section:not(.manager-payment-panel) .section-head {
+    align-items: flex-start;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .decision-filter-stack {
+    width: 100%;
+    margin-left: 0;
+    align-items: stretch;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .decision-filter-group {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .panel--payment-section:not(.manager-payment-panel) .decision-filter-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .payment-filter-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .payment-filter-group .decision-filter-btn:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .decision-filter-btn {
+    width: 100%;
+    min-height: 35px;
+    padding: 6px 7px;
+    border-radius: 10px;
+    gap: 5px;
+    font-size: 10.5px;
+    white-space: normal;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .decision-filter-btn :deep(.nav-icon) {
+    width: 14px !important;
+    height: 14px !important;
+    flex-basis: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .panel--payment-section:not(.manager-payment-panel) .decision-filter-btn {
+    min-height: 33px;
+    padding: 5px;
+    font-size: 9.6px;
+  }
+}
+
+
+
+/* Boss paneli: Keldi/To'lov lead kartalari — 4 ta ko'rinadigan swiper */
+.boss-payment-carousel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 9px 10px;
+  border: 1px solid rgba(37, 99, 235, .12);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(239, 246, 255, .92), rgba(255, 255, 255, .96));
+}
+
+.boss-payment-carousel-toolbar__info {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #0f172a;
+}
+
+.boss-payment-carousel-toolbar__icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.boss-payment-carousel-toolbar__icon :deep(.nav-icon) {
+  width: 17px;
+  height: 17px;
+}
+
+.boss-payment-carousel-toolbar__info > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.boss-payment-carousel-toolbar__info strong {
+  font-size: 12.5px;
+  line-height: 1.15;
+}
+
+.boss-payment-carousel-toolbar__info small {
+  color: #64748b;
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
+.boss-payment-carousel-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.boss-payment-carousel-arrow {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: 11px;
+  color: #1d4ed8;
+  background: #fff;
+  cursor: pointer;
+  transition: transform .18s ease, color .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.boss-payment-carousel-arrow:hover {
+  transform: translateY(-1px);
+  color: #fff;
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.boss-payment-carousel-arrow :deep(.nav-icon) {
+  width: 17px;
+  height: 17px;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .payment-control-grid.boss-payment-carousel {
+  display: flex;
+  grid-template-columns: none;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 3px 2px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scroll-snap-type: inline mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 235, .38) rgba(226, 232, 240, .65);
+  -webkit-overflow-scrolling: touch;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .payment-control-grid.boss-payment-carousel::-webkit-scrollbar {
+  height: 7px;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .payment-control-grid.boss-payment-carousel::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(226, 232, 240, .7);
+}
+
+.panel--payment-section:not(.manager-payment-panel) .payment-control-grid.boss-payment-carousel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-carousel .boss-payment-card {
+  width: auto;
+  min-width: 0;
+  min-height: 100%;
+  flex: 0 0 calc((100% - 36px) / 4);
+  box-sizing: border-box;
+  align-content: start;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(203, 213, 225, .76);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(37, 99, 235, .055), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, .99), rgba(248, 250, 252, .98));
+  box-shadow: 0 8px 22px rgba(15, 23, 42, .055);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card__head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  align-items: start;
+  justify-content: initial;
+  gap: 8px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(226, 232, 240, .86);
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card__head .payment-dot {
+  width: 11px;
+  height: 11px;
+  margin-top: 4px;
+  flex: 0 0 11px;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card__identity {
+  min-width: 0;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card h4 {
+  max-width: 100%;
+  margin: 0 0 7px;
+  color: #0f172a;
+  font-size: clamp(17px, 1.35vw, 22px);
+  line-height: 1.08;
+  letter-spacing: -.018em;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card .boss-lead-item__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card .badge {
+  min-width: 0;
+  min-height: 23px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 9.8px;
+  line-height: 1.1;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card .visit-mini-card__meta {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 7px;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card .visit-mini-card__meta > span {
+  min-width: 0;
+  min-height: 43px;
+  display: block;
+  padding: 8px 9px;
+  border: 1px solid rgba(203, 213, 225, .64);
+  border-radius: 11px;
+  color: #334155;
+  background: rgba(248, 250, 252, .92);
+  font-size: 11.2px;
+  line-height: 1.28;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card .visit-mini-card__meta > span strong {
+  color: #0f172a;
+  font-size: 10.8px;
+  line-height: inherit;
+}
+
+.panel--payment-section:not(.manager-payment-panel) .boss-payment-card .operator-note-line {
+  grid-column: 1 / -1;
+  min-height: auto;
+  background: rgba(239, 246, 255, .88);
+  border-color: rgba(37, 99, 235, .18);
+}
+
+@media (max-width: 1280px) {
+  .panel--payment-section:not(.manager-payment-panel) .boss-payment-carousel .boss-payment-card {
+    flex-basis: calc((100% - 24px) / 3);
+  }
+}
+
+@media (max-width: 960px) {
+  .panel--payment-section:not(.manager-payment-panel) .boss-payment-carousel .boss-payment-card {
+    flex-basis: calc((100% - 12px) / 2);
+  }
+}
+
+@media (max-width: 640px) {
+  .boss-payment-carousel-toolbar {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .boss-payment-carousel-toolbar__info small {
+    display: none;
+  }
+
+  .boss-payment-carousel-toolbar__icon {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .boss-payment-carousel-arrow {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .boss-payment-carousel .boss-payment-card {
+    flex-basis: calc(100% - 8px);
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .boss-payment-card h4 {
+    font-size: 18px;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .boss-payment-card .visit-mini-card__meta {
+    gap: 6px;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .boss-payment-card .visit-mini-card__meta > span {
+    min-height: 40px;
+    padding: 7px 8px;
+    font-size: 10.8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .panel--payment-section:not(.manager-payment-panel) .boss-payment-card .visit-mini-card__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .panel--payment-section:not(.manager-payment-panel) .boss-payment-card .visit-mini-card__meta > span {
+    min-height: 0;
   }
 }
 
