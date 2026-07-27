@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'aziz-academy-crm-v13'
+const CACHE_VERSION = 'aziz-academy-crm-v14'
 const APP_SHELL = [
   '/',
   '/index.html',

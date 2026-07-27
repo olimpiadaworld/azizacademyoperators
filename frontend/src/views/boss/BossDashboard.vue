@@ -6789,4 +6789,130 @@ onBeforeUnmount(() => {
   }
 }
 
+
+/* =========================================================
+   BOSS PANEL — MENENJER NAZORATI FILTR TUGMALARI IXCHAM
+   Faqat Boss rolidagi "Menenjer nazorati" bo‘limiga ta'sir qiladi.
+   Global .nav-icon { width: 100%; height: 100%; } qoidasini bekor qiladi.
+   ========================================================= */
+.boss-manager-control-panel .decision-filter-stack {
+  width: min(100%, 780px);
+  margin-left: auto;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.boss-manager-control-panel .decision-filter-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.boss-manager-control-panel .decision-filter-btn {
+  width: auto;
+  min-width: 0;
+  min-height: 36px;
+  max-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 11px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .045);
+}
+
+.boss-manager-control-panel .decision-filter-btn :deep(.nav-icon) {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px !important;
+  max-width: 15px !important;
+  min-height: 15px !important;
+  max-height: 15px !important;
+  flex: 0 0 15px !important;
+  display: block;
+}
+
+.boss-manager-control-panel .decision-filter-btn > span {
+  display: inline-block;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.boss-manager-control-panel .decision-filter-btn:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 1180px) {
+  .boss-manager-control-panel .decision-panel-tools {
+    width: 100%;
+  }
+
+  .boss-manager-control-panel .decision-filter-stack {
+    width: 100%;
+    margin-left: 0;
+    align-items: flex-start;
+  }
+
+  .boss-manager-control-panel .decision-filter-group {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .boss-manager-control-panel .decision-filter-stack {
+    gap: 6px;
+  }
+
+  .boss-manager-control-panel .decision-filter-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .boss-manager-control-panel .payment-filter-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .boss-manager-control-panel .payment-filter-group .decision-filter-btn:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .boss-manager-control-panel .decision-filter-btn {
+    width: 100%;
+    min-height: 35px;
+    max-height: none;
+    padding: 6px 7px;
+    border-radius: 10px;
+    gap: 5px;
+    font-size: 10.5px;
+    white-space: normal;
+  }
+
+  .boss-manager-control-panel .decision-filter-btn :deep(.nav-icon) {
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
+    max-width: 14px !important;
+    min-height: 14px !important;
+    max-height: 14px !important;
+    flex-basis: 14px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .boss-manager-control-panel .decision-filter-btn {
+    min-height: 33px;
+    padding: 5px;
+    font-size: 9.6px;
+  }
+}
+
 </style>
