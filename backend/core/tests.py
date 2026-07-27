@@ -466,3 +466,75 @@ class OperatorVisitDecisionReclassifyTests(TestCase):
         self.lead.refresh_from_db()
         self.assertEqual(self.lead.current_status, 'sale')
         self.assertTrue(LeadVisitDecision.objects.filter(id=self.decision.id).exists())
+
+
+    def test_sale_to_other_branch_returns_after_manager_decision_then_otkaz_removes_it(self):
+        # Operatorning o‘z filiallarida yo‘q bo‘lgan Chinoz tanlansa ham aylanish
+        # ishlashi kerak: Sotuv -> menejer -> Keldi/Kelmadi -> operator nazorati.
+        chinoz_manager = AppUser.objects.create(
+            username='reclassify-chinoz-manager', password_hash='unused',
+            full_name='Chinoz Menenjeri', role='filial_rahbari', branch_name='Chinoz'
+        )
+
+        resend_response = self.client.post(
+            f'/api/operator/lead-visit-decisions/{self.decision.id}/reclassify/',
+            data=json.dumps({'status': 'sale', 'selected_branch': 'Chinoz'}),
+            content_type='application/json',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(resend_response.status_code, 200)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.current_status, 'sale')
+        self.assertEqual(self.lead.branch_name, 'Chinoz')
+        self.assertFalse(LeadVisitDecision.objects.filter(lead=self.lead).exists())
+
+        operator_empty_response = self.client.get(
+            '/api/operator/lead-visit-decisions/',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(operator_empty_response.status_code, 200)
+        self.assertNotIn(self.lead.id, [row['lead_id'] for row in operator_empty_response.json()])
+
+        manager_leads_response = self.client.get(
+            '/api/boss/leads/',
+            **self.auth_headers(chinoz_manager),
+        )
+        self.assertEqual(manager_leads_response.status_code, 200)
+        self.assertIn(self.lead.id, [row['id'] for row in manager_leads_response.json()])
+
+        decision_response = self.client.post(
+            f'/api/boss/leads/{self.lead.id}/visit-decision/',
+            data=json.dumps({'decision': 'arrived'}),
+            content_type='application/json',
+            **self.auth_headers(chinoz_manager),
+        )
+        self.assertEqual(decision_response.status_code, 200)
+
+        operator_return_response = self.client.get(
+            '/api/operator/lead-visit-decisions/',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(operator_return_response.status_code, 200)
+        returned_rows = [row for row in operator_return_response.json() if row['lead_id'] == self.lead.id]
+        self.assertEqual(len(returned_rows), 1)
+        self.assertEqual(returned_rows[0]['decision'], 'arrived')
+        self.assertEqual(returned_rows[0]['filial_rahbari_branch'], 'Chinoz')
+
+        new_decision_id = returned_rows[0]['id']
+        otkaz_response = self.client.post(
+            f'/api/operator/lead-visit-decisions/{new_decision_id}/reclassify/',
+            data=json.dumps({'status': 'otkaz'}),
+            content_type='application/json',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(otkaz_response.status_code, 200)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.current_status, 'otkaz')
+        self.assertFalse(LeadVisitDecision.objects.filter(lead=self.lead).exists())
+
+        operator_final_response = self.client.get(
+            '/api/operator/lead-visit-decisions/',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(operator_final_response.status_code, 200)
+        self.assertNotIn(self.lead.id, [row['lead_id'] for row in operator_final_response.json()])

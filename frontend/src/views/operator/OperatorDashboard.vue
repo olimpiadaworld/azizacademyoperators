@@ -117,7 +117,7 @@
           <div>
             <div class="eyebrow">QAYTA SOTUVGA YUBORISH</div>
             <h3>Qaysi filial menejeriga yuborilsin?</h3>
-            <p>{{ visitResaleModal.item?.lead_name || visitResaleModal.item?.full_name || 'Lead' }} tanlangan filial menejerining Leadlar bo‘limiga qayta tushadi.</p>
+            <p>{{ visitResaleModal.item?.lead_name || visitResaleModal.item?.full_name || 'Lead' }} tanlangan filial menejerining Leadlar bo‘limiga qayta tushadi. Menejer yana Keldi/Kelmadi qilsa karta shu bo‘limga qaytadi.</p>
           </div>
           <button class="modal-close" type="button" :disabled="visitActionLoadingId === visitResaleModal.item?.id" @click="closeVisitResaleModal">×</button>
         </div>
@@ -293,6 +293,98 @@
         <span class="badge">So‘nggi {{ reportDays }} kun</span>
       </div>
 
+      <div class="operator-visit-control operator-visit-control--daily-top glass-soft">
+        <div class="section-head section-head--wrap">
+          <div>
+            <div class="eyebrow">Menenjer nazorati</div>
+            <h3>Keldi / Kelmadi natijalari</h3>
+            <p>Bu yerda faqat sizga biriktirilgan menenjerlar bosgan natijalar ko‘rinadi.</p>
+          </div>
+          <div class="operator-visit-control__summary">
+            <span class="badge">Keldi: {{ operatorArrivedCount }}</span>
+            <span class="badge muted">Kelmadi: {{ operatorNotArrivedCount }}</span>
+            <span class="badge">To‘lov qildi: {{ operatorPaymentDoneCount }}</span>
+            <span class="badge muted">To‘lov qilmadi: {{ operatorPaymentNotDoneCount }}</span>
+          </div>
+        </div>
+
+        <div class="operator-visit-control__filters">
+          <select class="select" v-model="operatorDecisionFilter">
+            <option value="all">Keldi/Kelmadi</option>
+            <option value="arrived">Keldi</option>
+            <option value="not_arrived">Kelmadi</option>
+          </select>
+          <select class="select" v-model="operatorPaymentFilter">
+            <option value="all">To‘lov</option>
+            <option value="paid">To‘lov qildi</option>
+            <option value="unpaid">To‘lov qilmadi</option>
+            <option value="pending">Belgilanmagan</option>
+          </select>
+        </div>
+
+        <div v-if="filteredOperatorVisitDecisions.length" class="operator-visit-control__carousel-toolbar">
+          <div class="operator-visit-control__carousel-hint">
+            <strong>{{ filteredOperatorVisitDecisions.length }} ta karta</strong>
+            <span>Kartalarni yon tomonga suring</span>
+          </div>
+          <div class="operator-visit-control__carousel-actions">
+            <button type="button" class="operator-visit-control__carousel-arrow" aria-label="Oldingi kartalar" @click="scrollOperatorVisitCarousel(-1)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+            <button type="button" class="operator-visit-control__carousel-arrow" aria-label="Keyingi kartalar" @click="scrollOperatorVisitCarousel(1)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="filteredOperatorVisitDecisions.length" ref="operatorVisitCarouselRef" class="operator-visit-control__grid operator-visit-control__grid--swiper">
+          <article v-for="item in filteredOperatorVisitDecisions" :key="`operator-decision-${item.id}`" class="operator-visit-card">
+            <div class="operator-visit-card__top">
+              <span class="operator-visit-status" :class="item.decision === 'arrived' ? 'operator-visit-status--arrived' : 'operator-visit-status--not-arrived'">
+                {{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}
+              </span>
+              <span class="operator-visit-payment" :class="`operator-visit-payment--${operatorPaymentStatus(item)}`">
+                {{ operatorPaymentStatusLabel(item) }}
+              </span>
+            </div>
+            <h4>{{ item.lead_name || item.full_name || 'Lead' }}</h4>
+            <div class="operator-visit-card__meta">
+              <span><strong>Menenjer:</strong> {{ item.filial_rahbari_name || '-' }}</span>
+              <span><strong>Filial:</strong> {{ item.filial_rahbari_branch || item.branch_name || '-' }}</span>
+              <span><strong>Fan:</strong> {{ item.subject || '-' }}</span>
+              <span><strong>Sinf:</strong> {{ item.grade || '-' }}</span>
+              <span><strong>Tel:</strong> {{ item.lead_phone || item.phone1 || '-' }}</span>
+              <span><strong>Vaqt:</strong> {{ formatDateTime(item.updated_at) }}</span>
+              <span v-if="item.operator_note" class="operator-note-line"><strong>Sizning izohingiz:</strong> {{ item.operator_note }}</span>
+              <span v-if="item.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(item.operator_note_at) }}</span>
+              <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>Holatni belgilagan:</strong> {{ item.payment_status_by_name || '-' }}</span>
+              <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>To‘lov holati vaqti:</strong> {{ formatDateTime(item.payment_status_at) }}</span>
+            </div>
+            <div class="operator-visit-card__actions">
+              <button
+                class="operator-visit-card__action operator-visit-card__action--sale"
+                type="button"
+                :disabled="visitActionLoadingId === item.id"
+                @click="openVisitResaleModal(item)"
+              >
+                <span class="operator-visit-card__action-icon" aria-hidden="true">↗</span>
+                <span>{{ visitActionLoadingId === item.id && visitActionLoadingStatus === 'sale' ? 'Saqlanmoqda...' : 'Sotuv' }}</span>
+              </button>
+              <button
+                class="operator-visit-card__action operator-visit-card__action--otkaz"
+                type="button"
+                :disabled="visitActionLoadingId === item.id"
+                @click="reclassifyVisitDecision(item, 'otkaz')"
+              >
+                <span class="operator-visit-card__action-icon" aria-hidden="true">×</span>
+                <span>{{ visitActionLoadingId === item.id && visitActionLoadingStatus === 'otkaz' ? 'Saqlanmoqda...' : 'Atkaz' }}</span>
+              </button>
+            </div>
+          </article>
+        </div>
+        <div v-else class="empty-state">Sizga tegishli filiallar bo‘yicha Keldi/Kelmadi natijasi hali yo‘q.</div>
+      </div>
+
       <div v-if="dailyHistory.length" class="operator-report-list">
         <article v-for="row in dailyHistory" :key="row.date" class="operator-report-card glass-soft">
           <div class="operator-report-card__date">{{ formatReportDate(row.date) }}</div>
@@ -355,82 +447,7 @@
         </div>
       </div>
 
-      <div class="operator-visit-control glass-soft">
-        <div class="section-head section-head--wrap">
-          <div>
-            <div class="eyebrow">Menenjer nazorati</div>
-            <h3>Keldi / Kelmadi natijalari</h3>
-            <p>Bu yerda faqat sizga biriktirilgan menenjerlar bosgan natijalar ko‘rinadi.</p>
-          </div>
-          <div class="operator-visit-control__summary">
-            <span class="badge">Keldi: {{ operatorArrivedCount }}</span>
-            <span class="badge muted">Kelmadi: {{ operatorNotArrivedCount }}</span>
-            <span class="badge">To‘lov qildi: {{ operatorPaymentDoneCount }}</span>
-            <span class="badge muted">To‘lov qilmadi: {{ operatorPaymentNotDoneCount }}</span>
-          </div>
-        </div>
 
-        <div class="operator-visit-control__filters">
-          <select class="select" v-model="operatorDecisionFilter">
-            <option value="all">Keldi/Kelmadi</option>
-            <option value="arrived">Keldi</option>
-            <option value="not_arrived">Kelmadi</option>
-          </select>
-          <select class="select" v-model="operatorPaymentFilter">
-            <option value="all">To‘lov</option>
-            <option value="paid">To‘lov qildi</option>
-            <option value="unpaid">To‘lov qilmadi</option>
-            <option value="pending">Belgilanmagan</option>
-          </select>
-        </div>
-
-        <div v-if="filteredOperatorVisitDecisions.length" class="operator-visit-control__grid">
-          <article v-for="item in filteredOperatorVisitDecisions" :key="`operator-decision-${item.id}`" class="operator-visit-card">
-            <div class="operator-visit-card__top">
-              <span class="operator-visit-status" :class="item.decision === 'arrived' ? 'operator-visit-status--arrived' : 'operator-visit-status--not-arrived'">
-                {{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}
-              </span>
-              <span class="operator-visit-payment" :class="`operator-visit-payment--${operatorPaymentStatus(item)}`">
-                {{ operatorPaymentStatusLabel(item) }}
-              </span>
-            </div>
-            <h4>{{ item.lead_name || item.full_name || 'Lead' }}</h4>
-            <div class="operator-visit-card__meta">
-              <span><strong>Menenjer:</strong> {{ item.filial_rahbari_name || '-' }}</span>
-              <span><strong>Filial:</strong> {{ item.filial_rahbari_branch || item.branch_name || '-' }}</span>
-              <span><strong>Fan:</strong> {{ item.subject || '-' }}</span>
-              <span><strong>Sinf:</strong> {{ item.grade || '-' }}</span>
-              <span><strong>Tel:</strong> {{ item.lead_phone || item.phone1 || '-' }}</span>
-              <span><strong>Vaqt:</strong> {{ formatDateTime(item.updated_at) }}</span>
-              <span v-if="item.operator_note" class="operator-note-line"><strong>Sizning izohingiz:</strong> {{ item.operator_note }}</span>
-              <span v-if="item.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(item.operator_note_at) }}</span>
-              <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>Holatni belgilagan:</strong> {{ item.payment_status_by_name || '-' }}</span>
-              <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>To‘lov holati vaqti:</strong> {{ formatDateTime(item.payment_status_at) }}</span>
-            </div>
-            <div class="operator-visit-card__actions">
-              <button
-                class="operator-visit-card__action operator-visit-card__action--sale"
-                type="button"
-                :disabled="visitActionLoadingId === item.id"
-                @click="openVisitResaleModal(item)"
-              >
-                <span class="operator-visit-card__action-icon" aria-hidden="true">↗</span>
-                <span>{{ visitActionLoadingId === item.id && visitActionLoadingStatus === 'sale' ? 'Saqlanmoqda...' : 'Sotuv' }}</span>
-              </button>
-              <button
-                class="operator-visit-card__action operator-visit-card__action--otkaz"
-                type="button"
-                :disabled="visitActionLoadingId === item.id"
-                @click="reclassifyVisitDecision(item, 'otkaz')"
-              >
-                <span class="operator-visit-card__action-icon" aria-hidden="true">×</span>
-                <span>{{ visitActionLoadingId === item.id && visitActionLoadingStatus === 'otkaz' ? 'Saqlanmoqda...' : 'Atkaz' }}</span>
-              </button>
-            </div>
-          </article>
-        </div>
-        <div v-else class="empty-state">Sizga tegishli filiallar bo‘yicha Keldi/Kelmadi natijasi hali yo‘q.</div>
-      </div>
     </section>
 
     <section v-else-if="currentTab === 'assigned'" class="operator-new-leads panel glass">
@@ -701,6 +718,7 @@ const actionToast = ref(null)
 const dailyHistory = ref([])
 const monthlyHistory = ref([])
 const operatorVisitDecisions = ref([])
+const operatorVisitCarouselRef = ref(null)
 const operatorDecisionFilter = ref('all')
 const operatorPaymentFilter = ref('all')
 const visitActionLoadingId = ref(null)
@@ -773,6 +791,7 @@ function getStatusIcon(statusKey) {
 
 let successTimer = null
 let reminderCheckTimer = null
+let visitDecisionRefreshTimer = null
 let actionToastTimer = null
 const notifiedReminderKeys = new Set()
 
@@ -807,6 +826,19 @@ const canSubmitStatusModal = computed(() => {
   const freshNote = String(statusModal.newNote || '').trim()
   return Boolean(freshNote)
 })
+
+function scrollOperatorVisitCarousel(direction) {
+  const carousel = operatorVisitCarouselRef.value
+  if (!carousel) return
+
+  const firstCard = carousel.querySelector('.operator-visit-card')
+  const cardWidth = firstCard?.getBoundingClientRect().width || carousel.clientWidth
+  const gap = Number.parseFloat(window.getComputedStyle(carousel).columnGap || window.getComputedStyle(carousel).gap) || 14
+  const visibleCards = window.innerWidth >= 1280 ? 4 : window.innerWidth >= 900 ? 2 : 1
+  const distance = (cardWidth + gap) * visibleCards
+
+  carousel.scrollBy({ left: direction * distance, behavior: 'smooth' })
+}
 
 function normalizeOperatorBranchList(value) {
   const raw = Array.isArray(value)
@@ -997,6 +1029,9 @@ watch(() => route.query.tab, (tab) => {
   if (tab === 'incoming') {
     fetchIncomingLeads()
   }
+  if (tab === 'report') {
+    fetchOperatorVisitDecisions()
+  }
 }, { immediate: true })
 
 function showSuccess(message) {
@@ -1110,6 +1145,11 @@ async function fetchOperatorVisitDecisions() {
   }
 }
 
+async function refreshOperatorVisitDecisions() {
+  if (currentTab.value !== 'report' || visitActionLoadingId.value) return
+  await fetchOperatorVisitDecisions()
+}
+
 function openVisitResaleModal(item) {
   if (!item?.id) return
   errorMessage.value = ''
@@ -1153,7 +1193,7 @@ async function reclassifyVisitDecision(item, status, selectedBranch = '') {
     } catch (refreshError) {
       console.warn('Lead saqlandi, lekin ro‘yxatlarni yangilashda xatolik:', refreshError)
     }
-    showSuccess(data?.detail || (status === 'sale' ? 'Lead tanlangan filial menejeriga qayta yuborildi.' : 'Lead Atkaz bo‘limiga o‘tkazildi.'))
+    showSuccess(data?.detail || (status === 'sale' ? 'Lead tanlangan filial menejeriga qayta yuborildi. Menejer Keldi/Kelmadi qilganda karta bu yerga qaytadi.' : 'Lead Atkaz bo‘limiga o‘tkazildi va bu ro‘yxatdan olib tashlandi.'))
     return true
   } catch (error) {
     errorMessage.value = extractApiError(error, status === 'sale' ? 'Leadni qayta Sotuvga yuborishda xatolik yuz berdi.' : 'Leadni Atkazga o‘tkazishda xatolik yuz berdi.')
@@ -1609,12 +1649,14 @@ onMounted(async () => {
   await ensureNotificationPermission()
   await checkDueReminders()
   reminderCheckTimer = window.setInterval(checkDueReminders, 15000)
+  visitDecisionRefreshTimer = window.setInterval(refreshOperatorVisitDecisions, 10000)
 })
 
 onBeforeUnmount(() => {
   clearTimeout(successTimer)
   clearTimeout(actionToastTimer)
   if (reminderCheckTimer) window.clearInterval(reminderCheckTimer)
+  if (visitDecisionRefreshTimer) window.clearInterval(visitDecisionRefreshTimer)
   closeStatusModal()
   handleCardDragEnd()
 })

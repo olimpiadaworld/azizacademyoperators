@@ -1965,9 +1965,24 @@ def operator_visit_decisions(request):
     user = request.app_user
     qs = LeadVisitDecision.objects.select_related(
         'lead', 'lead__assigned_operator', 'lead__boss', 'decided_by', 'payment_done_by', 'payment_not_done_by', 'left_without_payment_by'
-    ).filter(lead__assigned_operator=user).order_by('-updated_at')
-    # Operator faqat o‘ziga biriktirilgan filiallar menenjerlari bosgan Keldi/Kelmadi natijalarini ko‘radi.
-    visible = [item for item in qs if item.decided_by and users_branch_overlap(user, item.decided_by)]
+    ).filter(
+        lead__assigned_operator=user,
+        lead__current_status='sale',
+    ).order_by('-updated_at', '-id')
+
+    # Operator Sotuv modalida istalgan filialni tanlashi mumkin. Lead o‘sha
+    # filial menejeriga qayta yuborilgach, menejer yana Keldi/Kelmadi qilsa
+    # natija operatorning shu nazorat bo‘limiga qaytishi shart. Shu sabab
+    # menejer filiali bilan operator filiali kesishishini talab qilmaymiz;
+    # xavfsizlik lead.assigned_operator=user filtri bilan ta’minlangan.
+    # Eski bazada bir lead uchun bir nechta menejer qarori qolgan bo‘lsa,
+    # operatorga bitta karta ko‘rsatamiz; Keldi yakuniy holat sifatida ustun.
+    selected = {}
+    for item in qs:
+        current = selected.get(item.lead_id)
+        if current is None or (item.decision == 'arrived' and current.decision != 'arrived'):
+            selected[item.lead_id] = item
+    visible = list(selected.values())
     decision = clean_string(request.GET.get('decision'))
     payment = clean_string(request.GET.get('payment'))
     if decision in ('arrived', 'not_arrived'):
@@ -2014,9 +2029,10 @@ def operator_reclassify_visit_decision(request, decision_id):
     ).filter(id=decision_id, lead__assigned_operator=request.app_user).first()
     if not decision or not decision.lead:
         return ok({'detail': 'Bu nazorat kartasi topilmadi yoki sizga tegishli emas.'}, status=404)
-    if not decision.decided_by or not users_branch_overlap(request.app_user, decision.decided_by):
-        return ok({'detail': 'Bu nazorat kartasi sizning filiallaringizga tegishli emas.'}, status=403)
 
+    # Filiallar bir xil bo‘lishi shart emas: operator Sotuv modalidan boshqa
+    # filialni tanlagan bo‘lishi mumkin. Muhim huquq tekshiruvi yuqoridagi
+    # lead__assigned_operator=request.app_user filtri orqali bajarildi.
     try:
         with transaction.atomic():
             lead = Lead.objects.select_for_update().select_related('assigned_operator', 'boss').get(
@@ -2107,9 +2123,9 @@ def operator_reclassify_visit_decision(request, decision_id):
 
     return ok({
         'detail': (
-            f'Lead {BRANCH_MANAGER_DISPLAY_NAMES.get(selected_branch, selected_branch)} filial menejeriga qayta yuborildi.'
+            f'Lead {BRANCH_MANAGER_DISPLAY_NAMES.get(selected_branch, selected_branch)} filial menejeriga qayta yuborildi. Menejer Keldi/Kelmadi qilganda karta operator nazoratiga qaytadi.'
             if next_status == 'sale'
-            else 'Lead Atkaz bo‘limiga o‘tkazildi.'
+            else 'Lead Atkaz bo‘limiga o‘tkazildi va operator nazoratidan olib tashlandi.'
         ),
         'status': next_status,
         'selected_branch': selected_branch,
