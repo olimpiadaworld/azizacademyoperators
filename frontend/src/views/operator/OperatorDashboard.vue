@@ -111,31 +111,33 @@
       </div>
     </div>
 
-    <div v-if="visitResaleModal.open" class="modal-overlay">
-      <div class="modal-card glass assigned-status-modal operator-visit-sale-modal">
-        <div class="modal-card__head">
-          <div>
-            <div class="eyebrow">QAYTA SOTUVGA YUBORISH</div>
-            <h3>Qaysi filial menejeriga yuborilsin?</h3>
-            <p>{{ visitResaleModal.item?.lead_name || visitResaleModal.item?.full_name || 'Lead' }} tanlangan filial menejerining Leadlar bo‘limiga qayta tushadi. Menejer yana Keldi/Kelmadi qilsa karta shu bo‘limga qaytadi.</p>
+    <Teleport to="body">
+      <div v-if="visitResaleModal.open" class="modal-overlay operator-visit-modal-overlay" @click.self="closeVisitResaleModal">
+        <div class="modal-card glass assigned-status-modal operator-visit-sale-modal">
+          <div class="modal-card__head">
+            <div>
+              <div class="eyebrow">QAYTA SOTUVGA YUBORISH</div>
+              <h3>Qaysi filial menejeriga yuborilsin?</h3>
+              <p>{{ visitResaleModal.item?.lead_name || visitResaleModal.item?.full_name || 'Lead' }} tanlangan filial menejerining Leadlar bo‘limiga qayta tushadi. Menejer yana Keldi/Kelmadi qilsa karta shu bo‘limga qaytadi.</p>
+            </div>
+            <button class="modal-close" type="button" :disabled="visitActionLoadingId === visitResaleModal.item?.id" @click.stop.prevent="closeVisitResaleModal">×</button>
           </div>
-          <button class="modal-close" type="button" :disabled="visitActionLoadingId === visitResaleModal.item?.id" @click="closeVisitResaleModal">×</button>
-        </div>
 
-        <div class="assigned-status-modal__grid operator-visit-sale-modal__grid">
-          <button
-            v-for="branch in allSaleBranchNames"
-            :key="`visit-resale-${branch}`"
-            class="assigned-status-option sale"
-            type="button"
-            :disabled="visitActionLoadingId === visitResaleModal.item?.id"
-            @click="confirmVisitResale(branch)"
-          >
-            {{ branch }}
-          </button>
+          <div class="assigned-status-modal__grid operator-visit-sale-modal__grid">
+            <button
+              v-for="branch in allSaleBranchNames"
+              :key="`visit-resale-${branch}`"
+              class="assigned-status-option sale"
+              type="button"
+              :disabled="visitActionLoadingId === visitResaleModal.item?.id"
+              @click.stop.prevent="confirmVisitResale(branch)"
+            >
+              {{ branch }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <div v-if="addLeadModal.step === 'form'" class="modal-overlay">
       <div class="modal-card glass add-lead-modal">
@@ -365,7 +367,7 @@
                 class="operator-visit-card__action operator-visit-card__action--sale"
                 type="button"
                 :disabled="visitActionLoadingId === item.id"
-                @click="openVisitResaleModal(item)"
+                @click.stop.prevent="openVisitResaleModal(item)"
               >
                 <span class="operator-visit-card__action-icon" aria-hidden="true">↗</span>
                 <span>{{ visitActionLoadingId === item.id && visitActionLoadingStatus === 'sale' ? 'Saqlanmoqda...' : 'Sotuv' }}</span>
@@ -374,7 +376,7 @@
                 class="operator-visit-card__action operator-visit-card__action--otkaz"
                 type="button"
                 :disabled="visitActionLoadingId === item.id"
-                @click="reclassifyVisitDecision(item, 'otkaz')"
+                @click.stop.prevent="reclassifyVisitDecision(item, 'otkaz')"
               >
                 <span class="operator-visit-card__action-icon" aria-hidden="true">×</span>
                 <span>{{ visitActionLoadingId === item.id && visitActionLoadingStatus === 'otkaz' ? 'Saqlanmoqda...' : 'Atkaz' }}</span>
@@ -1171,32 +1173,55 @@ async function confirmVisitResale(branch) {
 }
 
 async function reclassifyVisitDecision(item, status, selectedBranch = '') {
-  if (!item?.id || !['sale', 'otkaz'].includes(status)) return false
+  const leadId = Number(item?.lead_id || item?.lead || 0)
+  if (!item?.id || !leadId || !['sale', 'otkaz'].includes(status)) {
+    errorMessage.value = 'Lead ma’lumoti topilmadi. Sahifani yangilab qayta urinib ko‘ring.'
+    return false
+  }
+  if (status === 'sale' && !selectedBranch) {
+    errorMessage.value = 'Sotuv uchun filialni tanlang.'
+    return false
+  }
+
   errorMessage.value = ''
   try {
     visitActionLoadingId.value = item.id
     visitActionLoadingStatus.value = status
-    const { data } = await client.post(`operator/lead-visit-decisions/${item.id}/reclassify/`, {
+
+    // Mavjud change-status endpointi eski va yangi backend versiyalarida ham bor.
+    // reset_visit_decisions=true yangi backendda eski Keldi/Kelmadi yozuvlarini
+    // tozalab, leadni menejerga qaytadan chiqaradi.
+    const note = status === 'sale'
+      ? `Operator nazoratidan qayta Sotuvga yuborildi | Filial: ${selectedBranch}`
+      : 'Operator nazoratidan Atkazga o‘tkazildi'
+    const { data } = await client.patch(`operator/leads/${leadId}/change-status/`, {
       status,
       current_status: status,
       selected_branch: selectedBranch,
-    })
+      note,
+      reset_visit_decisions: true,
+      source: 'operator_visit_control',
+    }, { timeout: 20000 })
 
-    operatorVisitDecisions.value = operatorVisitDecisions.value.filter((row) => row.id !== item.id)
-    try {
-      await Promise.all([
-        fetchAllStatuses('Leadlar yangilanmoqda...'),
-        fetchDaily(),
-        fetchDailyHistory(),
-        fetchOperatorVisitDecisions(),
-      ])
-    } catch (refreshError) {
-      console.warn('Lead saqlandi, lekin ro‘yxatlarni yangilashda xatolik:', refreshError)
-    }
-    showSuccess(data?.detail || (status === 'sale' ? 'Lead tanlangan filial menejeriga qayta yuborildi. Menejer Keldi/Kelmadi qilganda karta bu yerga qaytadi.' : 'Lead Atkaz bo‘limiga o‘tkazildi va bu ro‘yxatdan olib tashlandi.'))
-    return true
+    operatorVisitDecisions.value = operatorVisitDecisions.value.filter((row) => row.id !== item.id && Number(row.lead_id || row.lead) !== leadId)
+    showSuccess(status === 'sale'
+      ? 'Lead tanlangan filial menejerining Leadlar bo‘limiga qayta yuborildi.'
+      : 'Lead Atkaz bo‘limiga o‘tkazildi va bu ro‘yxatdan olib tashlandi.')
+
+    // API javobini kutib bo‘lgach ro‘yxatlarni fon rejimida yangilaymiz.
+    Promise.allSettled([
+      fetchAllStatuses('Leadlar yangilanmoqda...'),
+      fetchDaily(),
+      fetchDailyHistory(),
+      fetchOperatorVisitDecisions(),
+    ]).catch(() => {})
+    return Boolean(data) || true
   } catch (error) {
-    errorMessage.value = extractApiError(error, status === 'sale' ? 'Leadni qayta Sotuvga yuborishda xatolik yuz berdi.' : 'Leadni Atkazga o‘tkazishda xatolik yuz berdi.')
+    const message = extractApiError(error, status === 'sale'
+      ? 'Leadni qayta Sotuvga yuborishda xatolik yuz berdi.'
+      : 'Leadni Atkazga o‘tkazishda xatolik yuz berdi.')
+    errorMessage.value = message
+    if (typeof window !== 'undefined' && window.alert) window.alert(message)
     return false
   } finally {
     visitActionLoadingId.value = null

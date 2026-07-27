@@ -455,6 +455,26 @@ class OperatorVisitDecisionReclassifyTests(TestCase):
         self.assertEqual(manager_response.status_code, 200)
         self.assertNotIn(self.lead.id, [row['id'] for row in manager_response.json()])
 
+    def test_existing_change_status_endpoint_resets_visit_decisions(self):
+        response = self.client.patch(
+            f'/api/operator/leads/{self.lead.id}/change-status/',
+            data=json.dumps({
+                'status': 'sale',
+                'current_status': 'sale',
+                'selected_branch': 'Chinoz',
+                'note': 'Operator nazoratidan qayta sotuvga yuborildi',
+                'reset_visit_decisions': True,
+                'source': 'operator_visit_control',
+            }),
+            content_type='application/json',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.current_status, 'sale')
+        self.assertEqual(self.lead.branch_name, 'Chinoz')
+        self.assertFalse(LeadVisitDecision.objects.filter(lead=self.lead).exists())
+
     def test_other_operator_cannot_reclassify_card(self):
         response = self.client.post(
             f'/api/operator/lead-visit-decisions/{self.decision.id}/reclassify/',

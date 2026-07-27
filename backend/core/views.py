@@ -1411,6 +1411,7 @@ def change_status(request, lead_id):
     body = json_body(request)
     next_status = clean_string(body.get('current_status') or body.get('status'))
     note = clean_string(body.get('note'))
+    reset_visit_decisions = bool(body.get('reset_visit_decisions')) and clean_string(body.get('source')) == 'operator_visit_control'
     if request.method not in ('PATCH', 'PUT', 'POST'):
         return ok({'detail': 'Method not allowed'}, status=405)
     if not is_valid_status(next_status):
@@ -1454,6 +1455,14 @@ def change_status(request, lead_id):
                 changed_by=request.app_user,
                 note=history_note,
             )
+
+            # Operatorning Menejer nazorati kartasidan qayta Sotuv/Atkaz bosilganda
+            # eski Keldi/Kelmadi va to‘lov yozuvlari qolsa lead menejerga qayta
+            # chiqmaydi. Faqat maxsus operator_visit_control manbasida tozalaymiz.
+            reset_decision_count = 0
+            if reset_visit_decisions and next_status in ('sale', 'otkaz'):
+                reset_decision_count, _ = LeadVisitDecision.objects.filter(lead=lead).delete()
+
             try:
                 DataAuditLog.objects.create(
                     actor=request.app_user,
@@ -1461,7 +1470,13 @@ def change_status(request, lead_id):
                     entity_id=lead.id,
                     action='status_changed',
                     old_data={'current_status': old_status},
-                    new_data={'current_status': next_status, 'note': history_note, 'selected_branch': selected_branch},
+                    new_data={
+                        'current_status': next_status,
+                        'note': history_note,
+                        'selected_branch': selected_branch,
+                        'visit_decisions_reset': bool(reset_visit_decisions),
+                        'reset_decision_count': reset_decision_count,
+                    },
                 )
             except Exception:
                 # Audit log status almashtirishni to‘xtatib qo‘ymasligi kerak.

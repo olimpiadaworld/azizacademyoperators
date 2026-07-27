@@ -4821,8 +4821,14 @@ tr:hover td {
   transform: none;
 }
 
+.operator-visit-modal-overlay {
+  z-index: 5000;
+}
+
 .operator-visit-sale-modal {
   width: min(760px, calc(100vw - 28px));
+  max-height: min(760px, calc(100dvh - 28px));
+  overflow-y: auto;
 }
 
 .operator-visit-sale-modal__grid {
