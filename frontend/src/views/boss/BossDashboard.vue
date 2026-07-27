@@ -474,7 +474,7 @@
       </template>
     </div>
 
-    <div v-if="!isFilialRahbari && currentView === 'manager'" class="panel glass panel--manager-section">
+    <div v-if="!isFilialRahbari && currentView === 'manager'" class="panel glass panel--manager-section boss-manager-control-panel">
       <div class="section-divider">
         <span class="section-divider__line"></span>
         <span class="section-divider__label">Leadlardan alohida nazorat bo‘limi</span>
@@ -571,82 +571,59 @@
 
       <div v-if="!filteredBossVisitDecisions.length" class="empty-state">Menenjerdan hali belgi kelmagan.</div>
       <template v-else>
-        <div v-if="isCompactSwiperViewport" class="operator-swiper glass-soft lead-mobile-swiper manager-mobile-swiper">
-          <div class="operator-swiper__head">
-            <div>
-              <div class="eyebrow">Nazorat swiper</div>
-              <strong>{{ bossDecisionCurrentPositionLabel }}</strong>
-              <div class="operator-swiper__meta">Jami cardlar: {{ filteredBossVisitDecisions.length }} ta</div>
-            </div>
-            <div class="operator-swiper__controls">
-              <button class="swiper-arrow" type="button" @click="prevBossDecisionSlide" :disabled="!bossDecisionCanSlide" aria-label="Oldingi nazorat cardi">←</button>
-              <button class="swiper-arrow" type="button" @click="nextBossDecisionSlide" :disabled="!bossDecisionCanSlide" aria-label="Keyingi nazorat cardi">→</button>
-            </div>
+        <div class="boss-manager-carousel-toolbar">
+          <div class="boss-manager-carousel-toolbar__info">
+            <span class="boss-manager-carousel-toolbar__icon"><NavIcon name="briefcase" /></span>
+            <span>
+              <strong>Menenjer nazorati kartalari</strong>
+              <small>Desktopda 4 ta karta ko‘rinadi — qolganlarini yon tomonga suring</small>
+            </span>
           </div>
-
-          <div class="operator-swiper__viewport">
-            <div class="operator-swiper__track" :style="bossDecisionTrackStyle">
-              <div v-for="item in filteredBossVisitDecisions" :key="item.id" class="operator-swiper__slide">
-                <div class="visit-mini-card glass">
-                  <div class="visit-mini-card__head visit-mini-card__head--payment">
-                    <span :class="['payment-dot', paymentDotClass(item)]" :title="leadPaymentStatusLabel(item)"></span>
-                    <div>
-                      <h4>{{ item.lead_name }}</h4>
-                      <div class="boss-lead-item__chips">
-                        <span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
-                        <span class="badge muted">{{ item.filial_rahbari_name }}</span>
-                        <span :class="['badge', paymentBadgeClass(item)]">{{ leadPaymentStatusLabel(item) }}</span>
-                      </div>
-                    </div>
-                    <span class="badge">{{ formatDateTime(item.updated_at) }}</span>
-                  </div>
-                  <div class="visit-mini-card__meta">
-                    <span><strong>tel1:</strong> {{ item.lead_phone || '-' }}</span>
-                    <span><strong>tel2:</strong> {{ item.lead_phone2 || '-' }}</span>
-                    <span><strong>tel3:</strong> {{ item.lead_phone3 || '-' }}</span>
-                    <span><strong>T/SH:</strong> {{ item.tsh || '-' }}</span>
-                    <span><strong>Maktab:</strong> {{ item.display_school || item.school || '-' }}</span>
-                    <span><strong>Sinf:</strong> {{ item.grade || '-' }}</span>
-                    <span><strong>Fan:</strong> {{ item.subject || '-' }}</span>
-                    <span><strong>Ball:</strong> {{ item.ball || '-' }}</span>
-                    <span v-if="item.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ item.operator_note }}</span>
-                    <span v-if="item.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(item.operator_note_at) }}</span>
-                    <span><strong>Operator:</strong> {{ item.operator_name || '-' }}</span>
-                    <span><strong>Holat:</strong> {{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
-                    <span><strong>To‘lov:</strong> {{ leadPaymentStatusLabel(item) }}</span>
-                    <span v-if="item.payment_done_by_name"><strong>To‘lov qilgan:</strong> {{ item.payment_done_by_name }}</span>
-                    <span v-if="item.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(item.payment_done_at) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="boss-manager-carousel-toolbar__actions">
+            <button type="button" class="boss-manager-carousel-arrow" aria-label="Oldingi kartalar" @click="scrollBossManagerCarousel(-1)"><NavIcon name="arrowLeft" /></button>
+            <button type="button" class="boss-manager-carousel-arrow" aria-label="Keyingi kartalar" @click="scrollBossManagerCarousel(1)"><NavIcon name="arrowRight" /></button>
           </div>
         </div>
 
-        <div v-else class="boss-lead-list boss-lead-list--compact">
-          <div v-for="item in filteredBossVisitDecisions" :key="item.id" class="visit-mini-card glass">
-            <div class="visit-mini-card__head visit-mini-card__head--payment">
-              <span :class="['payment-dot', paymentDotClass(item)]" :title="leadPaymentStatusLabel(item)"></span>
-              <div>
-                <h4>{{ item.lead_name }}</h4>
-                <div class="boss-lead-item__chips">
-                  <span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
-                  <span class="badge muted">{{ item.filial_rahbari_name }}</span>
+        <div ref="bossManagerCarouselRef" class="boss-manager-control-carousel">
+          <article
+            v-for="item in filteredBossVisitDecisions"
+            :key="`boss-manager-control-${item.id}`"
+            class="visit-mini-card glass boss-manager-control-card"
+          >
+            <div class="boss-manager-control-card__head">
+              <span :class="['boss-manager-control-card__status', item.decision === 'arrived' ? 'is-arrived' : 'is-not-arrived']" :title="item.decision === 'arrived' ? 'Keldi' : 'Kelmadi'">
+                <NavIcon :name="item.decision === 'arrived' ? 'checkCircle' : 'xCircle'" />
+              </span>
+              <div class="boss-manager-control-card__identity">
+                <h4>{{ item.lead_name || item.full_name || 'Ism yo‘q' }}</h4>
+                <div class="boss-manager-control-card__chips">
+                  <span :class="['badge', item.decision === 'arrived' ? 'arrived-badge' : 'not-arrived-badge']">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
+                  <span v-if="item.filial_rahbari_name" class="badge muted">{{ item.filial_rahbari_name }}</span>
                   <span :class="['badge', paymentBadgeClass(item)]">{{ leadPaymentStatusLabel(item) }}</span>
                 </div>
               </div>
-              <span class="badge">{{ formatDateTime(item.updated_at) }}</span>
+              <span class="boss-manager-control-card__time">{{ formatDateTime(item.updated_at) }}</span>
             </div>
-            <div class="visit-mini-card__meta">
-              <span><strong>tel1:</strong> {{ item.lead_phone || '-' }}</span>
-              <span><strong>tel2:</strong> {{ item.lead_phone2 || '-' }}</span>
-              <span><strong>tel3:</strong> {{ item.lead_phone3 || '-' }}</span>
-              <span><strong>Holat:</strong> {{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
-              <span><strong>To‘lov:</strong> {{ leadPaymentStatusLabel(item) }}</span>
-              <span v-if="item.payment_done_by_name"><strong>To‘lov qilgan:</strong> {{ item.payment_done_by_name }}</span>
-              <span v-if="item.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(item.payment_done_at) }}</span>
+
+            <div class="boss-manager-control-card__meta">
+              <span><strong>tel1</strong><em>{{ item.lead_phone || item.phone1 || '-' }}</em></span>
+              <span><strong>tel2</strong><em>{{ item.lead_phone2 || item.phone2 || '-' }}</em></span>
+              <span><strong>tel3</strong><em>{{ item.lead_phone3 || item.phone3 || '-' }}</em></span>
+              <span><strong>T/SH</strong><em>{{ item.tsh || '-' }}</em></span>
+              <span><strong>Maktab</strong><em>{{ item.display_school || item.school || '-' }}</em></span>
+              <span><strong>Sinf</strong><em>{{ item.grade || '-' }}</em></span>
+              <span><strong>Fan</strong><em>{{ item.subject || '-' }}</em></span>
+              <span><strong>Ball</strong><em>{{ item.ball || '-' }}</em></span>
+              <span><strong>Operator</strong><em>{{ item.operator_name || '-' }}</em></span>
+              <span><strong>Holat</strong><em>{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</em></span>
+              <span><strong>To‘lov</strong><em>{{ leadPaymentStatusLabel(item) }}</em></span>
+              <span v-if="item.payment_done_by_name"><strong>To‘lov qilgan</strong><em>{{ item.payment_done_by_name }}</em></span>
+              <span v-if="item.payment_done_at"><strong>To‘lov vaqti</strong><em>{{ formatDateTime(item.payment_done_at) }}</em></span>
+              <span v-if="item.operator_note" class="boss-manager-control-card__wide boss-manager-control-card__note"><strong>Operator izohi</strong><em>{{ item.operator_note }}</em></span>
+              <span v-if="item.operator_note_at" class="boss-manager-control-card__wide"><strong>Izoh vaqti</strong><em>{{ formatDateTime(item.operator_note_at) }}</em></span>
             </div>
-          </div>
+          </article>
         </div>
       </template>
 
@@ -1872,6 +1849,7 @@ const filialPaymentTabDecisionFilter = ref('all')
 const filialPaymentTabPaymentFilter = ref('all')
 const showPaymentFilterMenu = ref(false)
 const paymentCarouselRef = ref(null)
+const bossManagerCarouselRef = ref(null)
 const activeDecisionFilter = computed({
   get: () => isFilialRahbari.value ? filialPaymentTabDecisionFilter.value : paymentSectionDecisionFilter.value,
   set: (value) => {
@@ -1945,6 +1923,22 @@ function scrollPaymentCarousel(direction) {
     : 1
   carousel.scrollBy({ left: direction * visibleCards * (cardWidth + gap), behavior: 'smooth' })
 }
+
+function scrollBossManagerCarousel(direction) {
+  const carousel = bossManagerCarouselRef.value
+  if (!carousel) return
+  const firstCard = carousel.querySelector('.boss-manager-control-card')
+  const cardWidth = firstCard?.getBoundingClientRect().width || carousel.clientWidth
+  const carouselStyle = window.getComputedStyle(carousel)
+  const gap = Number.parseFloat(carouselStyle.columnGap || carouselStyle.gap) || 12
+  const visibleCards = Math.max(1, Math.floor((carousel.clientWidth + gap) / (cardWidth + gap)))
+  carousel.scrollBy({ left: direction * visibleCards * (cardWidth + gap), behavior: 'smooth' })
+}
+
+watch(filteredBossVisitDecisions, async () => {
+  await nextTick()
+  bossManagerCarouselRef.value?.scrollTo({ left: 0, behavior: 'smooth' })
+})
 
 const paymentSectionItems = computed(() => {
   if (isFilialRahbari.value) {
@@ -6468,6 +6462,329 @@ onBeforeUnmount(() => {
   }
 
   .panel--payment-section:not(.manager-payment-panel) .boss-payment-card .visit-mini-card__meta > span {
+    min-height: 0;
+  }
+}
+
+
+/* Boss panel — Menejer nazorati: 4 kartali gorizontal swiper */
+.boss-manager-control-panel {
+  overflow: hidden;
+}
+
+.boss-manager-carousel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(37, 99, 235, .13);
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(239, 246, 255, .96), rgba(255, 255, 255, .94));
+}
+
+.boss-manager-carousel-toolbar__info {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.boss-manager-carousel-toolbar__icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(145deg, #2563eb, #1d4ed8);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, .22);
+}
+
+.boss-manager-carousel-toolbar__icon :deep(.nav-icon) {
+  width: 19px;
+  height: 19px;
+}
+
+.boss-manager-carousel-toolbar__info > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.boss-manager-carousel-toolbar__info strong {
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.boss-manager-carousel-toolbar__info small {
+  color: #64748b;
+  font-size: 10.5px;
+  line-height: 1.3;
+}
+
+.boss-manager-carousel-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.boss-manager-carousel-arrow {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  padding: 0;
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: 11px;
+  color: #1d4ed8;
+  background: #fff;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, .06);
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.boss-manager-carousel-arrow:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, .38);
+  background: #eff6ff;
+}
+
+.boss-manager-carousel-arrow :deep(.nav-icon) {
+  width: 17px;
+  height: 17px;
+}
+
+.boss-manager-control-carousel {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 2px 2px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: inline mandatory;
+  scroll-behavior: smooth;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 235, .35) rgba(226, 232, 240, .55);
+  -webkit-overflow-scrolling: touch;
+}
+
+.boss-manager-control-carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.boss-manager-control-carousel::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(226, 232, 240, .58);
+}
+
+.boss-manager-control-carousel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+}
+
+.boss-manager-control-card {
+  min-width: 270px;
+  flex: 0 0 calc((100% - 36px) / 4);
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(226, 232, 240, .96);
+  border-radius: 19px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(37, 99, 235, .07), transparent 34%),
+    linear-gradient(180deg, #fff, #fbfdff);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .075);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.boss-manager-control-card__head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(226, 232, 240, .82);
+}
+
+.boss-manager-control-card__status {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid rgba(37, 99, 235, .14);
+}
+
+.boss-manager-control-card__status.is-arrived {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: rgba(5, 150, 105, .18);
+}
+
+.boss-manager-control-card__status.is-not-arrived {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, .17);
+}
+
+.boss-manager-control-card__status :deep(.nav-icon) {
+  width: 19px;
+  height: 19px;
+}
+
+.boss-manager-control-card__identity {
+  min-width: 0;
+}
+
+.boss-manager-control-card__identity h4 {
+  margin: 0 0 6px;
+  color: #0f172a;
+  font-size: clamp(16px, 1.35vw, 20px);
+  line-height: 1.12;
+  letter-spacing: -.02em;
+  overflow-wrap: anywhere;
+}
+
+.boss-manager-control-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.boss-manager-control-card__chips .badge {
+  min-height: 22px;
+  padding: 3px 7px;
+  border-radius: 8px;
+  font-size: 9.5px;
+  line-height: 1.12;
+}
+
+.boss-manager-control-card__time {
+  grid-column: 1 / -1;
+  justify-self: start;
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 8px;
+  color: #64748b;
+  background: rgba(248, 250, 252, .96);
+  border: 1px solid rgba(226, 232, 240, .9);
+  font-size: 9.5px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.boss-manager-control-card__meta {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  flex: 1;
+  align-content: start;
+}
+
+.boss-manager-control-card__meta > span {
+  min-width: 0;
+  min-height: 42px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 7px 8px;
+  border: 1px solid rgba(226, 232, 240, .94);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, .86);
+}
+
+.boss-manager-control-card__meta strong {
+  color: #64748b;
+  font-size: 9.3px;
+  line-height: 1.15;
+}
+
+.boss-manager-control-card__meta em {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.boss-manager-control-card__wide {
+  grid-column: 1 / -1;
+}
+
+.boss-manager-control-card__note {
+  align-content: start !important;
+  background: rgba(239, 246, 255, .9) !important;
+  border-color: rgba(37, 99, 235, .16) !important;
+}
+
+@media (max-width: 1280px) {
+  .boss-manager-control-card {
+    flex-basis: calc((100% - 24px) / 3);
+  }
+}
+
+@media (max-width: 960px) {
+  .boss-manager-control-card {
+    flex-basis: calc((100% - 12px) / 2);
+  }
+}
+
+@media (max-width: 640px) {
+  .boss-manager-carousel-toolbar {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .boss-manager-carousel-toolbar__info small {
+    display: none;
+  }
+
+  .boss-manager-carousel-toolbar__icon,
+  .boss-manager-carousel-arrow {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .boss-manager-control-card {
+    min-width: 0;
+    flex-basis: calc(100% - 8px);
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .boss-manager-control-card__identity h4 {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 390px) {
+  .boss-manager-control-card__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .boss-manager-control-card__wide {
+    grid-column: auto;
+  }
+
+  .boss-manager-control-card__meta > span {
     min-height: 0;
   }
 }
