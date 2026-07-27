@@ -111,6 +111,32 @@
       </div>
     </div>
 
+    <div v-if="visitResaleModal.open" class="modal-overlay">
+      <div class="modal-card glass assigned-status-modal operator-visit-sale-modal">
+        <div class="modal-card__head">
+          <div>
+            <div class="eyebrow">QAYTA SOTUVGA YUBORISH</div>
+            <h3>Qaysi filial menejeriga yuborilsin?</h3>
+            <p>{{ visitResaleModal.item?.lead_name || visitResaleModal.item?.full_name || 'Lead' }} tanlangan filial menejerining Leadlar bo‘limiga qayta tushadi.</p>
+          </div>
+          <button class="modal-close" type="button" :disabled="visitActionLoadingId === visitResaleModal.item?.id" @click="closeVisitResaleModal">×</button>
+        </div>
+
+        <div class="assigned-status-modal__grid operator-visit-sale-modal__grid">
+          <button
+            v-for="branch in allSaleBranchNames"
+            :key="`visit-resale-${branch}`"
+            class="assigned-status-option sale"
+            type="button"
+            :disabled="visitActionLoadingId === visitResaleModal.item?.id"
+            @click="confirmVisitResale(branch)"
+          >
+            {{ branch }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="addLeadModal.step === 'form'" class="modal-overlay">
       <div class="modal-card glass add-lead-modal">
         <div class="modal-card__head">
@@ -381,6 +407,26 @@
               <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>Holatni belgilagan:</strong> {{ item.payment_status_by_name || '-' }}</span>
               <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>To‘lov holati vaqti:</strong> {{ formatDateTime(item.payment_status_at) }}</span>
             </div>
+            <div class="operator-visit-card__actions">
+              <button
+                class="operator-visit-card__action operator-visit-card__action--sale"
+                type="button"
+                :disabled="visitActionLoadingId === item.id"
+                @click="openVisitResaleModal(item)"
+              >
+                <span class="operator-visit-card__action-icon" aria-hidden="true">↗</span>
+                <span>{{ visitActionLoadingId === item.id && visitActionLoadingStatus === 'sale' ? 'Saqlanmoqda...' : 'Sotuv' }}</span>
+              </button>
+              <button
+                class="operator-visit-card__action operator-visit-card__action--otkaz"
+                type="button"
+                :disabled="visitActionLoadingId === item.id"
+                @click="reclassifyVisitDecision(item, 'otkaz')"
+              >
+                <span class="operator-visit-card__action-icon" aria-hidden="true">×</span>
+                <span>{{ visitActionLoadingId === item.id && visitActionLoadingStatus === 'otkaz' ? 'Saqlanmoqda...' : 'Atkaz' }}</span>
+              </button>
+            </div>
           </article>
         </div>
         <div v-else class="empty-state">Sizga tegishli filiallar bo‘yicha Keldi/Kelmadi natijasi hali yo‘q.</div>
@@ -409,6 +455,7 @@
           @save-reminder="saveReminder"
           @clear-reminder="clearReminder"
           @save-name="saveLeadName"
+          @save-phone="saveLeadPhone"
         />
       </div>
       <div v-else class="operator-new-leads__empty">
@@ -438,6 +485,7 @@
           @save-reminder="saveReminder"
           @clear-reminder="clearReminder"
           @save-name="saveLeadName"
+          @save-phone="saveLeadPhone"
         />
       </div>
       <div v-else class="operator-new-leads__empty">
@@ -478,6 +526,7 @@
             @save-reminder="saveReminder"
             @clear-reminder="clearReminder"
             @save-name="saveLeadName"
+            @save-phone="saveLeadPhone"
           />
         </template>
       </ResponsiveSwiper>
@@ -493,6 +542,7 @@
           @save-reminder="saveReminder"
           @clear-reminder="clearReminder"
           @save-name="saveLeadName"
+          @save-phone="saveLeadPhone"
         />
       </div>
       <div v-else class="operator-new-leads__empty">
@@ -584,6 +634,7 @@
             @save-reminder="saveReminder"
             @clear-reminder="clearReminder"
             @save-name="saveLeadName"
+            @save-phone="saveLeadPhone"
           />
         </div>
 
@@ -652,6 +703,9 @@ const monthlyHistory = ref([])
 const operatorVisitDecisions = ref([])
 const operatorDecisionFilter = ref('all')
 const operatorPaymentFilter = ref('all')
+const visitActionLoadingId = ref(null)
+const visitActionLoadingStatus = ref('')
+const visitResaleModal = reactive({ open: false, item: null })
 const selectedStatusKey = ref('')
 const draggedLead = ref(null)
 const dropTargetStatus = ref('')
@@ -1056,6 +1110,60 @@ async function fetchOperatorVisitDecisions() {
   }
 }
 
+function openVisitResaleModal(item) {
+  if (!item?.id) return
+  errorMessage.value = ''
+  visitResaleModal.open = true
+  visitResaleModal.item = item
+}
+
+function closeVisitResaleModal() {
+  if (visitActionLoadingId.value) return
+  visitResaleModal.open = false
+  visitResaleModal.item = null
+}
+
+async function confirmVisitResale(branch) {
+  const item = visitResaleModal.item
+  if (!item?.id || !branch) return
+  const saved = await reclassifyVisitDecision(item, 'sale', branch)
+  if (saved) closeVisitResaleModal()
+}
+
+async function reclassifyVisitDecision(item, status, selectedBranch = '') {
+  if (!item?.id || !['sale', 'otkaz'].includes(status)) return false
+  errorMessage.value = ''
+  try {
+    visitActionLoadingId.value = item.id
+    visitActionLoadingStatus.value = status
+    const { data } = await client.post(`operator/lead-visit-decisions/${item.id}/reclassify/`, {
+      status,
+      current_status: status,
+      selected_branch: selectedBranch,
+    })
+
+    operatorVisitDecisions.value = operatorVisitDecisions.value.filter((row) => row.id !== item.id)
+    try {
+      await Promise.all([
+        fetchAllStatuses('Leadlar yangilanmoqda...'),
+        fetchDaily(),
+        fetchDailyHistory(),
+        fetchOperatorVisitDecisions(),
+      ])
+    } catch (refreshError) {
+      console.warn('Lead saqlandi, lekin ro‘yxatlarni yangilashda xatolik:', refreshError)
+    }
+    showSuccess(data?.detail || (status === 'sale' ? 'Lead tanlangan filial menejeriga qayta yuborildi.' : 'Lead Atkaz bo‘limiga o‘tkazildi.'))
+    return true
+  } catch (error) {
+    errorMessage.value = extractApiError(error, status === 'sale' ? 'Leadni qayta Sotuvga yuborishda xatolik yuz berdi.' : 'Leadni Atkazga o‘tkazishda xatolik yuz berdi.')
+    return false
+  } finally {
+    visitActionLoadingId.value = null
+    visitActionLoadingStatus.value = ''
+  }
+}
+
 function updateLeadInLists(updatedLead) {
   fetchStatusOrder.forEach((status) => {
     leadsByStatus[status] = (leadsByStatus[status] || []).map((item) => (item.id === updatedLead.id ? updatedLead : item))
@@ -1344,6 +1452,28 @@ async function saveLeadName(payload) {
   } catch (error) {
     errorMessage.value = error?.response?.data?.detail || 'Ismni saqlashda xatolik yuz berdi.'
     throw error
+  }
+}
+
+async function saveLeadPhone(payload) {
+  errorMessage.value = ''
+  const field = ['phone2', 'phone3'].includes(payload?.field) ? payload.field : ''
+  if (!field) {
+    payload?.onError?.('Faqat tel2 yoki tel3 ni tahrirlash mumkin.')
+    return
+  }
+
+  try {
+    const { data } = await client.patch(`operator/leads/${payload.lead.id}/update-phones/`, {
+      [field]: payload.value,
+    })
+    updateLeadInLists(data)
+    payload?.onSuccess?.(data)
+    showActionToast(`${field === 'phone2' ? 'tel2' : 'tel3'} raqami saqlandi.`)
+  } catch (error) {
+    const message = extractApiError(error, 'Telefon raqamini saqlashda xatolik yuz berdi.')
+    errorMessage.value = message
+    payload?.onError?.(message)
   }
 }
 

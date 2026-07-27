@@ -1195,6 +1195,76 @@ def operator_update_lead_name(request, lead_id):
     return ok(get_one_lead(lead.id))
 
 
+@csrf_exempt
+@require_auth('operator')
+def operator_update_lead_phones(request, lead_id):
+    """Operator o'ziga biriktirilgan leadning tel2 yoki tel3 raqamini qo'shadi/tahrirlaydi."""
+    if request.method not in ('PATCH', 'PUT'):
+        return ok({'detail': 'Method not allowed'}, status=405)
+
+    lead = Lead.objects.filter(id=lead_id, assigned_operator=request.app_user).first()
+    if not lead:
+        return ok({'detail': 'Bu lead sizga tegishli emas.'}, status=403)
+
+    body = json_body(request)
+    allowed_fields = ('phone2', 'phone3')
+    changed_fields = []
+    old_data = {}
+    new_data = {}
+
+    for field in allowed_fields:
+        if field not in body:
+            continue
+
+        normalized = normalize_phone(body.get(field))
+        digits = ''.join(ch for ch in normalized if ch.isdigit())
+        if not normalized or len(digits) < 7:
+            label = 'tel2' if field == 'phone2' else 'tel3'
+            return ok({field: ['Telefon raqami noto‘g‘ri.'], 'detail': f'{label} uchun to‘g‘ri telefon raqami kiriting.'}, status=400)
+
+        old_value = getattr(lead, field) or ''
+        if normalized == old_value:
+            continue
+
+        # Bitta lead ichida aynan bir xil raqam takrorlanib qolmasin.
+        other_fields = ('phone1', 'phone3') if field == 'phone2' else ('phone1', 'phone2')
+        if any(normalize_phone(getattr(lead, other, '') or '') == normalized for other in other_fields):
+            return ok({field: ['Bu raqam leadning boshqa telefon maydonida mavjud.'], 'detail': 'Bu telefon raqami ushbu leadga oldin kiritilgan.'}, status=400)
+
+        old_data[field] = old_value
+        new_data[field] = normalized
+        setattr(lead, field, normalized)
+        changed_fields.append(field)
+
+    if not any(field in body for field in allowed_fields):
+        return ok({'detail': 'Faqat tel2 yoki tel3 yuborilishi mumkin.'}, status=400)
+
+    if not changed_fields:
+        return ok(get_one_lead(lead.id))
+
+    lead.updated_at = timezone.now()
+    lead.save(update_fields=[*changed_fields, 'updated_at'])
+
+    # Online forma orqali kelgan lead bo'lsa, manba yozuvini ham bir xil saqlaymiz.
+    online_updates = {field: getattr(lead, field) for field in changed_fields}
+    if online_updates:
+        OnlineLead.objects.filter(created_lead=lead).update(**online_updates)
+
+    try:
+        DataAuditLog.objects.create(
+            actor=request.app_user,
+            entity_type='lead',
+            entity_id=lead.id,
+            action='operator_phone_updated',
+            old_data=old_data,
+            new_data=new_data,
+        )
+    except Exception:
+        pass
+
+    return ok(get_one_lead(lead.id))
+
+
 @require_auth('boss')
 def boss_incoming_leads(request):
     """Boss uchun: o'zining operatorlari qo'lda qo'shgan (kiruvchi qo'ng'iroq) leadlar."""
@@ -1911,6 +1981,140 @@ def operator_visit_decisions(request):
     elif payment == 'pending':
         visible = [item for item in visible if visit_payment_status(item) == 'pending']
     return ok([visit_decision_to_dict(x) for x in visible])
+
+
+@csrf_exempt
+@require_auth('operator')
+def operator_reclassify_visit_decision(request, decision_id):
+    """Operator nazorat kartasini qayta Sotuv yoki Atkaz bo‘limiga yuboradi.
+
+    Sotuv tanlanganda eski Keldi/Kelmadi va to‘lov belgilarini yopamiz, aks holda
+    menenjer paneli leadni qayta ko‘rsatmaydi. Atkazda ham nazorat yozuvi olib
+    tashlanadi, lekin lead hech bir menenjer paneliga yuborilmaydi.
+    """
+    if request.method not in ('POST', 'PATCH', 'PUT'):
+        return ok({'detail': 'Method not allowed'}, status=405)
+
+    body = json_body(request)
+    next_status = clean_string(body.get('status') or body.get('current_status')).lower()
+    if next_status not in ('sale', 'otkaz'):
+        return ok({'status': ['Faqat Sotuv yoki Atkaz tanlash mumkin.'], 'detail': 'Faqat Sotuv yoki Atkaz tanlash mumkin.'}, status=400)
+
+    selected_branch = ''
+    if next_status == 'sale':
+        selected_branch = normalize_branch_label(body.get('selected_branch') or body.get('branch_name') or body.get('filial') or '')
+        if not selected_branch:
+            return ok({'selected_branch': ['Sotuv uchun filialni tanlang.'], 'detail': 'Sotuv uchun filialni tanlang.'}, status=400)
+        if selected_branch not in BRANCH_CHOICES:
+            return ok({'selected_branch': ['Tanlangan filial topilmadi.'], 'detail': 'Tanlangan filial topilmadi.'}, status=400)
+
+    decision = LeadVisitDecision.objects.select_related(
+        'lead', 'lead__assigned_operator', 'lead__boss', 'decided_by',
+        'payment_done_by', 'payment_not_done_by', 'left_without_payment_by',
+    ).filter(id=decision_id, lead__assigned_operator=request.app_user).first()
+    if not decision or not decision.lead:
+        return ok({'detail': 'Bu nazorat kartasi topilmadi yoki sizga tegishli emas.'}, status=404)
+    if not decision.decided_by or not users_branch_overlap(request.app_user, decision.decided_by):
+        return ok({'detail': 'Bu nazorat kartasi sizning filiallaringizga tegishli emas.'}, status=403)
+
+    try:
+        with transaction.atomic():
+            lead = Lead.objects.select_for_update().select_related('assigned_operator', 'boss').get(
+                id=decision.lead_id,
+                assigned_operator=request.app_user,
+            )
+            locked_decisions = list(
+                LeadVisitDecision.objects.select_for_update()
+                .select_related('decided_by')
+                .filter(lead=lead)
+                .order_by('id')
+            )
+            old_status = lead.current_status
+            old_branch = lead.branch_name
+            decision_snapshot = [
+                {
+                    'id': row.id,
+                    'decision': row.decision,
+                    'decided_by_id': row.decided_by_id,
+                    'decided_by_name': ((row.decided_by.full_name or row.decided_by.username) if row.decided_by_id and row.decided_by else ''),
+                    'payment_status': visit_payment_status(row),
+                }
+                for row in locked_decisions
+            ]
+
+            lead.current_status = next_status
+            lead.updated_at = timezone.now()
+            update_fields = ['current_status', 'updated_at']
+            if next_status == 'sale':
+                lead.branch_name = selected_branch
+                update_fields.append('branch_name')
+            lead.save(update_fields=update_fields)
+
+            action_label = 'qayta Sotuvga yuborildi' if next_status == 'sale' else 'Atkazga o‘tkazildi'
+            history_note = f'Operator nazorat bo‘limidan {action_label}'
+            if selected_branch:
+                history_note += f' | Filial: {selected_branch}'
+            LeadStatusHistory.objects.create(
+                lead=lead,
+                old_status=old_status,
+                new_status=next_status,
+                changed_by=request.app_user,
+                note=history_note[:500],
+            )
+
+            # Menejer paneliga qayta tushishi yoki Atkazga toza o‘tishi uchun
+            # avvalgi faol nazorat belgilarini olib tashlaymiz.
+            LeadVisitDecision.objects.filter(lead=lead).delete()
+
+            try:
+                DataAuditLog.objects.create(
+                    actor=request.app_user,
+                    entity_type='lead',
+                    entity_id=lead.id,
+                    action='operator_visit_reclassified',
+                    old_data={
+                        'current_status': old_status,
+                        'branch_name': old_branch,
+                        'visit_decisions': decision_snapshot,
+                    },
+                    new_data={
+                        'current_status': next_status,
+                        'branch_name': lead.branch_name,
+                        'selected_branch': selected_branch,
+                        'visit_decisions_reset': True,
+                    },
+                )
+            except Exception:
+                pass
+
+            if next_status == 'sale':
+                msg = (
+                    '🔁 <b>Lead qayta SOTUVGA yuborildi</b>\n'
+                    + tg_line('Vaqt', tg_now_text())
+                    + tg_line('Operator', tg_user_name(request.app_user))
+                    + tg_line('Filial', selected_branch)
+                    + '\n' + tg_lead_info(lead)
+                )
+                try:
+                    notify_telegram_after_commit(msg)
+                except Exception:
+                    pass
+    except Lead.DoesNotExist:
+        return ok({'detail': 'Bu lead sizga tegishli emas.'}, status=403)
+    except Exception as exc:
+        logger.exception('Operator nazorat kartasini qayta bo‘limga yuborishda xato.')
+        return ok({'detail': f'Amalni saqlashda backend xatoligi: {exc}'}, status=400)
+
+    return ok({
+        'detail': (
+            f'Lead {BRANCH_MANAGER_DISPLAY_NAMES.get(selected_branch, selected_branch)} filial menejeriga qayta yuborildi.'
+            if next_status == 'sale'
+            else 'Lead Atkaz bo‘limiga o‘tkazildi.'
+        ),
+        'status': next_status,
+        'selected_branch': selected_branch,
+        'lead': get_one_lead(lead.id),
+    })
 
 
 def autosize(ws):

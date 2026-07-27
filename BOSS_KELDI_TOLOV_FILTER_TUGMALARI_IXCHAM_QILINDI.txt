@@ -1,8 +1,0 @@
-BOSS PANEL KELDI/TO'LOV FILTER TUGMALARI IXCHAM QILINDI
-
-- Faqat Boss panelining Keldi/To'lov bo'limidagi 8 ta filtr tugmasi o'zgartirildi.
-- Katta SVG ikonlar 15px ga tushirildi.
-- Tugmalar balandligi va paddingi ixchamlashtirildi.
-- Desktopda ikki ixcham qator, kichik ekranlarda 3/2 ustunli grid ishlaydi.
-- Menejer paneli, lead kartalari va boshqa tugmalarga tegilmadi.
-- PWA cache v11 ga yangilandi.

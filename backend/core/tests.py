@@ -319,3 +319,150 @@ class ManagerPaymentStatusTests(TestCase):
         self.decision.refresh_from_db()
         self.assertTrue(self.decision.payment_done)
         self.assertEqual(self.decision.payment_done_by_id, self.new_manager.id)
+
+
+class OperatorPhoneUpdateTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.operator = AppUser.objects.create(
+            username='phone-operator',
+            password_hash='unused',
+            full_name='Phone Operator',
+            role='operator',
+        )
+        self.other_operator = AppUser.objects.create(
+            username='other-phone-operator',
+            password_hash='unused',
+            full_name='Other Operator',
+            role='operator',
+        )
+        self.lead = Lead.objects.create(
+            full_name='Phone Test Lead',
+            phone1='+998901112233',
+            assigned_operator=self.operator,
+            current_status='new',
+        )
+
+    def auth_headers(self, user):
+        token = issue_tokens(user)['access']
+        return {'HTTP_AUTHORIZATION': f'Bearer {token}'}
+
+    def test_operator_can_add_phone2_and_phone3_to_own_lead(self):
+        response = self.client.patch(
+            f'/api/operator/leads/{self.lead.id}/update-phones/',
+            data=json.dumps({'phone2': '91 222 33 44'}),
+            content_type='application/json',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.phone2, '+998912223344')
+        self.assertEqual(response.json()['phone2'], '+998912223344')
+
+        response = self.client.patch(
+            f'/api/operator/leads/{self.lead.id}/update-phones/',
+            data=json.dumps({'phone3': '+998 93 555 66 77'}),
+            content_type='application/json',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.phone3, '+998935556677')
+
+    def test_operator_cannot_update_another_operators_lead(self):
+        response = self.client.patch(
+            f'/api/operator/leads/{self.lead.id}/update-phones/',
+            data=json.dumps({'phone2': '+998901234567'}),
+            content_type='application/json',
+            **self.auth_headers(self.other_operator),
+        )
+        self.assertEqual(response.status_code, 403)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.phone2, '')
+
+    def test_duplicate_phone_inside_same_lead_is_rejected(self):
+        response = self.client.patch(
+            f'/api/operator/leads/{self.lead.id}/update-phones/',
+            data=json.dumps({'phone2': self.lead.phone1}),
+            content_type='application/json',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(response.status_code, 400)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.phone2, '')
+
+
+class OperatorVisitDecisionReclassifyTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.boss = AppUser.objects.create(
+            username='reclassify-boss', password_hash='unused', full_name='Boss', role='boss'
+        )
+        self.operator = AppUser.objects.create(
+            username='reclassify-operator', password_hash='unused', full_name='Operator',
+            role='operator', boss=self.boss, branch_name='Niyozbosh,Gulbahor'
+        )
+        self.other_operator = AppUser.objects.create(
+            username='other-reclassify-operator', password_hash='unused', full_name='Other Operator',
+            role='operator', boss=self.boss, branch_name='Gulbahor'
+        )
+        self.manager = AppUser.objects.create(
+            username='reclassify-manager', password_hash='unused', full_name='Gulbahor Menenjeri',
+            role='filial_rahbari', branch_name='Gulbahor'
+        )
+        self.lead = Lead.objects.create(
+            full_name='Qayta yuboriladigan lead', assigned_operator=self.operator,
+            boss=self.boss, current_status='sale', branch_name='Niyozbosh'
+        )
+        self.decision = LeadVisitDecision.objects.create(
+            lead=self.lead, decided_by=self.manager, decision='not_arrived'
+        )
+
+    def auth_headers(self, user):
+        token = issue_tokens(user)['access']
+        return {'HTTP_AUTHORIZATION': f'Bearer {token}'}
+
+    def test_operator_can_resend_sale_to_selected_manager(self):
+        response = self.client.post(
+            f'/api/operator/lead-visit-decisions/{self.decision.id}/reclassify/',
+            data=json.dumps({'status': 'sale', 'selected_branch': 'Gulbahor'}),
+            content_type='application/json',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.current_status, 'sale')
+        self.assertEqual(self.lead.branch_name, 'Gulbahor')
+        self.assertFalse(LeadVisitDecision.objects.filter(lead=self.lead).exists())
+
+        manager_response = self.client.get('/api/boss/leads/', **self.auth_headers(self.manager))
+        self.assertEqual(manager_response.status_code, 200)
+        self.assertIn(self.lead.id, [row['id'] for row in manager_response.json()])
+
+    def test_operator_can_move_card_to_otkaz_without_manager(self):
+        response = self.client.post(
+            f'/api/operator/lead-visit-decisions/{self.decision.id}/reclassify/',
+            data=json.dumps({'status': 'otkaz'}),
+            content_type='application/json',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.current_status, 'otkaz')
+        self.assertFalse(LeadVisitDecision.objects.filter(lead=self.lead).exists())
+
+        manager_response = self.client.get('/api/boss/leads/', **self.auth_headers(self.manager))
+        self.assertEqual(manager_response.status_code, 200)
+        self.assertNotIn(self.lead.id, [row['id'] for row in manager_response.json()])
+
+    def test_other_operator_cannot_reclassify_card(self):
+        response = self.client.post(
+            f'/api/operator/lead-visit-decisions/{self.decision.id}/reclassify/',
+            data=json.dumps({'status': 'otkaz'}),
+            content_type='application/json',
+            **self.auth_headers(self.other_operator),
+        )
+        self.assertEqual(response.status_code, 404)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.current_status, 'sale')
+        self.assertTrue(LeadVisitDecision.objects.filter(id=self.decision.id).exists())

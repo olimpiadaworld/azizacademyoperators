@@ -60,6 +60,7 @@ urlpatterns = [
     path('operator/leads/incoming/', views.operator_incoming_leads),
     path('operator/leads/<int:lead_id>/change-status/', views.change_status),
     path('operator/leads/<int:lead_id>/update-name/', views.operator_update_lead_name),
+    path('operator/leads/<int:lead_id>/update-phones/', views.operator_update_lead_phones),
     path('operator/leads/<int:lead_id>/reminder/', views.set_reminder),
     path('operator/reminders/', views.reminders),
     path('operator/online-leads/', views.operator_online_leads),
@@ -67,6 +68,7 @@ urlpatterns = [
     path('operator/daily-history/', views.operator_daily_history),
     path('operator/monthly-report/', views.operator_monthly_report),
     path('operator/lead-visit-decisions/', views.operator_visit_decisions),
+    path('operator/lead-visit-decisions/<int:decision_id>/reclassify/', views.operator_reclassify_visit_decision),
 
     path('public/online-leads/', views.public_online_leads),
 

@@ -72,35 +72,65 @@
           <span class="operator-phone-copy-row__hint">{{ copiedPhoneKey === 'phone1' ? '✓' : '📋' }}</span>
         </button>
 
-        <button
-          type="button"
-          class="operator-phone-copy-row"
-          :class="{ 'is-copyable': hasCopyablePhone(lead.phone2), 'is-copied': copiedPhoneKey === 'phone2' }"
-          :disabled="!hasCopyablePhone(lead.phone2)"
-          draggable="false"
-          @click.stop.prevent="copyPhone(lead.phone2, 'phone2')"
-          @pointerdown.stop
-          @dragstart.stop.prevent
-          @mousedown.stop.prevent
-        >
-          <span class="operator-phone-copy-row__text"><strong>tel2:</strong> {{ formatPhone(lead.phone2) }}</span>
-          <span class="operator-phone-copy-row__hint">{{ copiedPhoneKey === 'phone2' ? '✓' : '📋' }}</span>
-        </button>
+        <div v-if="editingPhoneField !== 'phone2'" class="operator-phone-edit-row" :class="{ 'is-empty': !hasCopyablePhone(lead.phone2) }">
+          <button
+            type="button"
+            class="operator-phone-edit-row__copy"
+            :class="{ 'is-copyable': hasCopyablePhone(lead.phone2), 'is-copied': copiedPhoneKey === 'phone2' }"
+            :disabled="!hasCopyablePhone(lead.phone2)"
+            draggable="false"
+            @click.stop.prevent="copyPhone(lead.phone2, 'phone2')"
+            @pointerdown.stop
+            @dragstart.stop.prevent
+            @mousedown.stop.prevent
+          >
+            <span class="operator-phone-copy-row__text"><strong>tel2:</strong> {{ hasCopyablePhone(lead.phone2) ? formatPhone(lead.phone2) : 'Nomer kiritilmagan' }}</span>
+            <span v-if="hasCopyablePhone(lead.phone2)" class="operator-phone-copy-row__hint" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+          </button>
+          <button type="button" class="operator-phone-edit-btn" :title="hasCopyablePhone(lead.phone2) ? 'tel2 ni tahrirlash' : 'tel2 qo‘shish'" @click.stop.prevent="startPhoneEdit('phone2')" @pointerdown.stop @mousedown.stop.prevent>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.8 6.2 4 4" stroke="currentColor" stroke-width="1.8"/></svg>
+          </button>
+        </div>
+        <form v-else class="operator-phone-edit-form" @submit.prevent="savePhoneEdit" @click.stop @pointerdown.stop @mousedown.stop>
+          <label><span>tel2</span><input ref="phoneInputRef" v-model="phoneDraft" class="input input--compact" type="tel" inputmode="tel" maxlength="20" placeholder="+998 90 123 45 67" :disabled="phoneSaving" /></label>
+          <div class="operator-phone-edit-form__actions">
+            <button type="submit" class="operator-phone-save-btn" :disabled="phoneSaving || !phoneDraft.trim()">{{ phoneSaving ? 'Saqlanmoqda...' : 'Saqlash' }}</button>
+            <button type="button" class="operator-phone-cancel-btn" :disabled="phoneSaving" @click="cancelPhoneEdit">Bekor</button>
+          </div>
+          <small v-if="phoneEditError" class="operator-phone-edit-error">{{ phoneEditError }}</small>
+        </form>
 
-        <button
-          type="button"
-          class="operator-phone-copy-row"
-          :class="{ 'is-copyable': hasCopyablePhone(lead.phone3), 'is-copied': copiedPhoneKey === 'phone3' }"
-          :disabled="!hasCopyablePhone(lead.phone3)"
-          draggable="false"
-          @click.stop.prevent="copyPhone(lead.phone3, 'phone3')"
-          @pointerdown.stop
-          @dragstart.stop.prevent
-          @mousedown.stop.prevent
-        >
-          <span class="operator-phone-copy-row__text"><strong>tel3:</strong> {{ formatPhone(lead.phone3) }}</span>
-          <span class="operator-phone-copy-row__hint">{{ copiedPhoneKey === 'phone3' ? '✓' : '📋' }}</span>
-        </button>
+        <div v-if="editingPhoneField !== 'phone3'" class="operator-phone-edit-row" :class="{ 'is-empty': !hasCopyablePhone(lead.phone3) }">
+          <button
+            type="button"
+            class="operator-phone-edit-row__copy"
+            :class="{ 'is-copyable': hasCopyablePhone(lead.phone3), 'is-copied': copiedPhoneKey === 'phone3' }"
+            :disabled="!hasCopyablePhone(lead.phone3)"
+            draggable="false"
+            @click.stop.prevent="copyPhone(lead.phone3, 'phone3')"
+            @pointerdown.stop
+            @dragstart.stop.prevent
+            @mousedown.stop.prevent
+          >
+            <span class="operator-phone-copy-row__text"><strong>tel3:</strong> {{ hasCopyablePhone(lead.phone3) ? formatPhone(lead.phone3) : 'Nomer kiritilmagan' }}</span>
+            <span v-if="hasCopyablePhone(lead.phone3)" class="operator-phone-copy-row__hint" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+          </button>
+          <button type="button" class="operator-phone-edit-btn" :title="hasCopyablePhone(lead.phone3) ? 'tel3 ni tahrirlash' : 'tel3 qo‘shish'" @click.stop.prevent="startPhoneEdit('phone3')" @pointerdown.stop @mousedown.stop.prevent>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.8 6.2 4 4" stroke="currentColor" stroke-width="1.8"/></svg>
+          </button>
+        </div>
+        <form v-else class="operator-phone-edit-form" @submit.prevent="savePhoneEdit" @click.stop @pointerdown.stop @mousedown.stop>
+          <label><span>tel3</span><input ref="phoneInputRef" v-model="phoneDraft" class="input input--compact" type="tel" inputmode="tel" maxlength="20" placeholder="+998 90 123 45 67" :disabled="phoneSaving" /></label>
+          <div class="operator-phone-edit-form__actions">
+            <button type="submit" class="operator-phone-save-btn" :disabled="phoneSaving || !phoneDraft.trim()">{{ phoneSaving ? 'Saqlanmoqda...' : 'Saqlash' }}</button>
+            <button type="button" class="operator-phone-cancel-btn" :disabled="phoneSaving" @click="cancelPhoneEdit">Bekor</button>
+          </div>
+          <small v-if="phoneEditError" class="operator-phone-edit-error">{{ phoneEditError }}</small>
+        </form>
 
         <p v-if="!lead.is_online"><strong>T/SH:</strong> {{ normalizeValue(lead.tsh) }}</p>
         <p><strong>{{ lead.is_online ? 'Hudud' : 'Maktab' }}:</strong> {{ primaryPlace }}</p>
@@ -166,7 +196,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
   lead: { type: Object, required: true },
@@ -175,18 +205,69 @@ const props = defineProps({
   dragDisabled: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['request-status-change', 'save-reminder', 'clear-reminder', 'drag-start', 'drag-end', 'save-name'])
+const emit = defineEmits(['request-status-change', 'save-reminder', 'clear-reminder', 'drag-start', 'drag-end', 'save-name', 'save-phone'])
 
 const reminderDayMonth = ref('')
 const reminderTime = ref('')
 const isDragging = ref(false)
 const copiedPhoneKey = ref('')
 let copiedPhoneTimer = null
-const dragEnabled = computed(() => !props.busy && !props.reminderBusy && !props.dragDisabled)
 
 const isEditingName = ref(false)
 const nameDraft = ref('')
 const nameSaving = ref(false)
+const editingPhoneField = ref('')
+const phoneDraft = ref('')
+const phoneSaving = ref(false)
+const phoneEditError = ref('')
+const phoneInputRef = ref(null)
+const dragEnabled = computed(() => !props.busy && !props.reminderBusy && !props.dragDisabled && !isEditingName.value && !editingPhoneField.value)
+
+async function startPhoneEdit(field) {
+  if (!['phone2', 'phone3'].includes(field) || phoneSaving.value) return
+  editingPhoneField.value = field
+  phoneDraft.value = props.lead?.[field] || ''
+  phoneEditError.value = ''
+  await nextTick()
+  const input = Array.isArray(phoneInputRef.value) ? phoneInputRef.value[0] : phoneInputRef.value
+  input?.focus?.()
+}
+
+function cancelPhoneEdit() {
+  if (phoneSaving.value) return
+  editingPhoneField.value = ''
+  phoneDraft.value = ''
+  phoneEditError.value = ''
+}
+
+function savePhoneEdit() {
+  const field = editingPhoneField.value
+  const value = phoneDraft.value.trim()
+  const digits = value.replace(/\D/g, '')
+  if (!['phone2', 'phone3'].includes(field)) return
+  if (digits.length < 7) {
+    phoneEditError.value = 'To‘g‘ri telefon raqami kiriting.'
+    return
+  }
+
+  phoneSaving.value = true
+  phoneEditError.value = ''
+  emit('save-phone', {
+    lead: props.lead,
+    field,
+    value,
+    onSuccess: () => {
+      phoneSaving.value = false
+      editingPhoneField.value = ''
+      phoneDraft.value = ''
+      phoneEditError.value = ''
+    },
+    onError: (message) => {
+      phoneSaving.value = false
+      phoneEditError.value = message || 'Telefon raqamini saqlab bo‘lmadi.'
+    },
+  })
+}
 
 function startNameEdit() {
   nameDraft.value = props.lead?.full_name || ''
@@ -246,6 +327,10 @@ const formattedUpdatedAt = computed(() => {
 watch(() => [props.lead?.id, props.lead?.reminder_at], () => {
   reminderDayMonth.value = toDayMonthInput(props.lead?.reminder_at)
   reminderTime.value = toTimeInput(props.lead?.reminder_at)
+  editingPhoneField.value = ''
+  phoneDraft.value = ''
+  phoneSaving.value = false
+  phoneEditError.value = ''
 }, { immediate: true })
 
 function normalizeValue(value) {
@@ -442,9 +527,153 @@ function handleDragEnd() {
   line-height: 1;
 }
 
-.operator-phone-copy-row.is-copied .operator-phone-copy-row__hint {
+.operator-phone-copy-row.is-copied .operator-phone-copy-row__hint,
+.operator-phone-edit-row__copy.is-copied .operator-phone-copy-row__hint {
   background: rgba(219, 234, 254, 0.95);
   color: #1d4ed8;
+}
+
+.operator-phone-copy-row__hint svg {
+  width: 14px;
+  height: 14px;
+}
+
+.operator-phone-edit-row {
+  grid-column: 1 / -1;
+  min-width: 0;
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 7px;
+  align-items: center;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid rgba(203, 213, 225, .75);
+  border-radius: 13px;
+  background: rgba(248, 250, 252, .9);
+}
+
+.operator-phone-edit-row.is-empty {
+  border-style: dashed;
+  border-color: rgba(37, 99, 235, .28);
+  background: rgba(239, 246, 255, .72);
+}
+
+.operator-phone-edit-row__copy {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #0f172a;
+  background: transparent;
+  text-align: left;
+}
+
+.operator-phone-edit-row__copy:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.operator-phone-edit-row.is-empty .operator-phone-copy-row__text {
+  color: #64748b;
+}
+
+.operator-phone-edit-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: 10px;
+  color: #1d4ed8;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, .08);
+  transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.operator-phone-edit-btn:hover {
+  transform: translateY(-1px);
+  background: #eff6ff;
+  box-shadow: 0 7px 14px rgba(37, 99, 235, .13);
+}
+
+.operator-phone-edit-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.operator-phone-edit-form {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid rgba(37, 99, 235, .26);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff, #eff6ff);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, .08);
+}
+
+.operator-phone-edit-form label {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+}
+
+.operator-phone-edit-form label > span {
+  color: #1e3a8a;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.operator-phone-edit-form .input {
+  min-width: 0;
+  height: 36px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.operator-phone-edit-form__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.operator-phone-save-btn,
+.operator-phone-cancel-btn {
+  min-height: 32px;
+  padding: 6px 11px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 900;
+}
+
+.operator-phone-save-btn {
+  border: 1px solid #2563eb;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.operator-phone-cancel-btn {
+  border: 1px solid rgba(148, 163, 184, .35);
+  color: #475569;
+  background: #fff;
+}
+
+.operator-phone-save-btn:disabled,
+.operator-phone-cancel-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.operator-phone-edit-error {
+  color: #b91c1c;
+  font-size: 10px;
+  line-height: 1.3;
 }
 
 .operator-compact-card__reminder-card {

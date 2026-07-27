@@ -1,0 +1,8 @@
+OPERATOR MENENJER NAZORATI — SOTUV / ATKAZ
+
+- Operator paneli > Menenjer nazorati kartalariga Sotuv va Atkaz tugmalari qo‘shildi.
+- Sotuv bosilganda filial tanlash modal oynasi ochiladi.
+- Tanlangan filial saqlangach eski Keldi/Kelmadi va to‘lov nazorati yozuvlari yopiladi.
+- Lead tanlangan filial menejerining Leadlar bo‘limiga qayta tushadi.
+- Atkaz bosilganda lead oddiy Atkaz bo‘limiga o‘tadi va menejerga yuborilmaydi.
+- Operator faqat o‘ziga tegishli leadlarda amal bajarishi mumkin.
