@@ -1,0 +1,13 @@
+MENENJER LEAD SONI VA RO'YXATI TUZATILDI
+
+Muammo:
+- Menejer panelida "Sotuv leadlari" soni bor edi, ammo pastdagi kartalar chiqmas edi.
+- Sabab: backend ochiq leadlarni to'g'ri qaytargan bo'lsa ham, frontend filialdagi eski menejerlarning Kelmadi qarorlarini qayta filtr sifatida ishlatgan.
+
+Tuzatish:
+- Menejerning ochiq leadlar ro'yxati endi bevosita boss/leads/ API natijasiga bog'landi.
+- Keldi: lead barcha menejerlardan yopiladi.
+- Kelmadi: lead faqat tugmani bosgan menejerdan yopiladi.
+- Boshqa/yangi menejerda lead ko'rinishda davom etadi.
+- Tepada ko'rsatilgan lead soni bilan pastdagi kartalar soni bir xil bo'ladi.
+- Keldi/Kelmadi bosilganda karta darhol ro'yxatdan yo'qoladi va server bilan qayta sinxronlanadi.

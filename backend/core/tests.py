@@ -137,6 +137,79 @@ class ManagerCreatedAfterSaleTests(TestCase):
             decision='not_arrived',
         ).exists())
 
+    def test_arrived_moves_only_clicking_manager_from_leads_to_control(self):
+        lead = Lead.objects.create(
+            full_name='Per Manager Flow Lead',
+            assigned_operator=self.operator,
+            current_status='sale',
+            branch_name='Niyozbosh',
+        )
+        first_manager = AppUser.objects.create(
+            username='manager-flow-first',
+            password_hash='unused',
+            full_name='First Manager',
+            role='filial_rahbari',
+            branch_name='Niyozbosh',
+        )
+        second_manager = AppUser.objects.create(
+            username='manager-flow-second',
+            password_hash='unused',
+            full_name='Second Manager',
+            role='filial_rahbari',
+            branch_name='Niyozbosh',
+        )
+
+        response = self.client.post(
+            f'/api/boss/leads/{lead.id}/visit-decision/',
+            data=json.dumps({'decision': 'arrived'}),
+            content_type='application/json',
+            **self.auth_headers(first_manager),
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # Bosgan menenjerda karta Leadlar bo‘limidan chiqadi.
+        first_open = self.client.get('/api/boss/leads/', **self.auth_headers(first_manager))
+        self.assertNotIn(lead.id, [item['id'] for item in first_open.json()])
+
+        # Shu karta uning Menejer nazorati / Keldi ma'lumotida bor.
+        first_control = self.client.get('/api/boss/lead-visit-decisions/', **self.auth_headers(first_manager))
+        first_rows = [item for item in first_control.json() if (item.get('lead') or item.get('lead_id')) == lead.id]
+        self.assertEqual(len(first_rows), 1)
+        self.assertEqual(first_rows[0]['decision'], 'arrived')
+
+        # Boshqa menenjer uchun lead hanuz ochiq: bir menenjerning qarori
+        # boshqa menenjerning Leadlar ro‘yxatini yopmaydi.
+        second_open = self.client.get('/api/boss/leads/', **self.auth_headers(second_manager))
+        self.assertIn(lead.id, [item['id'] for item in second_open.json()])
+
+    def test_not_arrived_moves_clicking_manager_to_not_arrived_control(self):
+        lead = Lead.objects.create(
+            full_name='Per Manager Not Arrived Lead',
+            assigned_operator=self.operator,
+            current_status='sale',
+            branch_name='Niyozbosh',
+        )
+        manager = AppUser.objects.create(
+            username='manager-flow-absent',
+            password_hash='unused',
+            full_name='Absent Manager',
+            role='filial_rahbari',
+            branch_name='Niyozbosh',
+        )
+        response = self.client.post(
+            f'/api/boss/leads/{lead.id}/visit-decision/',
+            data=json.dumps({'decision': 'not_arrived'}),
+            content_type='application/json',
+            **self.auth_headers(manager),
+        )
+        self.assertEqual(response.status_code, 200)
+        open_response = self.client.get('/api/boss/leads/', **self.auth_headers(manager))
+        self.assertNotIn(lead.id, [item['id'] for item in open_response.json()])
+        control_response = self.client.get('/api/boss/lead-visit-decisions/', **self.auth_headers(manager))
+        rows = [item for item in control_response.json() if (item.get('lead') or item.get('lead_id')) == lead.id]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['decision'], 'not_arrived')
+
     def test_other_branch_manager_cannot_manage_sale(self):
         lead = Lead.objects.create(
             full_name='Other Branch Lead',

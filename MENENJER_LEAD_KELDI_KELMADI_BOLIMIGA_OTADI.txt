@@ -1,0 +1,8 @@
+MENEJER LEAD OQIMI TUZATILDI
+
+- Keldi bosilganda lead shu menejerning Leadlar bo‘limidan chiqadi.
+- Lead Menejer nazorati -> Kelganlar bo‘limiga tushadi.
+- Kelmadi bosilganda lead shu menejerning Leadlar bo‘limidan chiqadi.
+- Lead Menejer nazorati -> Kelmadi bo‘limiga tushadi.
+- Boshqa menejerning qarori joriy menejerning Leadlar ro‘yxatini yopmaydi.
+- Tugma bosilgandan keyin panel avtomatik tegishli nazorat bo‘limiga o‘tadi.

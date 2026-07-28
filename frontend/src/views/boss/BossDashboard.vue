@@ -1708,7 +1708,13 @@ const arrivedCount = computed(() => (isFilialRahbari.value
 const notArrivedCount = computed(() => (isFilialRahbari.value
   ? visitDecisions.value.filter(item => item.decision === 'not_arrived').length
   : Object.values(visitDecisionMap.value).filter(value => value === 'not_arrived').length))
-const undecidedLeads = computed(() => leads.value.filter(lead => !visitDecisionMap.value[lead.id]))
+// Menejer uchun `boss/leads/` endpointi aynan shu foydalanuvchining ochiq
+// sotuvlarini qaytaradi. Joriy menejer Keldi yoki Kelmadi bosganda karta uning
+// Leadlar bo‘limidan chiqadi va Menejer nazoratidagi tegishli bo‘limga o‘tadi.
+// Boshqa menejerlarning qarorlari joriy menejerning ochiq ro‘yxatini yopmaydi.
+const undecidedLeads = computed(() => (isFilialRahbari.value
+  ? leads.value
+  : leads.value.filter(lead => !visitDecisionMap.value[lead.id])))
 const decidedLeads = computed(() => {
   if (isFilialRahbari.value) {
     return visitDecisions.value.map(decision => ({
@@ -2329,10 +2335,16 @@ async function submitVisitDecision(leadId, decision) {
       ...visitDecisionMap.value,
       [leadId]: savedData.decision,
     }
-    showSuccess(savedData.decision === 'arrived' ? 'Keldi saqlandi' : 'Kelmadi saqlandi')
-    if (isFilialRahbari.value && currentView.value === 'manager') {
+    if (isFilialRahbari.value) {
+      // Kartani darhol Leadlar bo‘limidan olib tashlaymiz. U yo‘qolmaydi:
+      // fetchVisitDecisions() orqali Menejer nazoratining Keldi/Kelmadi bo‘limiga tushadi.
+      leads.value = leads.value.filter(lead => lead.id !== leadId)
       filialSection.value = savedData.decision === 'arrived' ? 'arrived' : 'not_arrived'
+      clampFilialSlide()
     }
+    showSuccess(savedData.decision === 'arrived'
+      ? 'Lead Keldi bo‘limiga o‘tkazildi'
+      : 'Lead Kelmadi bo‘limiga o‘tkazildi')
   } catch (e) {
     error.value = e.response?.data?.detail || 'Belgini saqlashda xatolik yuz berdi.'
     decisionLoadingId.value = null
@@ -2345,8 +2357,11 @@ async function submitVisitDecision(leadId, decision) {
   if (isFilialRahbari.value && savedData) {
     try {
       await Promise.all([fetchVisitDecisions(), fetchLeads('Sotuvlar yangilanmoqda...')])
+      // Foydalanuvchi bosgan natijani darhol ko‘rsin: Keldi -> Kelganlar,
+      // Kelmadi -> Kelmadi bo‘limi.
+      await setCurrentView('manager')
     } catch (e) {
-      error.value = 'Belgi saqlandi, lekin ro‘yxatni yangilashda xatolik bo‘ldi. Sahifani bir marta yangilang.'
+      error.value = 'Belgi saqlandi, lekin Menejer nazorati bo‘limini yangilashda xatolik bo‘ldi. Sahifani bir marta yangilang.'
     }
   }
 

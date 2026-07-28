@@ -216,12 +216,13 @@ def filial_can_see_lead(filial_user, lead, sale_history_branches=None):
 
 
 def manager_visible_visit_decisions(user):
-    """Menenjer filialiga tegishli eski va yangi nazorat yozuvlarini qaytaradi.
+    """Menenjer filialiga tegishli nazorat kartalarini qaytaradi.
 
-    Akkaunt o‘chirilishi soft-delete bo‘lgani uchun eski qarorlar bazada qoladi.
-    Yangi menenjer ayni filialga biriktirilganda qarorlar decided_by ID bo‘yicha
-    emas, lead filiali bo‘yicha topiladi. Bir lead uchun bir nechta eski yozuv
-    bo‘lsa, Keldi yakuniy holati ustun; aks holda eng so‘nggi yozuv olinadi.
+    Joriy menenjer o‘zi Keldi/Kelmadi bosgan bo‘lsa aynan uning qarori ustun
+    turadi va karta tegishli bo‘limga tushadi. Joriy menenjer hali belgi
+    qo‘ymagan eski leadlarda filial tarixi saqlanishi uchun eng so‘nggi eski
+    qaror ko‘rsatiladi; eski qaror joriy menenjerning ochiq Leadlar ro‘yxatini
+    yopmaydi.
     """
     qs = LeadVisitDecision.objects.select_related(
         'lead', 'lead__assigned_operator', 'lead__boss',
@@ -229,14 +230,22 @@ def manager_visible_visit_decisions(user):
     ).order_by('-updated_at', '-id')
     items = list(qs)
     history_map = sale_history_map_for_leads([item.lead_id for item in items])
-    selected = {}
+    grouped = {}
     for item in items:
         lead = getattr(item, 'lead', None)
         if not lead or not filial_can_see_lead(user, lead, history_map.get(item.lead_id, set())):
             continue
-        current = selected.get(item.lead_id)
-        if current is None or (item.decision == 'arrived' and current.decision != 'arrived'):
-            selected[item.lead_id] = item
+        grouped.setdefault(item.lead_id, []).append(item)
+
+    selected = {}
+    for lead_id, rows in grouped.items():
+        own = next((row for row in rows if row.decided_by_id == user.id), None)
+        if own is not None:
+            selected[lead_id] = own
+            continue
+        # Akkaunt almashganida tarix yo‘qolmasin: joriy foydalanuvchi hali belgi
+        # qo‘ymagan bo‘lsa eng so‘nggi filial qarorini ko‘rsatamiz.
+        selected[lead_id] = rows[0]
     return sorted(selected.values(), key=lambda item: (item.updated_at, item.id), reverse=True)
 
 
@@ -262,14 +271,12 @@ def manager_existing_visit_decision(user, lead, *, for_update=False):
     items = list(qs.order_by('-updated_at', '-id'))
     if not items:
         return None
-    # Keldi yakuniy qaror bo‘lgani uchun u har doim ustun turadi.
-    for item in items:
-        if item.decision == 'arrived':
-            return item
-    # Aks holda hozirgi menenjerning yozuvi yoki eng so‘nggi eski yozuv olinadi.
+    # Joriy menenjerning o‘z kartasi har doim ustun. Bu Keldi/Kelmadi kartasini
+    # aynan u bosgan bo‘limda va uning to‘lov amallari bilan saqlaydi.
     for item in items:
         if item.decided_by_id == user.id:
             return item
+    # Menenjer almashgan bo‘lsa eski filial kartasini boshqarish imkoniyati qoladi.
     return items[0]
 
 def visit_payment_status(item):
@@ -1284,12 +1291,15 @@ def boss_leads(request):
     user = request.app_user
     qs = base_lead_qs()
     if user.role == 'filial_rahbari':
-        # Menenjerlar barcha Sotuv leadlarni ko‘radi.
-        # Agar biror menenjer “Keldi” bosgan bo‘lsa, lead hamma menenjerlardan yopiladi.
-        # Agar menenjer “Kelmadi” bosgan bo‘lsa, lead faqat o‘sha menenjer panelidan yopiladi.
-        arrived_lead_ids = LeadVisitDecision.objects.filter(decision='arrived').values('lead_id')
-        own_not_arrived_ids = LeadVisitDecision.objects.filter(decided_by=user, decision='not_arrived').values('lead_id')
-        qs = qs.filter(current_status='sale').exclude(id__in=arrived_lead_ids).exclude(id__in=own_not_arrived_ids)
+        # Har bir menenjer o‘zining ochiq Sotuv leadlarini ko‘radi.
+        # Menenjer Keldi yoki Kelmadi bosganda lead faqat uning Leadlar bo‘limidan
+        # chiqadi va Menejer nazorati ichidagi tegishli bo‘limga ko‘chadi.
+        # Boshqa menenjerning qarori shu foydalanuvchining Leadlar ro‘yxatini yopmaydi.
+        own_decided_lead_ids = LeadVisitDecision.objects.filter(
+            decided_by=user,
+            decision__in=('arrived', 'not_arrived'),
+        ).values('lead_id')
+        qs = qs.filter(current_status='sale').exclude(id__in=own_decided_lead_ids)
         qs = apply_lead_search(qs, request.GET.get('search')).order_by('-updated_at', '-id')
         sale_leads = list(qs)
         history_map = sale_history_map_for_leads([lead.id for lead in sale_leads])
@@ -1683,51 +1693,42 @@ def visit_decision(request, lead_id):
     changed = False
     old_decision = ''
     with transaction.atomic():
-        # Bir leadga bir nechta menenjer ilgari Kelmadi bosgan bo‘lishi mumkin.
-        # Keldi yakuniy holat bo‘lgani uchun u barcha menenjerlar uchun ustun turadi.
-        locked_items = list(
+        # Har bir menenjer uchun alohida qaror saqlanadi. Shuning uchun boshqa
+        # menenjer bosgan Keldi/Kelmadi joriy menenjerning Leadlar ro‘yxatini
+        # yopmaydi va uning kartasini boshqa bo‘limga ko‘chirmaydi.
+        item = (
             LeadVisitDecision.objects.select_for_update()
-            .filter(lead=lead)
-            .order_by('-updated_at', '-id')
+            .filter(lead=lead, decided_by=request.app_user)
+            .first()
         )
-        arrived_item = next((row for row in locked_items if row.decision == 'arrived'), None)
-        if arrived_item is not None:
-            if decision == 'not_arrived':
-                return ok({'detail': 'Keldi bosilgandan keyin Kelmadi qilib o‘zgartirib bo‘lmaydi.'}, status=409)
-            item = arrived_item
-        else:
-            # Eski menenjerning yozuvini yangi menenjerga ko‘chirmaymiz.
-            # Har bir menenjer o‘z qarorini saqlaydi. Bu unique constraint bilan
-            # to‘qnashuvni bartaraf qiladi va keyin yaratilgan menenjerga ham
-            # Kelmadi/Keldi bosish imkonini beradi.
-            item = next((row for row in locked_items if row.decided_by_id == request.app_user.id), None)
-            if item is None:
-                try:
-                    # Ichki atomic savepoint IntegrityError bo‘lsa tashqi
-                    # tranzaksiyani "broken" holatga tushirmaydi.
-                    with transaction.atomic():
-                        item = LeadVisitDecision.objects.create(
-                            lead=lead,
-                            decided_by=request.app_user,
-                            decision=decision,
-                        )
-                    changed = True
-                except IntegrityError:
-                    # Ikki marta tez bosilganda yoki parallel so‘rov kelganda
-                    # mavjud yozuvni qayta olib xavfsiz yangilaymiz.
-                    item = LeadVisitDecision.objects.select_for_update().get(
+        if item is None:
+            try:
+                with transaction.atomic():
+                    item = LeadVisitDecision.objects.create(
                         lead=lead,
                         decided_by=request.app_user,
+                        decision=decision,
                     )
-            old_decision = item.decision if not changed else ''
-            if item.decision != decision:
-                item.decision = decision
-                item.updated_at = timezone.now()
-                item.save(update_fields=['decision', 'updated_at'])
                 changed = True
+            except IntegrityError:
+                item = LeadVisitDecision.objects.select_for_update().get(
+                    lead=lead,
+                    decided_by=request.app_user,
+                )
+        else:
+            old_decision = item.decision
 
-    # Asosiy belgi allaqachon saqlandi. Tarix/audit jadvalidagi vaqtinchalik
-    # muammo asosiy Keldi/Kelmadi amalini bekor qilmasligi kerak.
+        # Shu menenjer Keldi deb yakunlagan kartani keyin Kelmadi qilib
+        # o‘zgartirishga ruxsat bermaymiz.
+        if item.decision == 'arrived' and decision == 'not_arrived':
+            return ok({'detail': 'Keldi bosilgandan keyin Kelmadi qilib o‘zgartirib bo‘lmaydi.'}, status=409)
+
+        if item.decision != decision:
+            item.decision = decision
+            item.updated_at = timezone.now()
+            item.save(update_fields=['decision', 'updated_at'])
+            changed = True
+
     if changed:
         try:
             LeadVisitDecisionHistory.objects.create(
