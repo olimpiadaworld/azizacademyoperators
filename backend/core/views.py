@@ -1678,8 +1678,11 @@ def visit_decision(request, lead_id):
 
     body = json_body(request)
     decision = clean_string(body.get('decision'))
+    admin_note = clean_string(body.get('admin_note') or body.get('note') or body.get('reason'))[:500]
     if decision not in ('arrived', 'not_arrived'):
         return ok({'decision': ['Qaror noto‘g‘ri.'], 'detail': 'Qaror noto‘g‘ri.'}, status=400)
+    if not admin_note:
+        return ok({'admin_note': ['Sabab yozish shart.'], 'detail': 'Sabab yozish shart.'}, status=400)
 
     lead = Lead.objects.select_related('assigned_operator', 'boss').filter(
         id=lead_id,
@@ -1692,6 +1695,7 @@ def visit_decision(request, lead_id):
 
     changed = False
     old_decision = ''
+    old_admin_note = ''
     with transaction.atomic():
         # Har bir menenjer uchun alohida qaror saqlanadi. Shuning uchun boshqa
         # menenjer bosgan Keldi/Kelmadi joriy menenjerning Leadlar ro‘yxatini
@@ -1708,6 +1712,7 @@ def visit_decision(request, lead_id):
                         lead=lead,
                         decided_by=request.app_user,
                         decision=decision,
+                        admin_note=admin_note,
                     )
                 changed = True
             except IntegrityError:
@@ -1717,6 +1722,7 @@ def visit_decision(request, lead_id):
                 )
         else:
             old_decision = item.decision
+            old_admin_note = item.admin_note or ''
 
         # Shu menenjer Keldi deb yakunlagan kartani keyin Kelmadi qilib
         # o‘zgartirishga ruxsat bermaymiz.
@@ -1725,9 +1731,15 @@ def visit_decision(request, lead_id):
 
         if item.decision != decision:
             item.decision = decision
-            item.updated_at = timezone.now()
-            item.save(update_fields=['decision', 'updated_at'])
             changed = True
+
+        if item.admin_note != admin_note:
+            item.admin_note = admin_note
+            changed = True
+
+        if changed:
+            item.updated_at = timezone.now()
+            item.save(update_fields=['decision', 'admin_note', 'updated_at'])
 
     if changed:
         try:
@@ -1745,8 +1757,8 @@ def visit_decision(request, lead_id):
                 entity_type='lead_visit_decision',
                 entity_id=item.id,
                 action='upserted',
-                old_data={'decision': old_decision},
-                new_data={'decision': decision},
+                old_data={'decision': old_decision, 'admin_note': old_admin_note},
+                new_data={'decision': decision, 'admin_note': admin_note},
             )
         except Exception:
             pass
@@ -1759,6 +1771,7 @@ def visit_decision(request, lead_id):
             + tg_line('Menenjer', tg_user_name(request.app_user))
             + tg_line('Filial', request.app_user.branch_name)
             + tg_line('Qaror', decision_label)
+            + tg_line('Admin izohi', admin_note)
             + tg_line('Operator', tg_user_name(lead.assigned_operator))
             + '\n' + tg_lead_info(lead)
         )

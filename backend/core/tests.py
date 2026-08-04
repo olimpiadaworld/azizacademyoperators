@@ -53,7 +53,7 @@ class ManagerCreatedAfterSaleTests(TestCase):
 
         response = self.client.post(
             f'/api/boss/leads/{lead.id}/visit-decision/',
-            data=json.dumps({'decision': 'arrived'}),
+            data=json.dumps({'decision': 'arrived', 'admin_note': 'Test sababi'}),
             content_type='application/json',
             **self.auth_headers(manager),
         )
@@ -61,6 +61,42 @@ class ManagerCreatedAfterSaleTests(TestCase):
         decision = LeadVisitDecision.objects.get(lead=lead)
         self.assertEqual(decision.decision, 'arrived')
         self.assertEqual(decision.decided_by_id, manager.id)
+        self.assertEqual(decision.admin_note, 'Test sababi')
+        self.assertEqual(response.json()['admin_note'], 'Test sababi')
+
+        operator_response = self.client.get(
+            '/api/operator/lead-visit-decisions/',
+            **self.auth_headers(self.operator),
+        )
+        self.assertEqual(operator_response.status_code, 200)
+        operator_row = next(item for item in operator_response.json() if item['lead_id'] == lead.id)
+        self.assertEqual(operator_row['admin_note'], 'Test sababi')
+
+    def test_visit_decision_requires_admin_note(self):
+        lead = Lead.objects.create(
+            full_name='Sababsiz Lead',
+            assigned_operator=self.operator,
+            current_status='sale',
+            branch_name='Niyozbosh',
+        )
+        manager = AppUser.objects.create(
+            username='manager-note-required',
+            password_hash='unused',
+            full_name='Niyozbosh Menenjeri',
+            role='filial_rahbari',
+            branch_name='Niyozbosh',
+        )
+
+        response = self.client.post(
+            f'/api/boss/leads/{lead.id}/visit-decision/',
+            data=json.dumps({'decision': 'arrived'}),
+            content_type='application/json',
+            **self.auth_headers(manager),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['detail'], 'Sabab yozish shart.')
+        self.assertFalse(LeadVisitDecision.objects.filter(lead=lead).exists())
 
     def test_manager_created_after_sale_can_mark_not_arrived(self):
         lead = Lead.objects.create(
@@ -86,7 +122,7 @@ class ManagerCreatedAfterSaleTests(TestCase):
 
         response = self.client.post(
             f'/api/boss/leads/{lead.id}/visit-decision/',
-            data=json.dumps({'decision': 'not_arrived'}),
+            data=json.dumps({'decision': 'not_arrived', 'admin_note': 'Test sababi'}),
             content_type='application/json',
             **self.auth_headers(manager),
         )
@@ -124,7 +160,7 @@ class ManagerCreatedAfterSaleTests(TestCase):
 
         response = self.client.post(
             f'/api/boss/leads/{lead.id}/visit-decision/',
-            data=json.dumps({'decision': 'not_arrived'}),
+            data=json.dumps({'decision': 'not_arrived', 'admin_note': 'Test sababi'}),
             content_type='application/json',
             **self.auth_headers(new_manager),
         )
@@ -161,7 +197,7 @@ class ManagerCreatedAfterSaleTests(TestCase):
 
         response = self.client.post(
             f'/api/boss/leads/{lead.id}/visit-decision/',
-            data=json.dumps({'decision': 'arrived'}),
+            data=json.dumps({'decision': 'arrived', 'admin_note': 'Test sababi'}),
             content_type='application/json',
             **self.auth_headers(first_manager),
         )
@@ -198,7 +234,7 @@ class ManagerCreatedAfterSaleTests(TestCase):
         )
         response = self.client.post(
             f'/api/boss/leads/{lead.id}/visit-decision/',
-            data=json.dumps({'decision': 'not_arrived'}),
+            data=json.dumps({'decision': 'not_arrived', 'admin_note': 'Test sababi'}),
             content_type='application/json',
             **self.auth_headers(manager),
         )
@@ -231,7 +267,7 @@ class ManagerCreatedAfterSaleTests(TestCase):
 
         response = self.client.post(
             f'/api/boss/leads/{lead.id}/visit-decision/',
-            data=json.dumps({'decision': 'arrived'}),
+            data=json.dumps({'decision': 'arrived', 'admin_note': 'Test sababi'}),
             content_type='application/json',
             **self.auth_headers(manager),
         )
@@ -267,7 +303,7 @@ class ManagerCreatedAfterSaleTests(TestCase):
 
         response = self.client.post(
             f'/api/boss/leads/{lead.id}/visit-decision/',
-            data=json.dumps({'decision': 'arrived'}),
+            data=json.dumps({'decision': 'arrived', 'admin_note': 'Test sababi'}),
             content_type='application/json',
             **self.auth_headers(new_manager),
         )
@@ -597,7 +633,7 @@ class OperatorVisitDecisionReclassifyTests(TestCase):
 
         decision_response = self.client.post(
             f'/api/boss/leads/{self.lead.id}/visit-decision/',
-            data=json.dumps({'decision': 'arrived'}),
+            data=json.dumps({'decision': 'arrived', 'admin_note': 'Test sababi'}),
             content_type='application/json',
             **self.auth_headers(chinoz_manager),
         )

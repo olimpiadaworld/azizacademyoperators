@@ -101,6 +101,7 @@ class LeadVisitDecision(models.Model):
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, db_column='lead_id', related_name='visit_decisions')
     decided_by = models.ForeignKey(AppUser, on_delete=models.CASCADE, db_column='decided_by_id')
     decision = models.CharField(max_length=20)
+    admin_note = models.CharField(max_length=500, default='', blank=True)
     payment_done = models.BooleanField(default=False)
     payment_done_at = models.DateTimeField(null=True, blank=True)
     payment_done_by = models.ForeignKey(AppUser, null=True, blank=True, on_delete=models.SET_NULL, db_column='payment_done_by_id', related_name='payment_confirmed_decisions')

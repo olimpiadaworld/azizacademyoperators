@@ -270,15 +270,16 @@
                     <span><strong>Ball:</strong> {{ lead.ball || '-' }}</span>
                     <span v-if="lead.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ lead.operator_note }}</span>
                     <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
+                    <span v-if="lead.admin_note" class="admin-note-line"><strong>Admin izohi:</strong> {{ lead.admin_note }}</span>
                     <span><strong>To‘lov:</strong> {{ leadPaymentStatusLabel(lead) }}</span>
                     <span v-if="lead.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(lead.payment_done_at) }}</span>
                   </div>
                   <div class="visit-mini-card__actions">
-                    <button class="btn visit-action-btn visit-action-btn--arrived" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')">
+                    <button class="btn visit-action-btn visit-action-btn--arrived" :disabled="decisionLoadingId === lead.id" @click="openDecisionReasonModal(lead, 'arrived')">
                       <NavIcon name="checkCircle" />
                       <span>{{ decisionLoadingId === lead.id && pendingDecision === 'arrived' ? 'Saqlanmoqda...' : 'Keldi' }}</span>
                     </button>
-                    <button class="btn secondary visit-action-btn visit-action-btn--absent" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'not_arrived')">
+                    <button class="btn secondary visit-action-btn visit-action-btn--absent" :disabled="decisionLoadingId === lead.id" @click="openDecisionReasonModal(lead, 'not_arrived')">
                       <NavIcon name="xCircle" />
                       <span>{{ decisionLoadingId === lead.id && pendingDecision === 'not_arrived' ? 'Saqlanmoqda...' : 'Kelmadi' }}</span>
                     </button>
@@ -420,10 +421,11 @@
                     <span><strong>Ball:</strong> {{ lead.ball || '-' }}</span>
                     <span v-if="lead.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ lead.operator_note }}</span>
                     <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
+                    <span v-if="lead.admin_note" class="admin-note-line"><strong>Admin izohi:</strong> {{ lead.admin_note }}</span>
                   </div>
                   <div class="visit-mini-card__actions">
-                    <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
-                    <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
+                    <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="openDecisionReasonModal(lead, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+                    <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="openDecisionReasonModal(lead, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
                     <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
                     <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
                     <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(lead, 'left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
@@ -455,15 +457,16 @@
               <span><strong>Sinf:</strong> {{ lead.grade || '-' }}</span>
               <span><strong>Fan:</strong> {{ lead.subject || '-' }}</span>
               <span><strong>Ball:</strong> {{ lead.ball || '-' }}</span>
-                    <span v-if="lead.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ lead.operator_note }}</span>
-                    <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
+              <span v-if="lead.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ lead.operator_note }}</span>
+              <span v-if="lead.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(lead.operator_note_at) }}</span>
+              <span v-if="lead.admin_note" class="admin-note-line"><strong>Admin izohi:</strong> {{ lead.admin_note }}</span>
               <span><strong>To‘lov:</strong> {{ leadPaymentStatusLabel(lead) }}</span>
               <span v-if="lead.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(lead.payment_done_at) }}</span>
               <span v-if="lead.left_without_payment_at"><strong>To‘lov qilmadi vaqti:</strong> {{ formatDateTime(lead.left_without_payment_at) }}</span>
             </div>
             <div class="visit-mini-card__actions">
-              <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="submitVisitDecision(lead.id, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
-              <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(lead.id, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
+              <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'arrived' }" :disabled="decisionLoadingId === lead.id" @click="openDecisionReasonModal(lead, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+              <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': visitDecisionMap[lead.id] === 'not_arrived' }" :disabled="decisionLoadingId === lead.id || visitDecisionMap[lead.id] === 'arrived'" :title="visitDecisionMap[lead.id] === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="openDecisionReasonModal(lead, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
               <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'paid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'paid'" @click="setPaymentStatus(lead, 'paid')"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
               <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'unpaid' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'unpaid'" @click="setPaymentStatus(lead, 'unpaid')"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
                     <button v-if="visitDecisionMap[lead.id] === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(lead) === 'left_without_payment' }" :disabled="paymentLoadingId === lead.id || paymentStatusValue(lead) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(lead, 'left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
@@ -611,6 +614,7 @@
                     <span><strong>Ball:</strong> {{ item.ball || '-' }}</span>
                     <span v-if="item.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ item.operator_note }}</span>
                     <span v-if="item.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(item.operator_note_at) }}</span>
+                    <span v-if="item.admin_note" class="admin-note-line"><strong>Admin izohi:</strong> {{ item.admin_note }}</span>
                     <span><strong>Operator:</strong> {{ item.operator_name || '-' }}</span>
                     <span><strong>Holat:</strong> {{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span>
                     <span><strong>To‘lov:</strong> {{ leadPaymentStatusLabel(item) }}</span>
@@ -645,6 +649,7 @@
               <span><strong>To‘lov:</strong> {{ leadPaymentStatusLabel(item) }}</span>
               <span v-if="item.payment_done_by_name"><strong>To‘lov qilgan:</strong> {{ item.payment_done_by_name }}</span>
               <span v-if="item.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(item.payment_done_at) }}</span>
+              <span v-if="item.admin_note" class="admin-note-line"><strong>Admin izohi:</strong> {{ item.admin_note }}</span>
             </div>
           </div>
         </div>
@@ -767,10 +772,11 @@
             <span v-if="item.payment_done_by_name"><strong>To‘lov qilgan:</strong> {{ item.payment_done_by_name }}</span>
             <span v-if="item.payment_done_at"><strong>To‘lov vaqti:</strong> {{ formatDateTime(item.payment_done_at) }}</span>
             <span v-if="item.operator_note" class="operator-note-line"><strong>Operator izohi:</strong> {{ item.operator_note }}</span>
+            <span v-if="item.admin_note" class="admin-note-line"><strong>Admin izohi:</strong> {{ item.admin_note }}</span>
           </div>
           <div v-if="isFilialRahbari" class="visit-mini-card__actions">
-            <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': item.decision === 'arrived' }" :disabled="decisionLoadingId === item.id" @click="submitVisitDecision(item.id, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
-            <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id || item.decision === 'arrived'" :title="item.decision === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="submitVisitDecision(item.id, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
+            <button class="btn visit-action-btn visit-action-btn--arrived" :class="{ 'is-active-choice': item.decision === 'arrived' }" :disabled="decisionLoadingId === item.id" @click="openDecisionReasonModal(item, 'arrived')"><NavIcon name="checkCircle" /><span>Keldi</span></button>
+            <button class="btn secondary visit-action-btn visit-action-btn--absent" :class="{ 'is-active-choice': item.decision === 'not_arrived' }" :disabled="decisionLoadingId === item.id || item.decision === 'arrived'" :title="item.decision === 'arrived' ? 'Keldi bosilgandan keyin Kelmadi qilib bo‘lmaydi' : ''" @click="openDecisionReasonModal(item, 'not_arrived')"><NavIcon name="xCircle" /><span>Kelmadi</span></button>
             <button v-if="item.decision === 'arrived'" class="btn payment-btn payment-action-btn payment-action-btn--paid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'paid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'paid'" @click="setPaymentStatus(item, 'paid')"><NavIcon name="creditCard" /><span>To‘lov qildi</span></button>
             <button v-if="item.decision === 'arrived'" class="btn payment-left-btn payment-action-btn payment-action-btn--unpaid" :class="{ 'is-active-choice': paymentStatusValue(item) === 'unpaid' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'unpaid'" @click="setPaymentStatus(item, 'unpaid')"><NavIcon name="wallet" /><span>To‘lov qilmadi</span></button>
             <button v-if="item.decision === 'arrived'" class="btn payment-left-without-btn payment-action-btn payment-action-btn--left" :class="{ 'is-active-choice': paymentStatusValue(item) === 'left_without_payment' }" :disabled="paymentLoadingId === item.id || paymentStatusValue(item) === 'left_without_payment'" title="Keldi, to‘lov qilmasdan ketdi" @click="setPaymentStatus(item, 'left_without_payment')"><NavIcon name="doorOpen" /><span>To‘lovsiz ketdi</span></button>
@@ -1424,6 +1430,40 @@
         </div>
       </div>
     </div>
+
+    <div v-if="isFilialRahbari && decisionReasonModal.open" class="modal-overlay">
+      <div class="modal-card glass decision-reason-modal">
+        <div class="modal-card__head">
+          <div>
+            <div class="eyebrow">{{ decisionReasonModal.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</div>
+            <h3>Sabab</h3>
+            <p v-if="decisionReasonModal.leadName" class="decision-reason-modal__lead">{{ decisionReasonModal.leadName }}</p>
+          </div>
+          <button class="modal-close" type="button" :disabled="decisionLoadingId !== null" @click="closeDecisionReasonModal">×</button>
+        </div>
+        <form class="grid" @submit.prevent="confirmVisitDecision">
+          <label class="decision-reason-modal__field">
+            <span>Sababni yozing</span>
+            <textarea
+              v-model="decisionReasonModal.note"
+              class="input decision-reason-modal__textarea"
+              maxlength="500"
+              rows="5"
+              placeholder="Masalan: o‘quvchi belgilangan vaqtda keldi..."
+              autofocus
+              required
+            ></textarea>
+            <small>{{ decisionReasonModal.note.length }}/500</small>
+          </label>
+          <div class="decision-reason-modal__actions">
+            <button class="btn" type="submit" :disabled="decisionLoadingId !== null || !decisionReasonModal.note.trim()">
+              {{ decisionLoadingId !== null ? 'Saqlanmoqda...' : 'Saqlash' }}
+            </button>
+            <button class="btn ghost" type="button" :disabled="decisionLoadingId !== null" @click="closeDecisionReasonModal">Bekor qilish</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1501,6 +1541,13 @@ const bulkAssignLoading = ref(false)
 const decisionLoadingId = ref(null)
 const paymentLoadingId = ref(null)
 const pendingDecision = ref('')
+const decisionReasonModal = reactive({
+  open: false,
+  leadId: null,
+  leadName: '',
+  decision: '',
+  note: '',
+})
 const operatorForm = reactive({ username: '', password: '', branch_names: [] })
 const branchOptions = [
   { label: 'Niyozbosh Menenjeri', value: 'Niyozbosh' },
@@ -1732,6 +1779,7 @@ const decidedLeads = computed(() => {
       operator_name: decision.operator_name || '',
       branch_name: decision.branch_name || '',
       decision: decision.decision,
+      admin_note: decision.admin_note || '',
       payment_status: decision.payment_status || (decision.payment_done ? 'paid' : decision.payment_not_done ? 'unpaid' : decision.left_without_payment ? 'left_without_payment' : 'pending'),
       payment_done: !!decision.payment_done,
       payment_not_done: !!decision.payment_not_done,
@@ -2322,14 +2370,47 @@ async function bulkAssignOnlineLeads() {
   }
 }
 
-async function submitVisitDecision(leadId, decision) {
+function openDecisionReasonModal(target, decision) {
+  const leadId = Number(target?.lead_id || target?.lead || target?.id || target || 0)
+  if (!leadId || !['arrived', 'not_arrived'].includes(decision)) return
+  decisionReasonModal.open = true
+  decisionReasonModal.leadId = leadId
+  decisionReasonModal.leadName = target?.full_name || target?.lead_name || ''
+  decisionReasonModal.decision = decision
+  decisionReasonModal.note = target?.admin_note || ''
+}
+
+function closeDecisionReasonModal() {
+  if (decisionLoadingId.value !== null) return
+  decisionReasonModal.open = false
+  decisionReasonModal.leadId = null
+  decisionReasonModal.leadName = ''
+  decisionReasonModal.decision = ''
+  decisionReasonModal.note = ''
+}
+
+async function confirmVisitDecision() {
+  const note = decisionReasonModal.note.trim()
+  if (!decisionReasonModal.leadId || !note) return
+  const saved = await submitVisitDecision(
+    decisionReasonModal.leadId,
+    decisionReasonModal.decision,
+    note,
+  )
+  if (saved) closeDecisionReasonModal()
+}
+
+async function submitVisitDecision(leadId, decision, adminNote) {
   decisionLoadingId.value = leadId
   pendingDecision.value = decision
   error.value = ''
 
   let savedData = null
   try {
-    const response = await client.post(`boss/leads/${leadId}/visit-decision/`, { decision })
+    const response = await client.post(`boss/leads/${leadId}/visit-decision/`, {
+      decision,
+      admin_note: adminNote,
+    })
     savedData = response.data
     visitDecisionMap.value = {
       ...visitDecisionMap.value,
@@ -2349,7 +2430,7 @@ async function submitVisitDecision(leadId, decision) {
     error.value = e.response?.data?.detail || 'Belgini saqlashda xatolik yuz berdi.'
     decisionLoadingId.value = null
     pendingDecision.value = ''
-    return
+    return false
   }
 
   // Belgi saqlangandan keyingi ro‘yxat yangilanishi alohida jarayon.
@@ -2367,6 +2448,7 @@ async function submitVisitDecision(leadId, decision) {
 
   decisionLoadingId.value = null
   pendingDecision.value = ''
+  return true
 }
 
 function paymentStatusValue(item) {
@@ -4261,6 +4343,52 @@ onBeforeUnmount(() => {
   background: rgba(37, 99, 235, 0.08);
   border: 1px solid rgba(37, 99, 235, 0.14);
   color: #0f172a;
+}
+
+.admin-note-line {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  color: #78350f;
+}
+
+.decision-reason-modal {
+  width: min(92vw, 520px);
+}
+
+.decision-reason-modal__lead {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.decision-reason-modal__field {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.decision-reason-modal__textarea {
+  min-height: 130px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.decision-reason-modal__field small {
+  justify-self: end;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.decision-reason-modal__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 

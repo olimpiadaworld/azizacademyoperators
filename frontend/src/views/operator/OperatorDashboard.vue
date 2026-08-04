@@ -359,6 +359,7 @@
               <span><strong>Vaqt:</strong> {{ formatDateTime(item.updated_at) }}</span>
               <span v-if="item.operator_note" class="operator-note-line"><strong>Sizning izohingiz:</strong> {{ item.operator_note }}</span>
               <span v-if="item.operator_note_at" class="operator-note-line"><strong>Izoh vaqti:</strong> {{ formatDateTime(item.operator_note_at) }}</span>
+              <span v-if="item.admin_note" class="admin-note-line"><strong>Admin izohi:</strong> {{ item.admin_note }}</span>
               <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>Holatni belgilagan:</strong> {{ item.payment_status_by_name || '-' }}</span>
               <span v-if="operatorPaymentStatus(item) !== 'pending'"><strong>To‘lov holati vaqti:</strong> {{ formatDateTime(item.payment_status_at) }}</span>
             </div>
@@ -2186,6 +2187,15 @@ onBeforeUnmount(() => {
   background: rgba(37, 99, 235, 0.08);
   border: 1px solid rgba(37, 99, 235, 0.14);
   color: #0f172a;
+}
+
+.admin-note-line {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  color: #78350f;
 }
 
 @media (max-width: 1280px) {

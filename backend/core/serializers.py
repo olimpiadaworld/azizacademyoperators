@@ -96,6 +96,7 @@ def visit_decision_to_dict(item):
         'operator_name': ((lead.assigned_operator.full_name or lead.assigned_operator.username) if lead and lead.assigned_operator_id and lead.assigned_operator else ''),
         'boss_name': ((lead.boss.full_name or lead.boss.username) if lead and lead.boss_id and lead.boss else ''),
         'decision': item.decision,
+        'admin_note': getattr(item, 'admin_note', '') or '',
         'payment_status': (
             'paid' if bool(getattr(item, 'payment_done', False))
             else 'unpaid' if bool(getattr(item, 'payment_not_done', False))

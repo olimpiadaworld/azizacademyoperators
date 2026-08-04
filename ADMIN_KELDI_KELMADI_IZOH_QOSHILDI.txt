@@ -1,0 +1,12 @@
+KELDI / KELMADI SABAB MODALI QO'SHILDI
+
+- Menenjer Keldi yoki Kelmadi tugmasini bosganda "Sabab" oynasi chiqadi.
+- Sabab yozmasdan saqlash mumkin emas.
+- Izoh bazada admin_note maydonida saqlanadi.
+- Menejer, boss va nazorat kartalarida "Admin izohi" ko'rinadi.
+- Operatorning Menejer nazorati kartasida ham "Admin izohi" ko'rinadi.
+- Railway deploy vaqtida init_db mavjud bazaga admin_note ustunini avtomatik qo'shadi.
+
+Tekshiruv:
+- Django: 22 ta test muvaffaqiyatli o'tdi.
+- Vue/Vite: production build muvaffaqiyatli yakunlandi.
