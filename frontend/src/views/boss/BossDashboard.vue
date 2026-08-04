@@ -5626,4 +5626,59 @@ onBeforeUnmount(() => {
   }
 }
 
+/* Menejer kartalari: barcha ma'lumotlar tagma-tag, faqat Keldi/Kelmadi yonma-yon. */
+.boss-page--manager-role .manager-lead-card {
+  height: auto !important;
+  min-height: 0;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__meta {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  grid-template-columns: none !important;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__meta > span,
+.boss-page--manager-role .manager-lead-card .operator-note-line,
+.boss-page--manager-role .manager-lead-card .admin-note-line {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__meta > span strong {
+  flex: 0 0 auto;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__actions .visit-action-btn {
+  grid-column: auto !important;
+  width: 100% !important;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+}
+
+.boss-page--manager-role .manager-lead-card .visit-mini-card__actions .payment-action-btn {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  min-width: 0;
+  margin: 0;
+}
+
 </style>

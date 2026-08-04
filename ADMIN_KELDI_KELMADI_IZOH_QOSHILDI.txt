@@ -5,6 +5,8 @@ KELDI / KELMADI SABAB MODALI QO'SHILDI
 - Izoh bazada admin_note maydonida saqlanadi.
 - Menejer, boss va nazorat kartalarida "Admin izohi" ko'rinadi.
 - Operatorning Menejer nazorati kartasida ham "Admin izohi" ko'rinadi.
+- Menejer kartalaridagi barcha ma'lumotlar tagma-tag joylashtirildi.
+- Keldi va Kelmadi tugmalari yonma-yon, teng o'lchamda qoldirildi.
 - Railway deploy vaqtida init_db mavjud bazaga admin_note ustunini avtomatik qo'shadi.
 
 Tekshiruv:
