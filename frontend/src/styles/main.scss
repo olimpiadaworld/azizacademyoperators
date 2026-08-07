@@ -1286,8 +1286,18 @@ th { color: var(--muted); font-weight:600; }
   padding: 10px 16px;
   border-radius: 999px;
   font-weight: 700;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   cursor: pointer;
   transition: .2s ease;
+}
+
+.decision-filter-btn .nav-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
 .decision-filter-btn.active,

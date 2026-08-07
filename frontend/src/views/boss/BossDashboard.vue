@@ -4424,6 +4424,23 @@ onBeforeUnmount(() => {
     width: 100%;
     min-height: 48px;
   }
+
+  .manager-control-panel .manager-lead-card .visit-mini-card__actions,
+  .manager-payment-panel .payment-control-card .visit-mini-card__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .manager-control-panel .manager-lead-card .visit-action-btn,
+  .manager-control-panel .manager-lead-card .payment-action-btn,
+  .manager-payment-panel .payment-control-card .visit-action-btn,
+  .manager-payment-panel .payment-control-card .payment-action-btn {
+    grid-column: span 1;
+    width: auto;
+    min-height: 36px;
+  }
+  .manager-control-panel .manager-lead-card .payment-action-btn--left,
+  .manager-payment-panel .payment-control-card .payment-action-btn--left {
+    grid-column: 1 / -1;
+  }
 }
 
 
@@ -5103,12 +5120,16 @@ onBeforeUnmount(() => {
   height: 17px;
 }
 
-/* Menejer nazorati kartalaridagi Keldi/Kelmadi tugmalari ixcham */
+/* Menejer nazorati kartalaridagi Keldi/Kelmadi/To'lov tugmalari ixcham */
 .manager-control-panel .manager-lead-card .visit-mini-card__actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
-.manager-control-panel .manager-lead-card .visit-action-btn {
+.manager-control-panel .manager-lead-card .visit-action-btn,
+.manager-control-panel .manager-lead-card .payment-action-btn {
+  grid-column: span 1;
+  min-width: 0;
   min-height: 34px;
   padding: 6px 10px;
   border-radius: 11px;
@@ -5116,23 +5137,27 @@ onBeforeUnmount(() => {
   font-size: 10.4px;
   font-weight: 800;
   letter-spacing: -.01em;
+  white-space: normal;
   box-shadow: 0 5px 12px rgba(15,23,42,.10);
 }
 
-.manager-control-panel .manager-lead-card .visit-action-btn::before {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  font-size: 11px;
-  background: rgba(255,255,255,.16);
+.manager-control-panel .manager-lead-card .payment-action-btn--left {
+  grid-column: 1 / -1;
 }
 
-.manager-control-panel .manager-lead-card .visit-action-btn :deep(.nav-icon) {
+.manager-control-panel .manager-lead-card .visit-action-btn::before,
+.manager-control-panel .manager-lead-card .payment-action-btn::before {
+  display: none;
+}
+
+.manager-control-panel .manager-lead-card .visit-action-btn :deep(.nav-icon),
+.manager-control-panel .manager-lead-card .payment-action-btn :deep(.nav-icon) {
   width: 14px;
   height: 14px;
 }
 
-.manager-control-panel .manager-lead-card .visit-action-btn:not(:disabled):hover {
+.manager-control-panel .manager-lead-card .visit-action-btn:not(:disabled):hover,
+.manager-control-panel .manager-lead-card .payment-action-btn:not(:disabled):hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 16px rgba(15,23,42,.12);
 }
@@ -5215,6 +5240,49 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 10px;
+}
+
+/* To'lov bo'limi kartalaridagi Keldi/Kelmadi/To'lov tugmalari ixcham */
+.manager-payment-panel .payment-control-card .visit-mini-card__actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.manager-payment-panel .payment-control-card .visit-action-btn,
+.manager-payment-panel .payment-control-card .payment-action-btn {
+  grid-column: span 1;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 11px;
+  gap: 5px;
+  font-size: 10.4px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  white-space: normal;
+  box-shadow: 0 5px 12px rgba(15,23,42,.10);
+}
+
+.manager-payment-panel .payment-control-card .payment-action-btn--left {
+  grid-column: 1 / -1;
+}
+
+.manager-payment-panel .payment-control-card .visit-action-btn::before,
+.manager-payment-panel .payment-control-card .payment-action-btn::before {
+  display: none;
+}
+
+.manager-payment-panel .payment-control-card .visit-action-btn :deep(.nav-icon),
+.manager-payment-panel .payment-control-card .payment-action-btn :deep(.nav-icon) {
+  width: 14px;
+  height: 14px;
+}
+
+.manager-payment-panel .payment-control-card .visit-action-btn:not(:disabled):hover,
+.manager-payment-panel .payment-control-card .payment-action-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(15,23,42,.12);
 }
 
 /* Chiroyli bo'sh holat */
