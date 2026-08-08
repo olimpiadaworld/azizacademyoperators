@@ -130,6 +130,59 @@
       </div>
     </div>
 
+    <div v-else-if="currentAdminTab === 'manager-marks'" class="panel glass admin-manager-marks-panel">
+      <div class="section-head section-head--wrap">
+        <div>
+          <div class="eyebrow">Keldi / To‘lov nazorati</div>
+          <h3>Menenjerlar belgilari</h3>
+          <p>Keldi, Kelmadi, To‘lov qildi, To‘lov qilmadi va to‘lov qilmasdan ketganlar shu yerda ko‘rinadi.</p>
+        </div>
+        <div class="lead-toolbar-info lead-toolbar-info--wrap">
+          <button class="btn secondary" type="button" :disabled="visitDecisionsExcelDownloading" @click="downloadVisitDecisionsExcel">
+            {{ visitDecisionsExcelDownloading ? 'Excel tayyorlanmoqda...' : 'Nazorat Excel yuklash' }}
+          </button>
+          <span class="badge">Jami: {{ adminVisitDecisions.length }}</span>
+          <span class="badge arrived-badge">Keldi: {{ adminArrivedCount }}</span>
+          <span class="badge not-arrived-badge">Kelmadi: {{ adminNotArrivedCount }}</span>
+          <span class="badge payment-paid-badge">To‘lov qildi: {{ adminPaymentDoneCount }}</span>
+          <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ adminPaymentNotDoneCount }}</span>
+          <span class="badge payment-left-without-badge">To‘lovsiz ketdi: {{ adminLeftWithoutPaymentCount }}</span>
+          <span class="badge muted">Belgilanmagan: {{ adminPaymentPendingCount }}</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>F.I.O</th>
+              <th>Menenjer</th>
+              <th>Operator</th>
+              <th>Qaror</th>
+              <th>To‘lov</th>
+              <th>Holatni belgilagan</th>
+              <th>To‘lov vaqti</th>
+              <th>Nazorat vaqti</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in adminVisitDecisions" :key="`admin-visit-${item.id}`">
+              <td>{{ item.lead_name || item.full_name || '-' }}</td>
+              <td>{{ item.filial_rahbari_name || '-' }}</td>
+              <td>{{ item.operator_name || '-' }}</td>
+              <td><span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span></td>
+              <td><span :class="['badge', adminPaymentBadgeClass(item)]">{{ adminPaymentStatusLabel(item) }}</span></td>
+              <td>{{ item.payment_status_by_name || '-' }}</td>
+              <td>{{ item.payment_status_at ? formatDateTime(item.payment_status_at) : '-' }}</td>
+              <td>{{ formatDateTime(item.updated_at) }}</td>
+            </tr>
+            <tr v-if="!adminVisitDecisions.length">
+              <td colspan="8" class="empty-state">Hali Keldi/Kelmadi yoki To‘lov belgisi yo‘q.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <template v-else>
     <ResponsiveSwiper
       v-if="isCompact"
@@ -190,60 +243,6 @@
           <div class="status-overview-card__top">{{ item.title }}</div>
           <strong>{{ item.value }}</strong>
         </div>
-      </div>
-    </div>
-
-
-    <div class="panel glass">
-      <div class="section-head section-head--wrap">
-        <div>
-          <div class="eyebrow">Keldi / To‘lov nazorati</div>
-          <h3>Menenjerlar belgilari</h3>
-          <p>Keldi, Kelmadi, To‘lov qildi, To‘lov qilmadi va to‘lov qilmasdan ketganlar shu yerda ko‘rinadi.</p>
-        </div>
-        <div class="lead-toolbar-info lead-toolbar-info--wrap">
-          <button class="btn secondary" type="button" :disabled="visitDecisionsExcelDownloading" @click="downloadVisitDecisionsExcel">
-            {{ visitDecisionsExcelDownloading ? 'Excel tayyorlanmoqda...' : 'Nazorat Excel yuklash' }}
-          </button>
-          <span class="badge">Jami: {{ adminVisitDecisions.length }}</span>
-          <span class="badge arrived-badge">Keldi: {{ adminArrivedCount }}</span>
-          <span class="badge not-arrived-badge">Kelmadi: {{ adminNotArrivedCount }}</span>
-          <span class="badge payment-paid-badge">To‘lov qildi: {{ adminPaymentDoneCount }}</span>
-          <span class="badge payment-unpaid-badge">To‘lov qilmadi: {{ adminPaymentNotDoneCount }}</span>
-          <span class="badge payment-left-without-badge">To‘lovsiz ketdi: {{ adminLeftWithoutPaymentCount }}</span>
-          <span class="badge muted">Belgilanmagan: {{ adminPaymentPendingCount }}</span>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>F.I.O</th>
-              <th>Menenjer</th>
-              <th>Operator</th>
-              <th>Qaror</th>
-              <th>To‘lov</th>
-              <th>Holatni belgilagan</th>
-              <th>To‘lov vaqti</th>
-              <th>Nazorat vaqti</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in adminVisitDecisions" :key="`admin-visit-${item.id}`">
-              <td>{{ item.lead_name || item.full_name || '-' }}</td>
-              <td>{{ item.filial_rahbari_name || '-' }}</td>
-              <td>{{ item.operator_name || '-' }}</td>
-              <td><span class="badge">{{ item.decision === 'arrived' ? 'Keldi' : 'Kelmadi' }}</span></td>
-              <td><span :class="['badge', adminPaymentBadgeClass(item)]">{{ adminPaymentStatusLabel(item) }}</span></td>
-              <td>{{ item.payment_status_by_name || '-' }}</td>
-              <td>{{ item.payment_status_at ? formatDateTime(item.payment_status_at) : '-' }}</td>
-              <td>{{ formatDateTime(item.updated_at) }}</td>
-            </tr>
-            <tr v-if="!adminVisitDecisions.length">
-              <td colspan="8" class="empty-state">Hali Keldi/Kelmadi yoki To‘lov belgisi yo‘q.</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
 
@@ -887,7 +886,7 @@ function branchStringToArray(value) {
 
 const currentAdminTab = computed(() => {
   const tab = typeof route.query.tab === 'string' ? route.query.tab : 'main'
-  return tab === 'database' ? 'database' : 'main'
+  return ['database', 'manager-marks'].includes(tab) ? tab : 'main'
 })
 
 const statusLabels = {

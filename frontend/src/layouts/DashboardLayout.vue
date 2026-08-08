@@ -95,7 +95,7 @@ const operatorCurrentTab = computed(() => {
 
 const adminCurrentTab = computed(() => {
   const tab = typeof route.query.tab === 'string' ? route.query.tab : 'main'
-  return ['main', 'database'].includes(tab) ? tab : 'main'
+  return ['main', 'manager-marks', 'database'].includes(tab) ? tab : 'main'
 })
 
 const links = computed(() => {
@@ -122,6 +122,7 @@ const links = computed(() => {
   }
   if (auth.role === 'admin') return [
     { to: { path: '/admin', query: { tab: 'main' } }, label: 'Admin paneli', tab: 'main', icon: 'shield' },
+    { to: { path: '/admin', query: { tab: 'manager-marks' } }, label: 'Menenjerlar belgilari', tab: 'manager-marks', icon: 'briefcase' },
     { to: { path: '/admin', query: { tab: 'database' } }, label: "Ma'lumotlar bazasi", tab: 'database', icon: 'database' },
   ]
   if (auth.role === 'director' || auth.role === 'director_deputy') return [
